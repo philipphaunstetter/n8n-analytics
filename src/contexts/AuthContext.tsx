@@ -31,7 +31,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Initialize and manage session state
   useEffect(() => {
     let devAuthCleanup: (() => void) | null = null
-    let supabaseSubscription: { unsubscribe: () => void } | null = null
 
     const initializeAuth = async () => {
       console.log('Initializing auth with SQLite session management')
@@ -73,9 +72,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => {
       if (devAuthCleanup) {
         devAuthCleanup()
-      }
-      if (supabaseSubscription) {
-        supabaseSubscription.unsubscribe()
       }
       if (healthMonitorCleanup) {
         healthMonitorCleanup()
