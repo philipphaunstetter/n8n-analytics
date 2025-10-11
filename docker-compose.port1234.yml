@@ -1,0 +1,30 @@
+# Elova - Custom Port 1234 Configuration
+# Use this if you want to run Elova on port 1234
+#
+# Usage: docker compose -f docker-compose.port1234.yml up -d
+
+version: '3.8'
+
+services:
+  elova:
+    image: ghcr.io/philipphaunstetter/n8n-analytics:latest
+    container_name: elova
+    restart: always
+    ports:
+      - "1234:3000"  # Host port 1234 -> Container port 3000
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - GENERIC_TIMEZONE=UTC
+      - TZ=UTC
+    volumes:
+      - elova_data:/app/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+volumes:
+  elova_data:

@@ -3,7 +3,6 @@ import type { NextRequest } from 'next/server'
 
 // Routes that don't require setup completion
 const PUBLIC_ROUTES = [
-  '/',
   '/api/health',
   '/api/setup',
   '/setup',
@@ -57,6 +56,17 @@ export async function middleware(request: NextRequest) {
     }
 
     const setupStatus = await setupResponse.json()
+
+    // Handle root path specifically
+    if (pathname === '/') {
+      if (!setupStatus.initDone) {
+        // Setup not complete, redirect to setup wizard
+        return NextResponse.redirect(new URL('/setup/welcome', request.url))
+      } else {
+        // Setup complete, redirect to dashboard
+        return NextResponse.redirect(new URL('/dashboard', request.url))
+      }
+    }
 
     // If setup is required and user is not on a setup page
     if (!setupStatus.initDone && !SETUP_ROUTES.some(route => pathname.startsWith(route))) {
