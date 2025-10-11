@@ -14,8 +14,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "WorkflowObservability",
-  description: "Monitor and analyze your workflow automation across all platforms",
+  title: "Elova",
+  description: "Unified workflow observability platform - Monitor n8n, Zapier, Make.com and more",
 };
 
 export default function RootLayout({

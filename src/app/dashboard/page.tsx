@@ -24,7 +24,7 @@ function DashboardContent() {
     const fetchStats = async () => {
       try {
         setLoading(true)
-        const response = await apiClient.get<{ data: DashboardStats }>(`/api/dashboard/stats?timeRange=${timeRange}`)
+        const response = await apiClient.get<{ data: DashboardStats }>(`/dashboard/stats?timeRange=${timeRange}`)
         setStats(response.data)
         setError(null)
       } catch (err) {

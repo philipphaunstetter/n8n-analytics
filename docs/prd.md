@@ -1,6 +1,6 @@
 # Product Requirements Document (PRD)
 
-Working title: Automation Workflow Observability (provider-agnostic)
+Product name: Elova - Automation Workflow Observability (provider-agnostic)
 
 Summary
 - Build a provider-agnostic web application that gives users visibility into their automation workflows: overview of running workflows, flowchart visualization, execution status, endpoint uptime checks, and instance health. 
@@ -214,7 +214,7 @@ Teams running automations across tools lack a single, actionable view to monitor
 16. Open Questions
 - Primary deployment targets (self-hosted vs. Vercel) and secret management approach for production.
 - Do we need to support multiple provider instances concurrently in MVP?
-- Preferred branding and final product name.
+- Preferred branding: Elova (finalized).
 - Scope of demo mode: synthetic data only or shared read-only demo instance (e.g., n8n-demo)?
 - Should we include workspace/environment isolation in MVP for enterprise appeal?
 - What level of real-time capabilities should be included in MVP vs. post-MVP?

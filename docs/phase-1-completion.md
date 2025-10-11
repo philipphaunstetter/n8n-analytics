@@ -14,7 +14,7 @@
 - Added proper TypeScript types and error handling
 
 ### ✅ Landing Page
-- Built modern, professional landing page for "WorkflowObservability"
+- Built modern, professional landing page for "Elova"
 - Featured key value propositions and supported platforms
 - Added proper call-to-action buttons linking to auth flows
 - Responsive design with Tailwind CSS

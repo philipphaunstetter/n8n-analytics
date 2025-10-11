@@ -31,7 +31,16 @@ yarn-error.log*
 .pnpm-debug.log*
 
 # env files (can opt-in for committing if needed)
-.env*
+.env
+.env.local
+.env.production
+.env.test
+.env.*.local
+
+# Allow example and template files
+!.env.example
+!.env.development
+!.env.production.template
 
 # vercel
 .vercel
@@ -39,3 +48,14 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Development data
+/dev_data
+/backups
+
+# Docker volumes and logs
+/logs
+*.log
+
+# Runtime files
+runtimeconfig.json

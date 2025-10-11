@@ -1,32 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createServerClient } from '@supabase/ssr'
-import { cookies } from 'next/headers'
 import { ProviderRegistry } from '@/lib/providers'
-import { Provider, ExecutionFilters } from '@/types'
+import { Provider, ExecutionFilters, ExecutionStatus, Execution } from '@/types'
+import { generateDemoExecutions, isDemoMode, DEMO_WORKFLOWS } from '@/lib/demo-data'
+import { authenticateRequest } from '@/lib/api-auth'
+import { n8nApi, N8nExecution, N8nWorkflow } from '@/lib/n8n-api'
 
 // GET /api/executions - List executions across all providers
 export async function GET(request: NextRequest) {
   try {
-    const cookieStore = await cookies()
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          get(name: string) {
-            return cookieStore.get(name)?.value
-          },
-          set(name: string, value: string, options: Record<string, unknown>) {
-            cookieStore.set({ name, value, ...options })
-          },
-          remove(name: string, options: Record<string, unknown>) {
-            cookieStore.set({ name, value: '', ...options })
-          },
-        },
-      }
-    )
-
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    // Authenticate the request (handles both dev and Supabase auth)
+    const { user, error: authError } = await authenticateRequest(request)
     
     if (authError || !user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -53,49 +36,51 @@ export async function GET(request: NextRequest) {
       filters.timeRange = 'custom'
     }
 
-    // TODO: Fetch user's providers from database
-    // For now, return empty results since we don't have providers set up yet
-    const providers: Provider[] = []
-
-    const allExecutions = []
+    // Fetch executions from n8n API or use demo data as fallback
+    let allExecutions: Execution[] = []
     let totalCount = 0
 
-    // Fetch executions from each provider
-    for (const provider of providers) {
-      if (filters.providerId && provider.id !== filters.providerId) {
-        continue // Skip this provider if filtering by specific provider
-      }
-
-      if (!provider.isConnected) {
-        continue // Skip disconnected providers
-      }
-
+    // Try to fetch real n8n data first if API is configured
+    if (process.env.N8N_HOST && process.env.N8N_API_KEY && !isDemoMode()) {
       try {
-        const adapter = ProviderRegistry.create(provider)
-        const result = await adapter.getExecutions(filters)
-
-        if (result.success && result.data) {
-          allExecutions.push(...result.data.items)
-          totalCount += result.data.total
-        }
+        console.log('Fetching real executions from n8n API...')
+        const n8nExecutions = await n8nApi.getExecutions({ limit: 100 })
+        const n8nWorkflows = await n8nApi.getWorkflows()
+        
+        // Convert n8n executions to our internal format
+        allExecutions = convertN8nExecutions(n8nExecutions.data, n8nWorkflows)
+        totalCount = allExecutions.length
+        
+        console.log(`Fetched ${allExecutions.length} real executions from n8n`)
       } catch (error) {
-        console.error(`Failed to fetch executions from provider ${provider.name}:`, error)
-        // Continue with other providers
+        console.error('Failed to fetch real n8n data, falling back to demo data:', error)
+        // Fall back to demo data if n8n API fails
+        allExecutions = generateDemoExecutions(200)
       }
+    } else if (isDemoMode()) {
+      console.log('Using demo mode - generating demo executions')
+      allExecutions = generateDemoExecutions(200)
+    } else {
+      console.log('No n8n configuration found, using demo data')
+      allExecutions = generateDemoExecutions(200)
     }
 
+    // Apply filters
+    const filteredExecutions = applyExecutionFilters(allExecutions, filters)
+    totalCount = filteredExecutions.length
+
     // Sort executions by startedAt (most recent first)
-    allExecutions.sort((a, b) => {
+    filteredExecutions.sort((a, b) => {
       return new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime()
     })
 
     return NextResponse.json({
       success: true,
       data: {
-        items: allExecutions,
+        items: filteredExecutions,
         total: totalCount,
         page: 1,
-        limit: allExecutions.length,
+        limit: filteredExecutions.length,
         hasNextPage: false,
         hasPreviousPage: false
       }
@@ -107,4 +92,178 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     )
   }
+}
+
+// Helper function to apply filters to executions
+function applyExecutionFilters(executions: Execution[], filters: ExecutionFilters): Execution[] {
+  let filtered = executions
+  
+  // Filter by status
+  if (filters.status && filters.status.length > 0) {
+    filtered = filtered.filter(exec => filters.status!.includes(exec.status))
+  }
+  
+  // Filter by time range
+  if (filters.timeRange && filters.timeRange !== 'custom') {
+    const now = new Date()
+    let startDate: Date
+    
+    switch (filters.timeRange) {
+      case '1h':
+        startDate = new Date(now.getTime() - 60 * 60 * 1000)
+        break
+      case '24h':
+        startDate = new Date(now.getTime() - 24 * 60 * 60 * 1000)
+        break
+      case '7d':
+        startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
+        break
+      case '30d':
+        startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
+        break
+      case '90d':
+        startDate = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000)
+        break
+      default:
+        startDate = new Date(now.getTime() - 24 * 60 * 60 * 1000)
+    }
+    
+    filtered = filtered.filter(exec => exec.startedAt >= startDate)
+  }
+  
+  // Filter by custom time range
+  if (filters.timeRange === 'custom' && filters.customTimeRange) {
+    const { start, end } = filters.customTimeRange
+    filtered = filtered.filter(exec => 
+      exec.startedAt >= start && exec.startedAt <= end
+    )
+  }
+  
+  // Filter by provider ID
+  if (filters.providerId) {
+    filtered = filtered.filter(exec => exec.providerId === filters.providerId)
+  }
+  
+  // Filter by workflow ID
+  if (filters.workflowId) {
+    filtered = filtered.filter(exec => exec.workflowId === filters.workflowId)
+  }
+  
+  // Filter by search query (search in execution ID, workflow name, or error message)
+  if (filters.search) {
+    const searchTerm = filters.search.toLowerCase()
+    filtered = filtered.filter(exec => {
+      // Search in execution ID
+      if (exec.id.toLowerCase().includes(searchTerm) || 
+          exec.providerExecutionId.toLowerCase().includes(searchTerm)) {
+        return true
+      }
+      
+      // Search in workflow name (try metadata first, then demo workflows)
+      const workflowName = exec.metadata?.workflowName || 
+                          DEMO_WORKFLOWS.find(w => w.id === exec.workflowId)?.name ||
+                          ''
+      if (workflowName.toLowerCase().includes(searchTerm)) {
+        return true
+      }
+      
+      // Search in error message
+      if (exec.error && exec.error.message.toLowerCase().includes(searchTerm)) {
+        return true
+      }
+      
+      return false
+    })
+  }
+  
+  return filtered
+}
+
+/**
+ * Convert n8n executions to our internal format
+ */
+function convertN8nExecutions(n8nExecutions: N8nExecution[], workflows: N8nWorkflow[]): Execution[] {
+  // Create workflow lookup map for faster access
+  const workflowMap = new Map(workflows.map(w => [w.id, w]))
+  
+  return n8nExecutions.map(n8nExec => {
+    const workflow = workflowMap.get(n8nExec.workflowId)
+    const startedAt = new Date(n8nExec.startedAt)
+    const stoppedAt = n8nExec.stoppedAt ? new Date(n8nExec.stoppedAt) : undefined
+    const duration = stoppedAt ? stoppedAt.getTime() - startedAt.getTime() : undefined
+    
+    // Map n8n status to our internal status format
+    let status: ExecutionStatus = 'unknown'
+    switch (n8nExec.status) {
+      case 'success':
+        status = 'success'
+        break
+      case 'failed':
+      case 'error':
+      case 'crashed':
+        status = 'error'
+        break
+      case 'running':
+        status = 'running'
+        break
+      case 'waiting':
+        status = 'waiting'
+        break
+      case 'canceled':
+        status = 'canceled'
+        break
+      case 'new':
+        status = 'waiting'
+        break
+      default:
+        status = 'unknown'
+    }
+    
+    // Map n8n mode to our internal mode format
+    let mode: 'manual' | 'trigger' | 'webhook' | 'cron' | 'unknown' = 'unknown'
+    switch (n8nExec.mode) {
+      case 'manual':
+        mode = 'manual'
+        break
+      case 'trigger':
+        mode = 'trigger'
+        break
+      case 'webhook':
+        mode = 'webhook'
+        break
+      case 'cron':
+        mode = 'cron'
+        break
+      default:
+        mode = 'unknown'
+    }
+    
+    const execution: Execution = {
+      id: `n8n-${n8nExec.id}`, // Prefix to avoid ID conflicts
+      providerId: 'n8n-main', // Static provider ID for n8n instance
+      workflowId: `n8n-${n8nExec.workflowId}`, // Prefix to avoid conflicts
+      providerExecutionId: n8nExec.id,
+      providerWorkflowId: n8nExec.workflowId,
+      status,
+      startedAt,
+      stoppedAt,
+      duration,
+      mode,
+      // Add error information if execution failed
+      error: status === 'error' ? {
+        message: `Execution failed with status: ${n8nExec.status}`,
+        timestamp: stoppedAt || startedAt
+      } : undefined,
+      // Add workflow name and other metadata
+      metadata: {
+        workflowName: workflow?.name || 'Unknown Workflow',
+        n8nWorkflowId: n8nExec.workflowId,
+        finished: n8nExec.finished,
+        retryOf: n8nExec.retryOf,
+        retrySuccessId: n8nExec.retrySuccessId
+      }
+    }
+    
+    return execution
+  })
 }

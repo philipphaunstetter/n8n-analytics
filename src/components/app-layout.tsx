@@ -26,6 +26,7 @@ import {
 import { Navbar, NavbarItem, NavbarSection, NavbarSpacer } from './navbar'
 import { Dropdown, DropdownButton, DropdownItem, DropdownMenu } from './dropdown'
 import { Avatar } from './avatar'
+import { ToastContainer } from './toast'
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: ChartPieIcon, current: true },
@@ -46,7 +47,7 @@ function AppSidebar() {
         <div className="flex items-center space-x-2">
           <ChartPieIcon className="h-8 w-8 text-indigo-600" />
           <span className="text-lg font-semibold text-gray-900 dark:text-white">
-            WorkflowObservability
+            Elova
           </span>
         </div>
       </SidebarHeader>
@@ -145,6 +146,7 @@ export function AppLayout({ children }: AppLayoutProps) {
       sidebar={<AppSidebar />}
     >
       {children}
+      <ToastContainer />
     </SidebarLayout>
   )
 }

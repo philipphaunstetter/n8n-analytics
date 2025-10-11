@@ -54,6 +54,8 @@ const DEV_USERS: Record<string, { password: string; user: DevUser }> = {
  */
 export class DevAuth {
   private static SESSION_KEY = 'dev_auth_session'
+  private static EXPIRY_KEY = 'dev_auth_expiry'
+  private static SESSION_DURATION = 7 * 24 * 60 * 60 * 1000 // 7 days
 
   static isDevelopment(): boolean {
     return process.env.NODE_ENV === 'development' && 
@@ -75,7 +77,13 @@ export class DevAuth {
 
   static setSession(user: DevUser): void {
     if (typeof window !== 'undefined') {
+      const expiryTime = Date.now() + this.SESSION_DURATION
       localStorage.setItem(this.SESSION_KEY, JSON.stringify(user))
+      localStorage.setItem(this.EXPIRY_KEY, expiryTime.toString())
+      
+      // Also store in sessionStorage for same-tab persistence
+      sessionStorage.setItem(this.SESSION_KEY, JSON.stringify(user))
+      sessionStorage.setItem(this.EXPIRY_KEY, expiryTime.toString())
     }
   }
 
@@ -84,14 +92,32 @@ export class DevAuth {
       return null
     }
 
-    const sessionData = localStorage.getItem(this.SESSION_KEY)
+    // Check expiry first
+    const expiryTime = localStorage.getItem(this.EXPIRY_KEY) || sessionStorage.getItem(this.EXPIRY_KEY)
+    if (expiryTime && Date.now() > parseInt(expiryTime)) {
+      this.clearSession()
+      return null
+    }
+
+    // Try sessionStorage first (more persistent during dev), then localStorage
+    let sessionData = sessionStorage.getItem(this.SESSION_KEY) || localStorage.getItem(this.SESSION_KEY)
+    
     if (!sessionData) {
       return null
     }
 
     try {
-      return JSON.parse(sessionData)
-    } catch {
+      const user = JSON.parse(sessionData)
+      
+      // Refresh the session in both storages if found
+      if (user) {
+        this.setSession(user)
+      }
+      
+      return user
+    } catch (error) {
+      console.warn('Failed to parse dev auth session:', error)
+      this.clearSession()
       return null
     }
   }
@@ -99,10 +125,38 @@ export class DevAuth {
   static clearSession(): void {
     if (typeof window !== 'undefined') {
       localStorage.removeItem(this.SESSION_KEY)
+      localStorage.removeItem(this.EXPIRY_KEY)
+      sessionStorage.removeItem(this.SESSION_KEY)
+      sessionStorage.removeItem(this.EXPIRY_KEY)
     }
   }
 
   static isAuthenticated(): boolean {
     return this.getSession() !== null
+  }
+
+  /**
+   * Set up cross-tab session synchronization
+   * Call this once when the app initializes
+   */
+  static setupSessionSync(onSessionChange: (user: DevUser | null) => void): (() => void) | null {
+    if (typeof window === 'undefined') {
+      return null
+    }
+
+    const handleStorageChange = (event: StorageEvent) => {
+      if (event.key === this.SESSION_KEY) {
+        // Session was changed in another tab
+        const newSession = this.getSession()
+        onSessionChange(newSession)
+      }
+    }
+
+    window.addEventListener('storage', handleStorageChange)
+    
+    // Return cleanup function
+    return () => {
+      window.removeEventListener('storage', handleStorageChange)
+    }
   }
 }

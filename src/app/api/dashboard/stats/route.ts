@@ -1,24 +1,141 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { authenticateRequest } from '@/lib/api-auth'
-import { ProviderRegistry } from '@/lib/providers'
-import { Provider, DashboardStats, TimeRange, ExecutionFilters } from '@/types'
+import { DashboardStats, TimeRange } from '@/types'
 import { generateDemoDashboardStats, isDemoMode } from '@/lib/demo-data'
+import { n8nApi } from '@/lib/n8n-api'
+
+/**
+ * Fetch dashboard statistics from n8n API
+ */
+async function fetchN8nDashboardStats(timeRange: TimeRange): Promise<DashboardStats> {
+  try {
+    // Calculate time range for filtering
+    const now = new Date()
+    let startTime: Date
+    
+    switch (timeRange) {
+      case '1h':
+        startTime = new Date(now.getTime() - 60 * 60 * 1000)
+        break
+      case '24h':
+        startTime = new Date(now.getTime() - 24 * 60 * 60 * 1000)
+        break
+      case '7d':
+        startTime = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
+        break
+      case '30d':
+        startTime = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
+        break
+      case '90d':
+        startTime = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000)
+        break
+      default:
+        startTime = new Date(now.getTime() - 24 * 60 * 60 * 1000)
+    }
+
+    // Fetch workflows and executions in parallel
+    const [workflowsResponse, executionsResponse] = await Promise.all([
+      n8nApi.getWorkflows(),
+      n8nApi.getExecutions({ limit: 100 }) // Fetch recent executions
+    ])
+
+    // Filter executions by time range
+    const filteredExecutions = executionsResponse.data.filter(execution => 
+      new Date(execution.startedAt) >= startTime
+    )
+
+    // Calculate basic stats
+    const totalExecutions = filteredExecutions.length
+    const successfulExecutions = filteredExecutions.filter(e => e.status === 'success').length
+    const failedExecutions = filteredExecutions.filter(e => ['failed', 'error', 'crashed'].includes(e.status)).length
+    const successRate = totalExecutions > 0 ? Math.round((successfulExecutions / totalExecutions) * 100) : 0
+
+    // Calculate average response time (duration)
+    const completedExecutions = filteredExecutions.filter(e => e.stoppedAt && e.startedAt)
+    let avgResponseTime: number | undefined
+    
+    if (completedExecutions.length > 0) {
+      const totalDuration = completedExecutions.reduce((sum, e) => {
+        const duration = new Date(e.stoppedAt!).getTime() - new Date(e.startedAt).getTime()
+        return sum + duration
+      }, 0)
+      avgResponseTime = Math.round(totalDuration / completedExecutions.length)
+    }
+
+    // Create workflow lookup map
+    const workflowMap = new Map(workflowsResponse.map(w => [w.id, w.name]))
+
+    // Get recent failures
+    const recentFailures = filteredExecutions
+      .filter(e => ['failed', 'error', 'crashed'].includes(e.status))
+      .sort((a, b) => new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime())
+      .slice(0, 5)
+      .map(execution => ({
+        executionId: execution.id,
+        workflowName: workflowMap.get(execution.workflowId) || 'Unknown Workflow',
+        error: 'Execution failed', // n8n API doesn't provide detailed error in list view
+        timestamp: new Date(execution.startedAt)
+      }))
+
+    // Calculate top workflows by execution count
+    const workflowStats = new Map<string, {
+      workflowId: string
+      name: string
+      executions: number
+      successes: number
+    }>()
+
+    for (const execution of filteredExecutions) {
+      const workflowId = execution.workflowId
+      if (!workflowStats.has(workflowId)) {
+        workflowStats.set(workflowId, {
+          workflowId,
+          name: workflowMap.get(workflowId) || 'Unknown Workflow',
+          executions: 0,
+          successes: 0
+        })
+      }
+      
+      const stats = workflowStats.get(workflowId)!
+      stats.executions++
+      if (execution.status === 'success') {
+        stats.successes++
+      }
+    }
+
+    const topWorkflows = Array.from(workflowStats.values())
+      .map(w => ({
+        ...w,
+        successRate: w.executions > 0 ? Math.round((w.successes / w.executions) * 100) : 0
+      }))
+      .sort((a, b) => b.executions - a.executions)
+      .slice(0, 5)
+
+    return {
+      timeRange,
+      totalExecutions,
+      successfulExecutions,
+      failedExecutions,
+      successRate,
+      avgResponseTime,
+      topWorkflows,
+      recentFailures
+    }
+  } catch (error) {
+    console.error('Error fetching n8n dashboard stats:', error)
+    throw error
+  }
+}
 
 // GET /api/dashboard/stats - Get dashboard statistics
 export async function GET(request: NextRequest) {
   try {
-    const { user, error: authError } = await authenticateRequest(request)
-    
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    // Parse query parameters
+    // Parse query parameters first
     const searchParams = request.nextUrl.searchParams
     const timeRange = (searchParams.get('timeRange') as TimeRange) || '24h'
     const providerId = searchParams.get('providerId') || undefined
 
-    // Return demo data if demo mode is enabled
+    // Return demo data if demo mode is enabled (skip auth for demo)
     if (isDemoMode()) {
       const demoStats = generateDemoDashboardStats(timeRange)
       return NextResponse.json({
@@ -27,122 +144,59 @@ export async function GET(request: NextRequest) {
       })
     }
 
-    // TODO: Fetch user's providers from database
-    // For now, return empty stats since we don't have providers set up yet
-    const providers: Provider[] = []
-
-    const stats: DashboardStats = {
-      providerId,
-      timeRange,
-      totalExecutions: 0,
-      successfulExecutions: 0,
-      failedExecutions: 0,
-      successRate: 0,
-      topWorkflows: [],
-      recentFailures: []
-    }
-
-    if (providers.length === 0) {
-      // Return empty stats when no providers are configured
-      return NextResponse.json({
-        success: true,
-        data: stats
-      })
-    }
-
-    // Create execution filters based on time range
-    const filters: ExecutionFilters = {
-      providerId,
-      timeRange
-    }
-
-    const allExecutions = []
-
-    // Fetch executions from each provider
-    for (const provider of providers) {
-      if (providerId && provider.id !== providerId) {
-        continue // Skip this provider if filtering by specific provider
-      }
-
-      if (!provider.isConnected) {
-        continue // Skip disconnected providers
-      }
-
-      try {
-        const adapter = ProviderRegistry.create(provider)
-        const result = await adapter.getExecutions(filters)
-
-        if (result.success && result.data) {
-          allExecutions.push(...result.data.items)
-        }
-      } catch (error) {
-        console.error(`Failed to fetch executions from provider ${provider.name}:`, error)
-        // Continue with other providers
-      }
-    }
-
-    // Calculate stats
-    stats.totalExecutions = allExecutions.length
-    stats.successfulExecutions = allExecutions.filter(e => e.status === 'success').length
-    stats.failedExecutions = allExecutions.filter(e => e.status === 'error').length
-    stats.successRate = stats.totalExecutions > 0 
-      ? Math.round((stats.successfulExecutions / stats.totalExecutions) * 100) 
-      : 0
-
-    // Calculate average response time
-    const completedExecutions = allExecutions.filter(e => e.duration)
-    if (completedExecutions.length > 0) {
-      const totalDuration = completedExecutions.reduce((sum, e) => sum + (e.duration || 0), 0)
-      stats.avgResponseTime = Math.round(totalDuration / completedExecutions.length)
-    }
-
-    // Get recent failures (last 10)
-    const recentFailures = allExecutions
-      .filter(e => e.status === 'error')
-      .sort((a, b) => new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime())
-      .slice(0, 10)
-
-    stats.recentFailures = recentFailures.map(execution => ({
-      executionId: execution.id,
-      workflowName: 'Unknown Workflow', // We'd need to fetch workflow names
-      error: execution.error?.message || 'Unknown error',
-      timestamp: execution.startedAt
-    }))
-
-    // Group executions by workflow to get top workflows
-    const workflowStats = new Map()
-    
-    for (const execution of allExecutions) {
-      const workflowId = execution.workflowId
-      if (!workflowStats.has(workflowId)) {
-        workflowStats.set(workflowId, {
-          workflowId,
-          name: 'Unknown Workflow', // We'd need to fetch workflow names
-          executions: 0,
-          successes: 0
-        })
+    // Check if n8n is configured
+    if (!process.env.N8N_HOST || !process.env.N8N_API_KEY) {
+      console.warn('N8N_HOST or N8N_API_KEY not configured, falling back to empty stats')
+      const emptyStats: DashboardStats = {
+        providerId,
+        timeRange,
+        totalExecutions: 0,
+        successfulExecutions: 0,
+        failedExecutions: 0,
+        successRate: 0,
+        topWorkflows: [],
+        recentFailures: []
       }
       
-      const workflow = workflowStats.get(workflowId)
-      workflow.executions++
-      if (execution.status === 'success') {
-        workflow.successes++
-      }
+      return NextResponse.json({
+        success: true,
+        data: emptyStats
+      })
+    }
+    
+    // Require authentication for all requests
+    const { user, error: authError } = await authenticateRequest(request)
+    
+    if (authError || !user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Calculate success rates and sort by execution count
-    stats.topWorkflows = Array.from(workflowStats.values())
-      .map(w => ({
-        ...w,
-        successRate: w.executions > 0 ? Math.round((w.successes / w.executions) * 100) : 0
-      }))
-      .sort((a, b) => b.executions - a.executions)
-      .slice(0, 5) // Top 5 workflows
-
-    return NextResponse.json({
-      success: true,
-      data: stats
-    })
+    // Fetch real data from n8n instance
+    try {
+      const n8nStats = await fetchN8nDashboardStats(timeRange)
+      return NextResponse.json({
+        success: true,
+        data: n8nStats
+      })
+    } catch (error) {
+      console.error('Failed to fetch n8n data:', error)
+      // Fallback to empty stats
+      const emptyStats: DashboardStats = {
+        providerId,
+        timeRange,
+        totalExecutions: 0,
+        successfulExecutions: 0,
+        failedExecutions: 0,
+        successRate: 0,
+        topWorkflows: [],
+        recentFailures: []
+      }
+      
+      return NextResponse.json({
+        success: true,
+        data: emptyStats
+      })
+    }
   } catch (error) {
     console.error('Failed to fetch dashboard stats:', error)
     return NextResponse.json(
