@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
     await configManager.initialize()
     
     // Get client info for audit
-    const headersList = headers()
+    const headersList = await headers()
     const userAgent = headersList.get('user-agent') || undefined
     const forwarded = headersList.get('x-forwarded-for')
     const realIp = headersList.get('x-real-ip')

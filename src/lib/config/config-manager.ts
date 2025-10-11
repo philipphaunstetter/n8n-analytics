@@ -2,6 +2,7 @@ import { createHash, randomBytes, createCipher, createDecipher } from 'crypto';
 import { z } from 'zod';
 import { Database } from 'sqlite3';
 import path from 'path';
+import fs from 'fs';
 
 export interface ConfigItem {
   key: string;
@@ -204,13 +205,13 @@ export class ConfigManager {
       this.db.run(
         updateSql,
         [serializedValue, options.changedBy || 'system', key],
-        function(err) {
+        (err: Error | null, result: any) => {
           if (err) {
             reject(err);
             return;
           }
 
-          if (this.changes === 0) {
+          if ((result as any).changes === 0) {
             reject(new Error(`Configuration key "${key}" not found`));
             return;
           }
@@ -447,7 +448,6 @@ export class ConfigManager {
     const keyFile = path.join(path.dirname(this.databasePath), '.encryption-key');
     
     try {
-      const fs = require('fs');
       if (fs.existsSync(keyFile)) {
         return fs.readFileSync(keyFile, 'utf8').trim();
       } else {
@@ -503,7 +503,7 @@ export class ConfigManager {
         throw new Error(`Value must be one of: ${rules.enum.join(', ')}`);
       }
     } catch (error) {
-      throw new Error(`Validation failed: ${error.message}`);
+      throw new Error(`Validation failed: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -539,7 +539,6 @@ export class ConfigManager {
   }
 
   private async loadMigrationFile(): Promise<string> {
-    const fs = require('fs');
     const migrationPath = path.join(process.cwd(), 'database/migrations/001_create_configuration_tables.sql');
     return fs.readFileSync(migrationPath, 'utf8');
   }

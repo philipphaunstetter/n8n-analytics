@@ -158,8 +158,7 @@ export default function CompletePage() {
       <div className="flex justify-center">
         <Button 
           onClick={handleComplete}
-          size="lg"
-          className="flex items-center gap-2"
+          className="flex items-center gap-2 px-8 py-3 text-lg"
           disabled={completing}
         >
           {completing ? (

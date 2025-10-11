@@ -10,23 +10,22 @@ import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Separator } from '@/components/ui/separator'
+// Removed missing UI components
 import { 
-  Database, 
-  Shield, 
-  ToggleLeft, 
-  Bell, 
-  Plug, 
-  Palette, 
-  Settings as SettingsIcon,
-  Save,
-  RotateCcw,
-  AlertTriangle,
-  Info,
-  Eye,
-  EyeOff
-} from 'lucide-react'
+  CircleStackIcon as Database, 
+  ShieldCheckIcon as Shield, 
+  Cog6ToothIcon as ToggleLeft, 
+  BellIcon as Bell, 
+  LinkIcon as Plug, 
+  PaintBrushIcon as Palette, 
+  CogIcon as SettingsIcon,
+  BookmarkIcon as Save,
+  ArrowPathIcon as RotateCcw,
+  ExclamationTriangleIcon as AlertTriangle,
+  InformationCircleIcon as Info,
+  EyeIcon as Eye,
+  EyeSlashIcon as EyeOff
+} from '@heroicons/react/24/outline'
 import { useToast } from '@/components/ui/use-toast'
 
 interface ConfigItem {
@@ -203,7 +202,7 @@ export default function SettingsPage() {
         <div className="space-y-2">
           <Label className="text-sm font-medium flex items-center gap-2">
             {item.key}
-            <Badge variant="secondary" className="text-xs">Readonly</Badge>
+            <Badge color="zinc" className="text-xs">Readonly</Badge>
           </Label>
           <Input 
             value={item.isSensitive ? '***PROTECTED***' : currentValue} 
@@ -224,7 +223,7 @@ export default function SettingsPage() {
             <div className="flex items-center justify-between">
               <Label className="text-sm font-medium flex items-center gap-2">
                 {item.key}
-                {isChanged && <Badge variant="outline" className="text-xs">Modified</Badge>}
+                {isChanged && <Badge color="blue" className="text-xs">Modified</Badge>}
               </Label>
               <Switch
                 checked={Boolean(currentValue)}
@@ -242,7 +241,7 @@ export default function SettingsPage() {
           <div className="space-y-2">
             <Label className="text-sm font-medium flex items-center gap-2">
               {item.key}
-              {isChanged && <Badge variant="outline" className="text-xs">Modified</Badge>}
+              {isChanged && <Badge color="blue" className="text-xs">Modified</Badge>}
             </Label>
             <Input
               type="number"
@@ -260,8 +259,8 @@ export default function SettingsPage() {
           <div className="space-y-2">
             <Label className="text-sm font-medium flex items-center gap-2">
               {item.key}
-              {isChanged && <Badge variant="outline" className="text-xs">Modified</Badge>}
-              <Badge variant="secondary" className="text-xs">JSON</Badge>
+              {isChanged && <Badge color="blue" className="text-xs">Modified</Badge>}
+              <Badge color="zinc" className="text-xs">JSON</Badge>
             </Label>
             <Textarea
               value={typeof currentValue === 'string' ? currentValue : JSON.stringify(currentValue, null, 2)}
@@ -289,8 +288,8 @@ export default function SettingsPage() {
           <div className="space-y-2">
             <Label className="text-sm font-medium flex items-center gap-2">
               {item.key}
-              {isChanged && <Badge variant="outline" className="text-xs">Modified</Badge>}
-              <Badge variant="destructive" className="text-xs">Sensitive</Badge>
+              {isChanged && <Badge color="blue" className="text-xs">Modified</Badge>}
+              <Badge color="red" className="text-xs">Sensitive</Badge>
             </Label>
             <div className="relative">
               <Input
@@ -302,8 +301,7 @@ export default function SettingsPage() {
               />
               <Button
                 type="button"
-                variant="ghost"
-                size="sm"
+                plain
                 className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
                 onClick={() => setShowSensitive(prev => ({ ...prev, [item.key]: !isVisible }))}
               >
@@ -321,7 +319,7 @@ export default function SettingsPage() {
           <div className="space-y-2">
             <Label className="text-sm font-medium flex items-center gap-2">
               {item.key}
-              {isChanged && <Badge variant="outline" className="text-xs">Modified</Badge>}
+              {isChanged && <Badge color="blue" className="text-xs">Modified</Badge>}
             </Label>
             <Input
               value={currentValue}
@@ -379,7 +377,7 @@ export default function SettingsPage() {
         
         <div className="flex gap-2">
           <Button
-            variant="outline"
+            outline
             onClick={resetToDefaults}
             disabled={saving}
             className="text-destructive hover:text-destructive"
@@ -399,13 +397,13 @@ export default function SettingsPage() {
       </div>
 
       {hasUnsavedChanges && (
-        <Alert className="mb-6">
-          <Info className="h-4 w-4" />
-          <AlertDescription>
+        <div className="mb-6 p-3 bg-blue-50 border border-blue-200 rounded-md flex items-center gap-2">
+          <Info className="h-4 w-4 text-blue-600" />
+          <p className="text-sm text-blue-600">
             You have {Object.keys(changes).length} unsaved change{Object.keys(changes).length !== 1 ? 's' : ''}. 
             Don't forget to save your changes.
-          </AlertDescription>
-        </Alert>
+          </p>
+        </div>
       )}
 
       <Tabs value={activeCategory} onValueChange={setActiveCategory}>
@@ -448,7 +446,7 @@ export default function SettingsPage() {
                       {categoryConfig.map((item, index) => (
                         <div key={item.key}>
                           {renderConfigInput(item)}
-                          {index < categoryConfig.length - 1 && <Separator className="mt-6" />}
+                          {index < categoryConfig.length - 1 && <div className="mt-6 h-px bg-border" />}
                         </div>
                       ))}
                     </div>
