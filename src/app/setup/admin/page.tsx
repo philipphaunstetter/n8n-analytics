@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { 
-  UserIcon,
+  ChartPieIcon,
   CheckCircleIcon,
   EyeIcon,
   EyeSlashIcon
@@ -99,7 +99,7 @@ export default function AdminSetupPage() {
           <CardHeader className="text-center pb-8">
             {/* Branding */}
             <div className="flex items-center justify-center space-x-2 mb-6">
-              <UserIcon className="h-8 w-8 text-indigo-600" />
+              <ChartPieIcon className="h-8 w-8 text-indigo-600" />
               <span className="text-2xl font-bold text-gray-900">Elova</span>
             </div>
             
