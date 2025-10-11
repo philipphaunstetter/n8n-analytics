@@ -144,25 +144,8 @@ export async function GET(request: NextRequest) {
       })
     }
 
-    // Check if n8n is configured
-    if (!process.env.N8N_HOST || !process.env.N8N_API_KEY) {
-      console.warn('N8N_HOST or N8N_API_KEY not configured, falling back to empty stats')
-      const emptyStats: DashboardStats = {
-        providerId,
-        timeRange,
-        totalExecutions: 0,
-        successfulExecutions: 0,
-        failedExecutions: 0,
-        successRate: 0,
-        topWorkflows: [],
-        recentFailures: []
-      }
-      
-      return NextResponse.json({
-        success: true,
-        data: emptyStats
-      })
-    }
+    // Check if n8n is configured (we'll check during the fetch, no need to warn here)
+    // The n8n API client now loads configuration from database dynamically
     
     // Require authentication for all requests
     const { user, error: authError } = await authenticateRequest(request)

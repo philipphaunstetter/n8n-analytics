@@ -27,8 +27,8 @@ export async function GET(request: NextRequest) {
     let allWorkflows: any[] = []
     let totalCount = 0
 
-    // Try to fetch real n8n data first if API is configured
-    if (process.env.N8N_HOST && process.env.N8N_API_KEY && !isDemoMode()) {
+    // Try to fetch real n8n data first if not in demo mode
+    if (!isDemoMode()) {
       try {
         console.log('Fetching real workflows from n8n API...')
         const n8nWorkflows = await n8nApi.getWorkflows()
@@ -48,7 +48,7 @@ export async function GET(request: NextRequest) {
       console.log('Using demo mode - generating demo workflows')
       allWorkflows = generateDemoWorkflows()
     } else {
-      console.log('No n8n configuration found, using demo data')
+      console.log('No n8n configuration available, using demo data')
       allWorkflows = generateDemoWorkflows()
     }
 
