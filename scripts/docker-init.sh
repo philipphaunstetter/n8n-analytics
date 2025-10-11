@@ -77,7 +77,7 @@ INSERT OR IGNORE INTO config (key, value, category, description) VALUES
     ('n8n.api_key', '', 'n8n', 'n8n API key (encrypted)'),
     ('sync.executions_interval', '15m', 'sync', 'Execution sync interval'),
     ('sync.workflows_interval', '6h', 'sync', 'Workflow sync interval'),
-    ('setup.completed', 'false', 'setup', 'Setup wizard completion status');
+    ('app.initDone', 'false', 'app', 'Setup wizard completion status');
 EOF
 
     echo "Configuration database initialized at: $DB_FILE"
