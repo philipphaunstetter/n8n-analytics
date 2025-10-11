@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge'
 import { 
   CheckCircleIcon, 
-  DatabaseIcon,
+  CircleStackIcon as DatabaseIcon,
   UserGroupIcon,
   CogIcon,
   LinkIcon,
@@ -15,7 +15,7 @@ import {
   ExclamationTriangleIcon,
   InformationCircleIcon
 } from '@heroicons/react/24/outline'
-import { Alert, AlertDescription } from '@/components/ui/alert'
+// Removed missing Alert components
 
 interface SetupStatus {
   isComplete: boolean
@@ -123,7 +123,7 @@ export default function WelcomePage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               Setup Progress
-              <Badge variant={setupStatus.isComplete ? "success" : "secondary"}>
+              <Badge color={setupStatus.isComplete ? "green" : "zinc"}>
                 {progressPercentage}% Complete
               </Badge>
             </CardTitle>
@@ -230,21 +230,20 @@ export default function WelcomePage() {
 
       {/* Important Notice */}
       {!setupStatus?.isComplete && (
-        <Alert>
-          <ExclamationTriangleIcon className="h-4 w-4" />
-          <AlertDescription>
+        <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-md flex items-start gap-3">
+          <ExclamationTriangleIcon className="h-4 w-4 text-yellow-600 mt-0.5 flex-shrink-0" />
+          <p className="text-sm text-yellow-800">
             <strong>Important:</strong> Complete the setup to access all Elova features. 
             You can always modify these settings later through the admin panel.
-          </AlertDescription>
-        </Alert>
+          </p>
+        </div>
       )}
 
       {/* Action Buttons */}
       <div className="flex justify-center">
         <Button 
           onClick={handleContinue}
-          size="lg"
-          className="flex items-center gap-2"
+          className="flex items-center gap-2 px-8 py-3 text-lg"
         >
           {setupStatus?.isComplete ? 'Go to Dashboard' : 'Start Setup'}
           <ArrowRightIcon className="h-4 w-4" />

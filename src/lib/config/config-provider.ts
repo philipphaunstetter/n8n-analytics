@@ -130,7 +130,7 @@ export class ConfigProvider {
     await this.ensureInitialized()
     
     return {
-      provider: await this.get<string>('auth.provider') || 'dev',
+      provider: await this.get<'supabase' | 'dev' | 'oauth'>('auth.provider') || 'dev',
       developmentMode: await this.get<boolean>('auth.development_mode') || false,
       sessionTimeout: await this.get<number>('auth.session_timeout') || 86400,
       requireEmailVerification: await this.get<boolean>('auth.require_email_verification') || false
