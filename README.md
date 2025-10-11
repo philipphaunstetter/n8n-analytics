@@ -53,6 +53,25 @@ volumes:
 docker compose up -d
 ```
 
+#### 🎯 **Version Channels**
+
+**Stable (Recommended)**
+- **Image**: `ghcr.io/philipphaunstetter/n8n-analytics:latest`
+- **Use for**: Production deployments
+- **Updates**: Stable releases only
+
+**Pre-release (Testing)**
+- **Image**: `ghcr.io/philipphaunstetter/n8n-analytics:beta`
+- **Use for**: Testing new features, development
+- **Updates**: Beta releases with latest features
+
+```yaml
+# For beta/testing (in docker-compose.yml)
+services:
+  elova:
+    image: ghcr.io/philipphaunstetter/n8n-analytics:beta
+```
+
 ### 3. Complete Setup
 
 Open http://localhost:3000 and complete the initial setup:
