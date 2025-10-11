@@ -136,10 +136,8 @@ export default function AdminSetupPage() {
                   minLength={6}
                   className="pr-10"
                 />
-                <Button
-                  type="button"
-                  plain
-                  className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
+                <div 
+                  className="absolute right-3 top-1/2 -translate-y-1/2 cursor-pointer text-gray-400 hover:text-gray-600"
                   onClick={() => setShowPassword(!showPassword)}
                 >
                   {showPassword ? (
@@ -147,7 +145,7 @@ export default function AdminSetupPage() {
                   ) : (
                     <EyeIcon className="h-4 w-4" />
                   )}
-                </Button>
+                </div>
               </div>
             </div>
             <div>
@@ -163,10 +161,8 @@ export default function AdminSetupPage() {
                   minLength={6}
                   className="pr-10"
                 />
-                <Button
-                  type="button"
-                  plain
-                  className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
+                <div 
+                  className="absolute right-3 top-1/2 -translate-y-1/2 cursor-pointer text-gray-400 hover:text-gray-600"
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                 >
                   {showConfirmPassword ? (
@@ -174,7 +170,7 @@ export default function AdminSetupPage() {
                   ) : (
                     <EyeIcon className="h-4 w-4" />
                   )}
-                </Button>
+                </div>
               </div>
             </div>
             
