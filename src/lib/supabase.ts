@@ -1,20 +1,17 @@
 import { createClient } from '@supabase/supabase-js'
 
-// Supabase configuration
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+// Create Supabase client safely
+function createSupabaseClient() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
-// Validate environment variables
-if (!supabaseUrl) {
-  throw new Error('Missing NEXT_PUBLIC_SUPABASE_URL environment variable')
-}
+  // If environment variables are missing (e.g., during build), create a dummy client
+  if (!supabaseUrl || !supabaseAnonKey) {
+    return createClient('https://dummy.supabase.co', 'dummy_key')
+  }
 
-if (!supabaseAnonKey) {
-  throw new Error('Missing NEXT_PUBLIC_SUPABASE_ANON_KEY environment variable')
-}
-
-// Create Supabase client with enhanced session management
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  // Create real Supabase client with enhanced session management
+  return createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
     autoRefreshToken: true,
     persistSession: true,
@@ -41,6 +38,10 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     }
   }
 })
+}
+
+// Create and export the Supabase client
+export const supabase = createSupabaseClient()
 
 // Database types (will be generated later with Supabase CLI)
 export type Database = {

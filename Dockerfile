@@ -27,12 +27,8 @@ COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_ENV=production
 
-# Set dummy Supabase environment variables for build (real ones will be provided at runtime)
-ENV NEXT_PUBLIC_SUPABASE_URL=https://dummy.supabase.co
-ENV NEXT_PUBLIC_SUPABASE_ANON_KEY=dummy_key
-ENV SUPABASE_SERVICE_ROLE_KEY=dummy_service_key
-
-# Build the Next.js application
+# Build the Next.js application with minimal environment
+# Database will be configured at runtime via initialization script
 RUN npm run build
 
 # Stage 2: Production image
@@ -46,14 +42,14 @@ RUN addgroup -g 1001 -S nodejs && \
     adduser -S elova -u 1001
 
 # Install runtime dependencies
-RUN apk add --no-cache dumb-init curl
+RUN apk add --no-cache dumb-init curl jq bash
 
 # Set production environment
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 
-# NOTE: Supabase environment variables (NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY, etc.) 
-# should be provided at container runtime, not build time
+# Environment variables for database configuration should be provided at runtime
+# The application will use SQLite by default or Supabase if configured
 
 # Set build metadata as environment variables
 ARG VERSION
@@ -67,6 +63,10 @@ ENV APP_BUILD_DATE=${BUILD_DATE}
 COPY --from=builder --chown=elova:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=elova:nodejs /app/.next/static ./.next/static
 COPY --from=builder --chown=elova:nodejs /app/public ./public
+
+# Copy initialization script
+COPY scripts/docker-init.sh /usr/local/bin/init.sh
+RUN chmod +x /usr/local/bin/init.sh
 
 # Create necessary directories
 RUN mkdir -p /app/data /app/logs && \
@@ -89,5 +89,5 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
 # Use dumb-init to handle signals properly
 ENTRYPOINT ["dumb-init", "--"]
 
-# Start the application
-CMD ["node", "server.js"]
+# Run initialization script and start the application
+CMD ["/bin/bash", "-c", "/usr/local/bin/init.sh && node server.js"]
