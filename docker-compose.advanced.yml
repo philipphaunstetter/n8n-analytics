@@ -1,0 +1,106 @@
+# Elova - Workflow Observability Platform
+# Advanced Docker Compose Configuration
+#
+# This version includes PostgreSQL and Redis for production use
+# Most users should use docker-compose.simple.yml instead
+#
+# Usage:
+#   docker compose -f docker-compose.advanced.yml up -d
+
+version: '3.8'
+
+services:
+  elova:
+    image: ghcr.io/philipphaunstetter/n8n-analytics:latest
+    container_name: elova
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "${ELOVA_PORT:-3000}:3000"
+    environment:
+      # Application settings
+      - NODE_ENV=production
+      - PORT=3000
+      
+      # Timezone configuration
+      - GENERIC_TIMEZONE=${GENERIC_TIMEZONE:-UTC}
+      - TZ=${TZ:-UTC}
+      
+      # Database configuration (PostgreSQL)
+      - DATABASE_TYPE=postgres
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_DB=${POSTGRES_DB:-elova}
+      - POSTGRES_USER=${POSTGRES_USER:-elova}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-elova_secure_password}
+      
+      # Optional: n8n connection
+      - N8N_HOST=${N8N_HOST:-}
+      - N8N_API_KEY=${N8N_API_KEY:-}
+      
+      # Feature flags
+      - ELOVA_DEMO_MODE=${ELOVA_DEMO_MODE:-false}
+    volumes:
+      - elova_data:/home/node/.elova
+    networks:
+      - elova_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  postgres:
+    image: postgres:15-alpine
+    container_name: elova-postgres
+    restart: unless-stopped
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB:-elova}
+      - POSTGRES_USER=${POSTGRES_USER:-elova}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-elova_secure_password}
+      - POSTGRES_INITDB_ARGS=--encoding=UTF8 --locale=C
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/init:/docker-entrypoint-initdb.d
+    networks:
+      - elova_network
+    ports:
+      - "${POSTGRES_EXPOSE_PORT:-5432}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-elova} -d ${POSTGRES_DB:-elova}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  redis:
+    image: redis:7-alpine
+    container_name: elova-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-elova_redis_secure}
+    volumes:
+      - redis_data:/data
+    networks:
+      - elova_network
+    ports:
+      - "${REDIS_EXPOSE_PORT:-6379}:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "--no-auth-warning", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+volumes:
+  elova_data:
+    driver: local
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+
+networks:
+  elova_network:
+    driver: bridge

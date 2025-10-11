@@ -30,17 +30,11 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files (can opt-in for committing if needed)
-.env
-.env.local
-.env.production
-.env.test
-.env.*.local
+# env files - configuration is now database-based
+.env*
 
-# Allow example and template files
+# Allow only the example template
 !.env.example
-!.env.development
-!.env.production.template
 
 # vercel
 .vercel
@@ -49,13 +43,18 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# Development data
+# Development data and databases
 /dev_data
 /backups
+/data
+*.db
+*.sqlite
+*.sqlite3
 
 # Docker volumes and logs
 /logs
 *.log
 
 # Runtime files
-runtimeconfig.json
+runtime-config.json
+runtime_config.json
