@@ -13,7 +13,6 @@ const PUBLIC_ROUTES = [
 
 // Setup wizard routes
 const SETUP_ROUTES = [
-  '/setup/welcome',
   '/setup/admin',
   '/setup/database', 
   '/setup/integrations',
