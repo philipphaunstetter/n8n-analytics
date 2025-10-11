@@ -18,15 +18,11 @@ import {
 // Removed missing Alert components
 
 interface SetupStatus {
-  isComplete: boolean
-  completedSteps: {
-    database: boolean
-    adminAccount: boolean
-    basicConfiguration: boolean
-    integrations: boolean
-  }
-  nextStep: string
+  initDone: boolean
   requiresSetup: boolean
+  nextStep: string
+  message?: string
+  error?: string
 }
 
 const SETUP_STEPS = [
@@ -80,12 +76,11 @@ export default function WelcomePage() {
   }
 
   const handleContinue = () => {
-    if (setupStatus?.nextStep === 'complete') {
+    if (setupStatus?.initDone) {
       router.push('/dashboard')
     } else {
-      // Go to next incomplete step
-      const nextStep = setupStatus?.nextStep || 'admin'
-      router.push(`/setup/${nextStep}`)
+      // Start the setup wizard
+      router.push('/setup/admin')
     }
   }
 
@@ -100,9 +95,11 @@ export default function WelcomePage() {
     )
   }
 
-  const completedCount = setupStatus ? Object.values(setupStatus.completedSteps).filter(Boolean).length : 0
+  // For simplified setup, we either have 0% (not done) or 100% (done)
+  const isSetupComplete = setupStatus?.initDone || false
+  const progressPercentage = isSetupComplete ? 100 : 0
+  const completedCount = isSetupComplete ? SETUP_STEPS.length : 0
   const totalSteps = SETUP_STEPS.length
-  const progressPercentage = Math.round((completedCount / totalSteps) * 100)
 
   return (
     <div className="space-y-8">
@@ -123,14 +120,14 @@ export default function WelcomePage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               Setup Progress
-              <Badge color={setupStatus.isComplete ? "green" : "zinc"}>
+              <Badge color={isSetupComplete ? "green" : "zinc"}>
                 {progressPercentage}% Complete
               </Badge>
             </CardTitle>
             <CardDescription>
-              {setupStatus.isComplete 
+              {isSetupComplete 
                 ? "Your setup is complete! You can now use Elova." 
-                : `${completedCount} of ${totalSteps} steps completed`}
+                : `Setup required - ${totalSteps} steps to complete`}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -146,7 +143,8 @@ export default function WelcomePage() {
               {/* Steps List */}
               <div className="grid gap-4 sm:grid-cols-2">
                 {SETUP_STEPS.map((step, index) => {
-                  const isCompleted = setupStatus.completedSteps[step.id as keyof typeof setupStatus.completedSteps]
+                  // All steps are either completed (if initDone) or not completed
+                  const isCompleted = isSetupComplete
                   const Icon = step.icon
                   
                   return (
@@ -229,7 +227,7 @@ export default function WelcomePage() {
       </Card>
 
       {/* Important Notice */}
-      {!setupStatus?.isComplete && (
+      {!isSetupComplete && (
         <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-md flex items-start gap-3">
           <ExclamationTriangleIcon className="h-4 w-4 text-yellow-600 mt-0.5 flex-shrink-0" />
           <p className="text-sm text-yellow-800">
@@ -245,7 +243,7 @@ export default function WelcomePage() {
           onClick={handleContinue}
           className="flex items-center gap-2 px-8 py-3 text-lg"
         >
-          {setupStatus?.isComplete ? 'Go to Dashboard' : 'Start Setup'}
+          {isSetupComplete ? 'Go to Dashboard' : 'Start Setup'}
           <ArrowRightIcon className="h-4 w-4" />
         </Button>
       </div>

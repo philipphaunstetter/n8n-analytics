@@ -1,25 +1,40 @@
 import { NextResponse } from 'next/server'
-import { setupChecker } from '@/lib/setup/setup-checker'
+import { getConfigManager } from '@/lib/config-manager'
 
 export async function GET() {
   try {
-    const status = await setupChecker.checkSetupStatus()
+    const config = getConfigManager()
     
-    return NextResponse.json(status)
+    // Check the simple initDone flag
+    const initDone = await config.get('app.initDone')
+    const setupCompleted = initDone === 'true'
+    
+    if (setupCompleted) {
+      // Setup is complete - redirect to sign in
+      return NextResponse.json({
+        initDone: true,
+        requiresSetup: false,
+        nextStep: 'signin',
+        message: 'Setup completed - ready for sign in'
+      })
+    } else {
+      // Setup is required - redirect to setup wizard
+      return NextResponse.json({
+        initDone: false,
+        requiresSetup: true,
+        nextStep: 'setup',
+        message: 'Initial setup required'
+      })
+    }
   } catch (error) {
     console.error('Failed to check setup status:', error)
     
     // On error, assume setup is required
     return NextResponse.json({
-      isComplete: false,
-      completedSteps: {
-        database: false,
-        adminAccount: false,
-        basicConfiguration: false,
-        integrations: false
-      },
-      nextStep: 'welcome',
-      requiresSetup: true
+      initDone: false,
+      requiresSetup: true,
+      nextStep: 'setup',
+      error: 'Failed to check setup status - assuming setup required'
     })
   }
 }

@@ -59,22 +59,20 @@ export async function middleware(request: NextRequest) {
     const setupStatus = await setupResponse.json()
 
     // If setup is required and user is not on a setup page
-    if (setupStatus.requiresSetup && !SETUP_ROUTES.some(route => pathname.startsWith(route))) {
-      // Redirect to appropriate setup step
-      const nextStep = setupStatus.nextStep || 'welcome'
-      return NextResponse.redirect(new URL(`/setup/${nextStep}`, request.url))
+    if (!setupStatus.initDone && !SETUP_ROUTES.some(route => pathname.startsWith(route))) {
+      // Redirect to setup wizard
+      return NextResponse.redirect(new URL('/setup/welcome', request.url))
     }
 
     // If setup is complete and user is on setup pages
-    if (!setupStatus.requiresSetup && SETUP_ROUTES.some(route => pathname.startsWith(route))) {
+    if (setupStatus.initDone && SETUP_ROUTES.some(route => pathname.startsWith(route))) {
       // Redirect to dashboard or main app
       return NextResponse.redirect(new URL('/dashboard', request.url))
     }
 
     // If user tries to access admin routes without setup completion
-    if (setupStatus.requiresSetup && ADMIN_ROUTES.some(route => pathname.startsWith(route))) {
-      const nextStep = setupStatus.nextStep || 'welcome'
-      return NextResponse.redirect(new URL(`/setup/${nextStep}`, request.url))
+    if (!setupStatus.initDone && ADMIN_ROUTES.some(route => pathname.startsWith(route))) {
+      return NextResponse.redirect(new URL('/setup/welcome', request.url))
     }
 
   } catch (error) {

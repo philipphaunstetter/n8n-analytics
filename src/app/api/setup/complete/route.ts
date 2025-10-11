@@ -1,54 +1,44 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { setupChecker, markSetupComplete } from '@/lib/setup/setup-checker'
-import { configProvider } from '@/lib/config/config-provider'
+import { getConfigManager } from '@/lib/config-manager'
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { adminData, skipIntegrations } = body
-
-    // Validate that all required steps are completed
-    const status = await setupChecker.checkSetupStatus()
+    const { adminData, config: configData, skipIntegrations } = body
     
-    if (!status.completedSteps.database) {
-      return NextResponse.json(
-        { error: 'Database setup not completed' },
-        { status: 400 }
-      )
-    }
+    const config = getConfigManager()
 
     // Create admin account (in a real app, this would create a user in the database)
     if (adminData) {
-      await configProvider.set(
-        'setup.admin_account_created',
-        true,
-        'Admin account created during setup'
-      )
-      
-      await configProvider.set(
-        'setup.admin_email',
-        adminData.email,
-        'Admin email from setup'
-      )
-      
-      await configProvider.set(
-        'setup.admin_name',
-        adminData.name || 'Admin',
-        'Admin name from setup'
-      )
+      await config.set('setup.admin_account_created', 'true')
+      await config.set('setup.admin_email', adminData.email || '')
+      await config.set('setup.admin_name', adminData.name || 'Admin')
+    }
+
+    // Save configuration data
+    if (configData) {
+      if (configData.timezone) {
+        await config.set('app.timezone', configData.timezone)
+      }
+      if (typeof configData.demoMode === 'boolean') {
+        await config.set('app.demoMode', configData.demoMode ? 'true' : 'false')
+      }
+      if (configData.n8nUrl) {
+        await config.set('n8n.url', configData.n8nUrl)
+      }
+      if (configData.n8nApiKey) {
+        await config.set('n8n.apiKey', configData.n8nApiKey)
+      }
     }
 
     // Mark integrations as skipped if requested
     if (skipIntegrations) {
-      await configProvider.set(
-        'setup.integrations_skipped',
-        true,
-        'User chose to skip integrations during setup'
-      )
+      await config.set('setup.integrations_skipped', 'true')
     }
 
-    // Mark setup as complete
-    await markSetupComplete()
+    // Mark setup as complete by setting the initDone flag
+    await config.set('app.initDone', 'true')
+    await config.set('setup.completed_at', new Date().toISOString())
 
     return NextResponse.json({
       message: 'Setup completed successfully',

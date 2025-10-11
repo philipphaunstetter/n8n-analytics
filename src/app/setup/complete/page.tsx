@@ -14,39 +14,10 @@ export default function CompletePage() {
   const [completing, setCompleting] = useState(false)
   const router = useRouter()
 
-  const handleComplete = async () => {
-    try {
-      setCompleting(true)
-
-      const response = await fetch('/api/setup/complete', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          adminData: {
-            email: 'admin@elova.local', // This would come from previous steps
-            name: 'Administrator'
-          },
-          skipIntegrations: true // This would be based on user choice
-        })
-      })
-
-      if (!response.ok) {
-        throw new Error('Failed to complete setup')
-      }
-
-      const result = await response.json()
-      
-      // Redirect to dashboard
-      router.push(result.redirectTo || '/dashboard')
-      
-    } catch (error) {
-      console.error('Setup completion failed:', error)
-      // You might want to show an error message here
-    } finally {
-      setCompleting(false)
-    }
+  const handleComplete = () => {
+    setCompleting(true)
+    // Setup is already completed, just redirect to dashboard
+    router.push('/dashboard')
   }
 
   return (
