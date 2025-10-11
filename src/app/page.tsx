@@ -46,6 +46,9 @@ const providers = [
 ]
 
 export default function LandingPage() {
+  // Note: Setup detection is handled by middleware
+  // Users will be redirected to /setup/welcome if setup is required
+  
   return (
     <div className="bg-white">
       {/* Header */}
@@ -96,12 +99,12 @@ export default function LandingPage() {
               Debug failures faster, optimize performance, and maintain compliance with a single dashboard.
             </p>
             <div className="mt-10 flex items-center justify-center gap-x-6">
-              <Link
-                href="/auth/signup"
-                className="rounded-md bg-indigo-600 px-3.5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
-              >
-                Get started
-              </Link>
+            <Link
+              href="/setup/welcome"
+              className="rounded-md bg-indigo-600 px-3.5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
+            >
+              Get started
+            </Link>
               <a href="#features" className="text-sm font-semibold leading-6 text-gray-900">
                 Learn more <span aria-hidden="true">→</span>
               </a>
@@ -181,7 +184,7 @@ export default function LandingPage() {
           </p>
           <div className="mt-10 flex items-center justify-center gap-x-6">
             <Link
-              href="/auth/signup"
+              href="/setup/welcome"
               className="rounded-md bg-white px-3.5 py-2.5 text-sm font-semibold text-gray-900 shadow-sm hover:bg-gray-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
             >
               Get started

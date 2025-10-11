@@ -68,6 +68,12 @@ COPY --from=builder --chown=elova:nodejs /app/public ./public
 COPY scripts/docker-init.sh /usr/local/bin/init.sh
 RUN chmod +x /usr/local/bin/init.sh
 
+# Copy database migrations
+COPY --chown=elova:nodejs database/ ./database/
+
+# Copy .env template and make it writable
+COPY --chown=elova:nodejs .env.docker.template ./.env
+
 # Create necessary directories
 RUN mkdir -p /app/data /app/logs && \
     chown elova:nodejs /app/data /app/logs
