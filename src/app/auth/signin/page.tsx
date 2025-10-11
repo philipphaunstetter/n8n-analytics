@@ -44,132 +44,79 @@ export default function SignIn() {
   }, [user, router])
 
   return (
-    <div className="flex min-h-full flex-1 flex-col justify-center py-12 sm:px-6 lg:px-8">
-      <div className="sm:mx-auto sm:w-full sm:max-w-md">
-        <Link href="/" className="flex justify-center">
-          <div className="flex items-center space-x-2">
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
+      <div className="max-w-md w-full space-y-8">
+        {/* Logo and Title */}
+        <div className="text-center">
+          <Link href="/" className="inline-flex items-center space-x-2">
             <ChartPieIcon className="h-8 w-8 text-indigo-600" />
-            <span className="text-xl font-bold text-gray-900">Elova</span>
-          </div>
-        </Link>
-        <h2 className="mt-6 text-center text-2xl font-bold leading-9 tracking-tight text-gray-900">
-          Sign in to your account
-        </h2>
-      </div>
+            <span className="text-2xl font-bold text-gray-900">Elova</span>
+          </Link>
+          <h2 className="mt-6 text-xl text-gray-600">
+            Sign in to your account
+          </h2>
+        </div>
 
-      <div className="mt-10 sm:mx-auto sm:w-full sm:max-w-[480px]">
-        {DevAuth.isDevelopment() && (
-          <div className="mb-4 rounded-md bg-blue-50 p-4">
-            <div className="flex">
-              <div className="ml-3">
-                <h3 className="text-sm font-medium text-blue-800">
-                  Development Mode
-                </h3>
-                <div className="mt-2 text-sm text-blue-700">
-                  <p>Use these credentials for testing:</p>
-                  <ul className="mt-1 list-disc list-inside">
-                    <li><strong>Email:</strong> admin@test.com, <strong>Password:</strong> 1234</li>
-                    <li><strong>Email:</strong> demo@test.com, <strong>Password:</strong> demo</li>
-                  </ul>
-                </div>
-              </div>
+        {/* Simple Login Form */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8">
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <input
+                id="email"
+                name="email"
+                type="email"
+                autoComplete="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full px-3 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm"
+                placeholder="Email address"
+              />
             </div>
+
+            <div>
+              <input
+                id="password"
+                name="password"
+                type="password"
+                autoComplete="current-password"
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full px-3 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm"
+                placeholder="Your Password"
+              />
+            </div>
+
+            {error && (
+              <div className="bg-red-50 border border-red-200 rounded-md p-3">
+                <div className="text-sm text-red-600">
+                  {error}
+                </div>
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full bg-indigo-600 text-white py-3 px-4 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium"
+            >
+              {loading ? 'Signing in...' : 'Sign in'}
+            </button>
+          </form>
+          
+          <div className="mt-6 text-center">
+            <Link href="#" className="text-sm text-indigo-600 hover:text-indigo-500">
+              Forgot your password?
+            </Link>
           </div>
-        )}
-        
-        <div className="bg-white px-6 py-12 shadow sm:rounded-lg sm:px-12">
-          {isDevMode ? (
-            <form onSubmit={handleSubmit} className="space-y-6">
-              <div>
-                <label htmlFor="email" className="block text-sm font-medium leading-6 text-gray-900">
-                  Email address
-                </label>
-                <div className="mt-2">
-                  <input
-                    id="email"
-                    name="email"
-                    type="email"
-                    autoComplete="email"
-                    required
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
-                    placeholder="admin@test.com"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label htmlFor="password" className="block text-sm font-medium leading-6 text-gray-900">
-                  Password
-                </label>
-                <div className="mt-2">
-                  <input
-                    id="password"
-                    name="password"
-                    type="password"
-                    autoComplete="current-password"
-                    required
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
-                    placeholder="1234"
-                  />
-                </div>
-              </div>
-
-              {error && (
-                <div className="rounded-md bg-red-50 p-4">
-                  <div className="text-sm text-red-800">
-                    {error}
-                  </div>
-                </div>
-              )}
-
-              <div>
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="flex w-full justify-center rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-semibold leading-6 text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {loading ? 'Signing in...' : 'Sign in'}
-                </button>
-              </div>
-            </form>
-          ) : (
-            <Auth
-              supabaseClient={supabase}
-              view="sign_in"
-              appearance={{
-                theme: ThemeSupa,
-                variables: {
-                  default: {
-                    colors: {
-                      brand: '#4f46e5',
-                      brandAccent: '#4338ca',
-                    },
-                  },
-                },
-              }}
-              providers={['google', 'github']}
-              redirectTo={`${typeof window !== 'undefined' ? window.location.origin : process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/auth/callback`}
-            />
-          )}
           
-          {!isDevMode && (
-            <p className="mt-6 text-center text-sm text-gray-500">
-              Don&apos;t have an account?{' '}
-              <Link href="/auth/signup" className="font-semibold leading-6 text-indigo-600 hover:text-indigo-500">
-                Sign up
-              </Link>
-            </p>
-          )}
-          
-          {isDevMode && (
-            <p className="mt-6 text-center text-sm text-gray-500">
-              Development mode - use the credentials above to test
-            </p>
-          )}
+          <div className="mt-4 text-center">
+            <span className="text-sm text-gray-500">Don&apos;t have an account? </span>
+            <Link href="#" className="text-sm text-indigo-600 hover:text-indigo-500 font-medium">
+              Sign up
+            </Link>
+          </div>
         </div>
       </div>
     </div>
