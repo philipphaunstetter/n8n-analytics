@@ -27,6 +27,11 @@ COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_ENV=production
 
+# Set dummy Supabase environment variables for build (real ones will be provided at runtime)
+ENV NEXT_PUBLIC_SUPABASE_URL=https://dummy.supabase.co
+ENV NEXT_PUBLIC_SUPABASE_ANON_KEY=dummy_key
+ENV SUPABASE_SERVICE_ROLE_KEY=dummy_service_key
+
 # Build the Next.js application
 RUN npm run build
 
@@ -46,6 +51,9 @@ RUN apk add --no-cache dumb-init curl
 # Set production environment
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
+
+# NOTE: Supabase environment variables (NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY, etc.) 
+# should be provided at container runtime, not build time
 
 # Set build metadata as environment variables
 ARG VERSION
