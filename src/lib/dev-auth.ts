@@ -69,7 +69,7 @@ export class DevAuth {
 
     try {
       // Use API endpoint to authenticate (handles database lookup on server side)
-      const response = await fetch('/api/auth/dev-signin', {
+      const response = await fetch('/api/auth/signin', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
