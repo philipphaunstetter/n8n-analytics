@@ -108,6 +108,10 @@ jobs:
     runs-on: ubuntu-latest
     if: github.event_name != 'pull_request'
     needs: build
+    permissions:
+      contents: read
+      security-events: write
+      actions: read
 
     steps:
     - name: Run Trivy vulnerability scanner
@@ -117,8 +121,23 @@ jobs:
         format: 'sarif'
         output: 'trivy-results.sarif'
 
+    - name: Run Trivy vulnerability scanner (table format for logs)
+      uses: aquasecurity/trivy-action@master
+      with:
+        image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+        format: 'table'
+
     - name: Upload Trivy scan results to GitHub Security tab
-      uses: github/codeql-action/upload-sarif@v2
+      uses: github/codeql-action/upload-sarif@v3
       if: always()
       with:
         sarif_file: 'trivy-results.sarif'
+      continue-on-error: true  # Don't fail the build if security upload fails
+
+    - name: Upload SARIF file as artifact (fallback)
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: trivy-sarif-results
+        path: 'trivy-results.sarif'
+        retention-days: 30
