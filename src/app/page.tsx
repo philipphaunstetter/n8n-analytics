@@ -53,10 +53,10 @@ export default function LandingPage() {
         <nav className="flex items-center justify-between p-6 lg:px-8" aria-label="Global">
           <div className="flex lg:flex-1">
             <a href="#" className="-m-1.5 p-1.5">
-              <span className="sr-only">WorkflowObservability</span>
+              <span className="sr-only">Elova</span>
               <div className="flex items-center space-x-2">
                 <ChartPieIcon className="h-8 w-8 text-indigo-600" />
-                <span className="text-xl font-bold text-gray-900">WorkflowObservability</span>
+                <span className="text-xl font-bold text-gray-900">Elova</span>
               </div>
             </a>
           </div>
@@ -177,7 +177,7 @@ export default function LandingPage() {
             Start monitoring your workflows today
           </h2>
           <p className="mx-auto mt-6 max-w-xl text-lg leading-8 text-gray-300">
-            Join teams already using WorkflowObservability to improve their automation reliability and performance.
+            Join teams already using Elova to improve their automation reliability and performance.
           </p>
           <div className="mt-10 flex items-center justify-center gap-x-6">
             <Link
@@ -211,11 +211,11 @@ export default function LandingPage() {
           <div className="flex items-center justify-center">
             <div className="flex items-center space-x-2">
               <ChartPieIcon className="h-6 w-6 text-indigo-600" />
-              <span className="text-lg font-semibold text-gray-900">WorkflowObservability</span>
+              <span className="text-lg font-semibold text-gray-900">Elova</span>
             </div>
           </div>
           <p className="mt-8 text-center text-xs leading-5 text-gray-500">
-            &copy; 2024 WorkflowObservability. Built for modern DevOps teams.
+            &copy; 2024 Elova. Built for modern DevOps teams.
           </p>
         </div>
       </footer>

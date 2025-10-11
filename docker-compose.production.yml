@@ -1,0 +1,126 @@
+version: '3.8'
+
+# Elova Production Docker Compose Configuration
+# This setup includes a setup wizard and clean production environment
+
+services:
+  elova:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        - VERSION=${VERSION:-latest}
+        - GIT_COMMIT=${GIT_COMMIT:-unknown}
+        - BUILD_DATE=${BUILD_DATE:-unknown}
+    image: elova:${VERSION:-latest}
+    container_name: elova
+    restart: unless-stopped
+    ports:
+      - "${PORT:-3000}:3000"
+    environment:
+      # Production environment
+      - NODE_ENV=production
+      - PORT=3000
+      
+      # Database configuration
+      - DATABASE_TYPE=${DATABASE_TYPE:-postgresql}
+      - DATABASE_URL=postgresql://elova:${POSTGRES_PASSWORD}@postgres:5432/elova
+      
+      # Authentication (will be configured via setup wizard)
+      - AUTH_TYPE=${AUTH_TYPE:-simple}
+      - AUTH_SECRET=${AUTH_SECRET}
+      
+      # n8n Integration (will be configured via setup wizard)  
+      - N8N_HOST=${N8N_HOST:-}
+      - N8N_API_KEY=${N8N_API_KEY:-}
+      
+      # Sync settings
+      - SYNC_FREQUENCY_EXECUTIONS=${SYNC_EXECUTIONS:-15m}
+      - SYNC_FREQUENCY_WORKFLOWS=${SYNC_WORKFLOWS:-6h}
+      - SYNC_FREQUENCY_BACKUPS=${SYNC_BACKUPS:-24h}
+      
+      # Production feature flags
+      - NEXT_PUBLIC_ENABLE_DEMO_MODE=false
+      - NEXT_PUBLIC_ENABLE_DEV_AUTH=false
+      
+      # Setup wizard (enabled for first-time setup)
+      - ENABLE_SETUP_WIZARD=${ENABLE_SETUP_WIZARD:-true}
+      
+      # Security
+      - CORS_ORIGIN=${CORS_ORIGIN:-}
+      - CSRF_PROTECTION=true
+      - HTTPS_REDIRECT=${HTTPS_REDIRECT:-false}
+      
+    volumes:
+      - elova_data:/app/data
+      - elova_logs:/app/logs
+      - elova_config:/app/config
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - elova_network
+    healthcheck:
+      test: ["CMD", "node", "healthcheck.js"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  postgres:
+    image: postgres:15-alpine
+    container_name: elova-db
+    restart: unless-stopped
+    environment:
+      - POSTGRES_DB=elova
+      - POSTGRES_USER=elova
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_INITDB_ARGS=--encoding=UTF8 --locale=C
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./backups/postgres:/backups
+    networks:
+      - elova_network
+    ports:
+      # Only expose if needed for external access
+      - "${POSTGRES_EXTERNAL_PORT:-}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U elova -d elova"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Optional: Redis for caching and session storage
+  redis:
+    image: redis:7-alpine
+    container_name: elova-redis
+    restart: unless-stopped
+    command: redis-server --requirepass ${REDIS_PASSWORD:-elova_redis}
+    volumes:
+      - redis_data:/data
+    networks:
+      - elova_network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    profiles:
+      - with-redis
+
+volumes:
+  elova_data:
+    driver: local
+  elova_logs:
+    driver: local
+  elova_config:
+    driver: local
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+
+networks:
+  elova_network:
+    driver: bridge
+    name: elova_network

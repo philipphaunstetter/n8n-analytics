@@ -13,12 +13,32 @@ if (!supabaseAnonKey) {
   throw new Error('Missing NEXT_PUBLIC_SUPABASE_ANON_KEY environment variable')
 }
 
-// Create Supabase client
+// Create Supabase client with enhanced session management
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
     autoRefreshToken: true,
     persistSession: true,
-    detectSessionInUrl: true
+    detectSessionInUrl: true,
+    flowType: 'pkce',
+    storage: {
+      getItem: (key: string) => {
+        if (typeof window === 'undefined') return null
+        return window.localStorage.getItem(key)
+      },
+      setItem: (key: string, value: string) => {
+        if (typeof window === 'undefined') return
+        window.localStorage.setItem(key, value)
+      },
+      removeItem: (key: string) => {
+        if (typeof window === 'undefined') return
+        window.localStorage.removeItem(key)
+      },
+    },
+  },
+  global: {
+    headers: {
+      'X-Client-Info': 'elova-dashboard'
+    }
   }
 })
 

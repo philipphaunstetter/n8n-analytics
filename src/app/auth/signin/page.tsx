@@ -49,7 +49,7 @@ export default function SignIn() {
         <Link href="/" className="flex justify-center">
           <div className="flex items-center space-x-2">
             <ChartPieIcon className="h-8 w-8 text-indigo-600" />
-            <span className="text-xl font-bold text-gray-900">WorkflowObservability</span>
+            <span className="text-xl font-bold text-gray-900">Elova</span>
           </div>
         </Link>
         <h2 className="mt-6 text-center text-2xl font-bold leading-9 tracking-tight text-gray-900">
