@@ -52,6 +52,7 @@ interface ConfigCategory {
 }
 
 const categoryIcons = {
+  general: SettingsIcon,
   database: Database,
   authentication: Shield,
   features: ToggleLeft,
@@ -64,7 +65,7 @@ const categoryIcons = {
 export default function SettingsPage() {
   const [config, setConfig] = useState<ConfigItem[]>([])
   const [categories, setCategories] = useState<ConfigCategory[]>([])
-  const [activeCategory, setActiveCategory] = useState<string>('database')
+  const [activeCategory, setActiveCategory] = useState<string>('general')
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [changes, setChanges] = useState<Record<string, any>>({})
@@ -78,6 +79,13 @@ export default function SettingsPage() {
   const loadConfiguration = async () => {
     try {
       setLoading(true)
+      
+      // Initialize missing configuration values first
+      try {
+        await fetch('/api/admin/config/initialize', { method: 'POST' })
+      } catch (error) {
+        console.warn('Failed to initialize config values:', error)
+      }
       
       // Load configuration items
       const configResponse = await fetch('/api/admin/config')
@@ -315,6 +323,89 @@ export default function SettingsPage() {
         )
 
       default:
+        // Special handling for timezone selection
+        if (item.key === 'app.timezone') {
+          return (
+            <div className="space-y-2">
+              <Label className="text-sm font-medium flex items-center gap-2">
+                {item.key}
+                {isChanged && <Badge color="blue" className="text-xs">Modified</Badge>}
+              </Label>
+              <select
+                value={currentValue}
+                onChange={(e) => handleValueChange(item.key, e.target.value)}
+                className="w-full p-2 border border-gray-300 rounded-md"
+              >
+                <option value="UTC">UTC</option>
+                <option value="America/New_York">Eastern Time (America/New_York)</option>
+                <option value="America/Chicago">Central Time (America/Chicago)</option>
+                <option value="America/Denver">Mountain Time (America/Denver)</option>
+                <option value="America/Los_Angeles">Pacific Time (America/Los_Angeles)</option>
+                <option value="Europe/London">London (Europe/London)</option>
+                <option value="Europe/Paris">Paris (Europe/Paris)</option>
+                <option value="Europe/Berlin">Berlin (Europe/Berlin)</option>
+                <option value="Asia/Tokyo">Tokyo (Asia/Tokyo)</option>
+                <option value="Asia/Shanghai">Shanghai (Asia/Shanghai)</option>
+                <option value="Asia/Kolkata">India (Asia/Kolkata)</option>
+                <option value="Australia/Sydney">Sydney (Australia/Sydney)</option>
+                <option value="Pacific/Auckland">Auckland (Pacific/Auckland)</option>
+              </select>
+              {item.description && (
+                <p className="text-xs text-muted-foreground">{item.description}</p>
+              )}
+            </div>
+          )
+        }
+        
+        // Special handling for N8N URL
+        if (item.key === 'integrations.n8n.url') {
+          return (
+            <div className="space-y-2">
+              <Label className="text-sm font-medium flex items-center gap-2">
+                n8n Instance URL
+                {isChanged && <Badge color="blue" className="text-xs">Modified</Badge>}
+              </Label>
+              <Input
+                type="url"
+                value={currentValue}
+                onChange={(e) => handleValueChange(item.key, e.target.value)}
+                placeholder="https://your-n8n-instance.com"
+              />
+              {item.description && (
+                <p className="text-xs text-muted-foreground">{item.description}</p>
+              )}
+              <p className="text-xs text-muted-foreground">
+                Enter the full URL of your n8n instance (e.g., https://n8n.example.com)
+              </p>
+            </div>
+          )
+        }
+        
+        // Special handling for N8N API Key
+        if (item.key === 'integrations.n8n.api_key') {
+          return (
+            <div className="space-y-2">
+              <Label className="text-sm font-medium flex items-center gap-2">
+                n8n API Key
+                {isChanged && <Badge color="blue" className="text-xs">Modified</Badge>}
+                <Badge color="red" className="text-xs">Sensitive</Badge>
+              </Label>
+              <Input
+                type="password"
+                value={currentValue}
+                onChange={(e) => handleValueChange(item.key, e.target.value)}
+                placeholder="Enter your n8n API key"
+              />
+              {item.description && (
+                <p className="text-xs text-muted-foreground">{item.description}</p>
+              )}
+              <p className="text-xs text-muted-foreground">
+                You can find your API key in n8n under Settings → API Keys
+              </p>
+            </div>
+          )
+        }
+        
         return (
           <div className="space-y-2">
             <Label className="text-sm font-medium flex items-center gap-2">
@@ -407,7 +498,7 @@ export default function SettingsPage() {
       )}
 
       <Tabs value={activeCategory} onValueChange={setActiveCategory}>
-        <TabsList className="grid w-full grid-cols-7">
+        <TabsList className="grid w-full grid-cols-8">
           {categories.map(category => {
             const Icon = categoryIcons[category.name as keyof typeof categoryIcons] || SettingsIcon
             return (

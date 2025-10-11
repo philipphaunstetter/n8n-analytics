@@ -58,6 +58,7 @@ CREATE TRIGGER IF NOT EXISTS tr_app_config_updated_at
 
 -- Insert default configuration categories
 INSERT OR IGNORE INTO config_categories (name, display_name, description, icon, sort_order, is_system) VALUES
+    ('general', 'General', 'General application settings', 'settings', 0, FALSE),
     ('database', 'Database', 'Database connection and settings', 'database', 1, TRUE),
     ('authentication', 'Authentication', 'User authentication and security', 'shield', 2, TRUE),
     ('features', 'Features', 'Application feature toggles', 'toggle', 3, TRUE),
@@ -99,6 +100,7 @@ INSERT OR IGNORE INTO app_config (key, value, value_type, category, description,
     ('security.password_min_length', '8', 'number', 'authentication', 'Minimum password length', FALSE, FALSE, '{"type": "number", "minimum": 6, "maximum": 128}'),
     
     -- Integration settings
+    ('integrations.n8n.url', '', 'string', 'integration', 'n8n instance URL for workflow integration', FALSE, FALSE, '{"type": "string", "format": "url"}'),
     ('integrations.n8n.api_key', '', 'encrypted', 'integration', 'n8n API key for workflow integration', TRUE, FALSE, '{"type": "string", "minLength": 1}'),
     ('integrations.webhook.secret', '', 'encrypted', 'integration', 'Webhook signature secret', TRUE, FALSE, '{"type": "string", "minLength": 16}'),
     
