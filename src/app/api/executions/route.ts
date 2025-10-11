@@ -163,7 +163,7 @@ function applyExecutionFilters(executions: Execution[], filters: ExecutionFilter
       const workflowName = exec.metadata?.workflowName || 
                           DEMO_WORKFLOWS.find(w => w.id === exec.workflowId)?.name ||
                           ''
-      if (workflowName.toLowerCase().includes(searchTerm)) {
+      if (typeof workflowName === 'string' && workflowName.toLowerCase().includes(searchTerm)) {
         return true
       }
       

@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
     console.error('❌ Sync API failed:', error)
     return NextResponse.json({
       error: 'Sync failed',
-      details: error.message
+      details: error instanceof Error ? error.message : 'Unknown error'
     }, { status: 500 })
   }
 }
@@ -99,7 +99,7 @@ export async function GET(request: NextRequest) {
     console.error('❌ Sync status API failed:', error)
     return NextResponse.json({
       error: 'Failed to get sync status',
-      details: error.message
+      details: error instanceof Error ? error.message : 'Unknown error'
     }, { status: 500 })
   }
 }

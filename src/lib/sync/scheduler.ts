@@ -73,8 +73,8 @@ export class SyncScheduler {
   /**
    * Sync executions from all providers
    */
-  private async syncExecutions() {
-    return await executionSync.syncAllProviders({ 
+  private async syncExecutions(): Promise<void> {
+    await executionSync.syncAllProviders({ 
       syncType: 'executions',
       batchSize: 100 
     })
@@ -83,8 +83,8 @@ export class SyncScheduler {
   /**
    * Sync workflow metadata from all providers
    */
-  private async syncWorkflows() {
-    return await executionSync.syncAllProviders({ 
+  private async syncWorkflows(): Promise<void> {
+    await executionSync.syncAllProviders({ 
       syncType: 'workflows',
       batchSize: 50 
     })
@@ -93,8 +93,8 @@ export class SyncScheduler {
   /**
    * Sync full workflow backups from all providers
    */
-  private async syncBackups() {
-    return await executionSync.syncAllProviders({ 
+  private async syncBackups(): Promise<void> {
+    await executionSync.syncAllProviders({ 
       syncType: 'backups',
       batchSize: 20 
     })
