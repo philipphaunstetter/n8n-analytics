@@ -5,7 +5,7 @@ import crypto from 'crypto'
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { adminData, config: configData, skipIntegrations } = body
+    const { adminData } = body
     
     const config = getConfigManager()
 
@@ -24,26 +24,9 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Save configuration data
-    if (configData) {
-      if (configData.timezone) {
-        await config.set('app.timezone', configData.timezone)
-      }
-      if (typeof configData.demoMode === 'boolean') {
-        await config.set('app.demoMode', configData.demoMode ? 'true' : 'false')
-      }
-      if (configData.n8nUrl) {
-        await config.set('n8n.url', configData.n8nUrl)
-      }
-      if (configData.n8nApiKey) {
-        await config.set('n8n.apiKey', configData.n8nApiKey)
-      }
-    }
-
-    // Mark integrations as skipped if requested
-    if (skipIntegrations) {
-      await config.set('setup.integrations_skipped', 'true')
-    }
+    // Set default configuration values
+    await config.set('app.timezone', 'UTC')
+    await config.set('app.demoMode', 'false')
 
     // Mark setup as complete by setting the initDone flag
     await config.set('app.initDone', 'true')
