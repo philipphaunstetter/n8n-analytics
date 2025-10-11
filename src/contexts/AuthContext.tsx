@@ -75,30 +75,36 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           }
         } catch (error) {
           console.error('Failed to initialize Supabase session:', error)
+          // If Supabase is not available, continue without it
         }
         
         setLoading(false)
         setSessionRestored(true)
 
         // Listen for Supabase auth changes
-        const { data: { subscription } } = supabase.auth.onAuthStateChange(
-          async (event, session) => {
-            console.log('Supabase auth state changed:', event, session?.user?.email || 'signed out')
-            
-            if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-              setSession(session)
-              setUser(session?.user ?? null)
-            } else if (event === 'SIGNED_OUT') {
-              setSession(null)
-              setUser(null)
+        try {
+          const { data: { subscription } } = supabase.auth.onAuthStateChange(
+            async (event, session) => {
+              console.log('Supabase auth state changed:', event, session?.user?.email || 'signed out')
+              
+              if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+                setSession(session)
+                setUser(session?.user ?? null)
+              } else if (event === 'SIGNED_OUT') {
+                setSession(null)
+                setUser(null)
+              }
+              
+              // Ensure loading is false after any auth event
+              setLoading(false)
             }
-            
-            // Ensure loading is false after any auth event
-            setLoading(false)
-          }
-        )
-        
-        supabaseSubscription = subscription
+          )
+          
+          supabaseSubscription = subscription
+        } catch (error) {
+          console.error('Failed to set up Supabase auth listener:', error)
+          // Continue without Supabase auth listener
+        }
       }
     }
 
@@ -151,19 +157,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       })
       return { error }
     } catch (error) {
-      return { error: 'Authentication failed' }
+      console.error('Supabase sign in failed:', error)
+      return { error: 'Authentication failed - please check your configuration' }
     }
   }
 
   const signUp = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/auth/callback`
-      }
-    })
-    return { error }
+    try {
+      const { error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/auth/callback`
+        }
+      })
+      return { error }
+    } catch (error) {
+      console.error('Supabase sign up failed:', error)
+      return { error: 'Sign up failed - please check your configuration' }
+    }
   }
 
   const signOut = async () => {
@@ -178,12 +190,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return { error: null }
       } else {
         console.log('Signing out from Supabase')
-        const { error } = await supabase.auth.signOut()
-        if (!error) {
+        try {
+          const { error } = await supabase.auth.signOut()
+          if (!error) {
+            setUser(null)
+            setSession(null)
+          }
+          return { error }
+        } catch (error) {
+          console.error('Supabase sign out failed:', error)
+          // Still clear local state even if Supabase call fails
           setUser(null)
           setSession(null)
+          return { error: null } // Don't show error to user for sign out
         }
-        return { error }
       }
     } catch (error) {
       console.error('Error during sign out:', error)
@@ -192,10 +212,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   const resetPassword = async (email: string) => {
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/auth/reset-password`
-    })
-    return { error }
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/auth/reset-password`
+      })
+      return { error }
+    } catch (error) {
+      console.error('Supabase password reset failed:', error)
+      return { error: 'Password reset failed - please check your configuration' }
+    }
   }
 
   const value = {
