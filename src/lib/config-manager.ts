@@ -6,7 +6,6 @@
  */
 
 import sqlite3 from 'sqlite3';
-import { promisify } from 'util';
 import path from 'path';
 
 interface ConfigValue {
@@ -39,79 +38,116 @@ export class ConfigManager {
   }
 
   private async initializeDatabase(): Promise<void> {
-    const run = promisify(this.db.run.bind(this.db));
-    
-    // Create config table if it doesn't exist (same as docker-init.sh)
-    await run(`
-      CREATE TABLE IF NOT EXISTS config (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        key TEXT UNIQUE NOT NULL,
-        value TEXT,
-        encrypted BOOLEAN DEFAULT 0,
-        category TEXT DEFAULT 'general',
-        description TEXT,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-      )
-    `);
-
-    // Create trigger for updated_at
-    await run(`
-      CREATE TRIGGER IF NOT EXISTS update_config_timestamp 
-        AFTER UPDATE ON config
-        BEGIN
-          UPDATE config SET updated_at = CURRENT_TIMESTAMP WHERE id = NEW.id;
-        END
-    `);
+    return new Promise((resolve, reject) => {
+      // Create config table if it doesn't exist (same as docker-init.sh)
+      this.db.run(`
+        CREATE TABLE IF NOT EXISTS config (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          key TEXT UNIQUE NOT NULL,
+          value TEXT,
+          encrypted BOOLEAN DEFAULT 0,
+          category TEXT DEFAULT 'general',
+          description TEXT,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+      `, (err) => {
+        if (err) {
+          reject(err);
+          return;
+        }
+        
+        // Create trigger for updated_at
+        this.db.run(`
+          CREATE TRIGGER IF NOT EXISTS update_config_timestamp 
+            AFTER UPDATE ON config
+            BEGIN
+              UPDATE config SET updated_at = CURRENT_TIMESTAMP WHERE id = NEW.id;
+            END
+        `, (err) => {
+          if (err) {
+            reject(err);
+            return;
+          }
+          resolve();
+        });
+      });
+    });
   }
 
   /**
    * Get a configuration value by key
    */
   async get(key: string): Promise<string | null> {
-    const query = promisify(this.db.get.bind(this.db));
-    const result = await query('SELECT value FROM config WHERE key = ?', [key]) as ConfigValue | undefined;
-    return result?.value || null;
+    return new Promise((resolve, reject) => {
+      this.db.get('SELECT value FROM config WHERE key = ?', [key], (err, row: ConfigValue) => {
+        if (err) {
+          reject(err);
+          return;
+        }
+        resolve(row?.value || null);
+      });
+    });
   }
 
   /**
    * Set a configuration value
    */
   async set(key: string, value: string, category: string = 'general', description?: string): Promise<void> {
-    const run = promisify(this.db.run.bind(this.db));
-    await run(
-      `INSERT OR REPLACE INTO config (key, value, category, description) 
-       VALUES (?, ?, ?, ?)`,
-      [key, value, category, description]
-    );
+    return new Promise((resolve, reject) => {
+      this.db.run(
+        `INSERT OR REPLACE INTO config (key, value, category, description) 
+         VALUES (?, ?, ?, ?)`,
+        [key, value, category, description],
+        function(err) {
+          if (err) {
+            reject(err);
+            return;
+          }
+          resolve();
+        }
+      );
+    });
   }
 
   /**
    * Get all configuration values for a category
    */
   async getCategory(category: string): Promise<Record<string, string | null>> {
-    const query = promisify(this.db.all.bind(this.db));
-    const results = await query('SELECT key, value FROM config WHERE category = ?', [category]) as ConfigValue[];
-    
-    const config: Record<string, string | null> = {};
-    for (const result of results) {
-      config[result.key] = result.value;
-    }
-    return config;
+    return new Promise((resolve, reject) => {
+      this.db.all('SELECT key, value FROM config WHERE category = ?', [category], (err, rows: ConfigValue[]) => {
+        if (err) {
+          reject(err);
+          return;
+        }
+        
+        const config: Record<string, string | null> = {};
+        for (const row of rows) {
+          config[row.key] = row.value;
+        }
+        resolve(config);
+      });
+    });
   }
 
   /**
    * Get all configuration values
    */
   async getAll(): Promise<Record<string, string | null>> {
-    const query = promisify(this.db.all.bind(this.db));
-    const results = await query('SELECT key, value FROM config') as ConfigValue[];
-    
-    const config: Record<string, string | null> = {};
-    for (const result of results) {
-      config[result.key] = result.value;
-    }
-    return config;
+    return new Promise((resolve, reject) => {
+      this.db.all('SELECT key, value FROM config', [], (err, rows: ConfigValue[]) => {
+        if (err) {
+          reject(err);
+          return;
+        }
+        
+        const config: Record<string, string | null> = {};
+        for (const row of rows) {
+          config[row.key] = row.value;
+        }
+        resolve(config);
+      });
+    });
   }
 
   /**
