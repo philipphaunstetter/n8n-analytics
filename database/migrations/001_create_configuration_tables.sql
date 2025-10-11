@@ -106,6 +106,9 @@ INSERT OR IGNORE INTO app_config (key, value, value_type, category, description,
     
     -- Notification settings
     ('notifications.email.enabled', 'false', 'boolean', 'notifications', 'Enable email notifications', FALSE, FALSE, '{"type": "boolean"}'),
+    ('notifications.email.provider', 'smtp', 'string', 'notifications', 'Email provider (smtp, resend)', FALSE, FALSE, '{"enum": ["smtp", "resend"]}'),
+    ('notifications.email.resend_api_key', '', 'encrypted', 'notifications', 'Resend API key for email delivery', TRUE, FALSE, '{"type": "string"}'),
+    ('notifications.email.from_name', '', 'string', 'notifications', 'Email sender display name', FALSE, FALSE, '{"type": "string"}'),
     ('notifications.email.smtp_host', '', 'string', 'notifications', 'SMTP server hostname', FALSE, FALSE, '{"type": "string"}'),
     ('notifications.email.smtp_port', '587', 'number', 'notifications', 'SMTP server port', FALSE, FALSE, '{"type": "number", "minimum": 1, "maximum": 65535}'),
     ('notifications.email.smtp_user', '', 'string', 'notifications', 'SMTP username', FALSE, FALSE, '{"type": "string"}'),
