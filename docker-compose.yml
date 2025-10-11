@@ -1,11 +1,12 @@
 version: '3.8'
 
+# Elova Docker Compose Configuration
+# The container will automatically append additional environment variables to .env on first startup
+# This includes runtime configuration, database settings, and feature flags
+
 services:
   elova:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    image: elova:latest
+    image: ghcr.io/philipphaunstetter/n8n-analytics:latest
     container_name: elova
     restart: unless-stopped
     ports:
@@ -13,32 +14,25 @@ services:
     environment:
       - NODE_ENV=production
       - PORT=3000
-      - DATABASE_TYPE=${DATABASE_TYPE:-postgresql}
-      - DATABASE_URL=postgresql://elova:${POSTGRES_PASSWORD:-elova_password}@postgres:5432/elova
-      - AUTH_TYPE=${AUTH_TYPE:-simple}
-      - AUTH_SECRET=${AUTH_SECRET:-your-super-secure-secret-minimum-32-characters-long}
-      - N8N_HOST=${N8N_HOST:-}
-      - N8N_API_KEY=${N8N_API_KEY:-}
-      - SYNC_FREQUENCY_EXECUTIONS=${SYNC_EXECUTIONS:-15m}
-      - SYNC_FREQUENCY_WORKFLOWS=${SYNC_WORKFLOWS:-6h}
-      - SYNC_FREQUENCY_BACKUPS=${SYNC_BACKUPS:-24h}
-      - NEXT_PUBLIC_ENABLE_DEMO_MODE=${DEMO_MODE:-false}
-      - NEXT_PUBLIC_ENABLE_DEV_AUTH=${DEV_AUTH:-false}
+      # Supabase configuration (optional - will use SQLite if not provided)
+      - NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL:-}
+      - NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY:-}
+      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY:-}
+      # Development mode settings
+      - NEXT_PUBLIC_ENABLE_DEMO_MODE=${DEMO_MODE:-true}
     volumes:
       - elova_data:/app/data
       - elova_logs:/app/logs
-    depends_on:
-      postgres:
-        condition: service_healthy
     networks:
       - elova_network
     healthcheck:
-      test: ["CMD", "node", "healthcheck.js"]
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 60s
 
+  # Optional: PostgreSQL database (if you don't want to use SQLite or Supabase)
   postgres:
     image: postgres:15-alpine
     container_name: elova-db
@@ -50,7 +44,6 @@ services:
       - POSTGRES_INITDB_ARGS=--encoding=UTF8 --locale=C
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./backups/postgres:/backups
     networks:
       - elova_network
     ports:
@@ -60,6 +53,8 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    profiles:
+      - with-postgres
 
   # Optional: Redis for caching and session storage
   redis:
@@ -78,25 +73,8 @@ services:
       interval: 10s
       timeout: 3s
       retries: 5
-
-  # Optional: Nginx reverse proxy
-  nginx:
-    image: nginx:alpine
-    container_name: elova-proxy
-    restart: unless-stopped
-    ports:
-      - "${HTTP_PORT:-80}:80"
-      - "${HTTPS_PORT:-443}:443"
-    volumes:
-      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-      - ./nginx/ssl:/etc/nginx/ssl:ro
-      - nginx_logs:/var/log/nginx
-    depends_on:
-      - elova
-    networks:
-      - elova_network
     profiles:
-      - with-proxy
+      - with-redis
 
 volumes:
   elova_data:
@@ -106,8 +84,6 @@ volumes:
   postgres_data:
     driver: local
   redis_data:
-    driver: local
-  nginx_logs:
     driver: local
 
 networks:
