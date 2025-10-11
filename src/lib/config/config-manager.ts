@@ -1,4 +1,4 @@
-import { createHash, randomBytes, createCipher, createDecipher } from 'crypto';
+import { createHash, randomBytes, createCipherGCM, createDecipherGCM } from 'crypto';
 import { z } from 'zod';
 import { Database } from 'sqlite3';
 import path from 'path';
@@ -54,7 +54,23 @@ export class ConfigManager {
   private encryptionKey: string;
   private isInitialized = false;
 
-  constructor(private databasePath: string = '/app/data/elova.db') {
+  /**
+   * Get the default database path based on environment
+   */
+  static getDefaultDatabasePath(): string {
+    if (process.env.NODE_ENV === 'development') {
+      return path.join(process.cwd(), 'data', 'elova.db');
+    }
+    return '/app/data/elova.db';
+  }
+
+  constructor(private databasePath: string = ConfigManager.getDefaultDatabasePath()) {
+    // Ensure the database directory exists
+    const dbDir = path.dirname(databasePath);
+    if (!fs.existsSync(dbDir)) {
+      fs.mkdirSync(dbDir, { recursive: true });
+    }
+    
     this.db = new Database(databasePath);
     this.encryptionKey = this.getOrCreateEncryptionKey();
   }
@@ -423,18 +439,39 @@ export class ConfigManager {
   private encrypt(text: string): string {
     if (!text) return text;
     
-    const cipher = createCipher('aes-256-cbc', this.encryptionKey);
+    // Generate a random IV for each encryption
+    const iv = randomBytes(16);
+    const cipher = createCipherGCM('aes-256-gcm', Buffer.from(this.encryptionKey, 'hex'), iv);
+    cipher.setAAD(Buffer.from('elova-config', 'utf8'));
+    
     let encrypted = cipher.update(text, 'utf8', 'hex');
     encrypted += cipher.final('hex');
-    return encrypted;
+    
+    const authTag = cipher.getAuthTag();
+    
+    // Combine IV + auth tag + encrypted data
+    return iv.toString('hex') + ':' + authTag.toString('hex') + ':' + encrypted;
   }
 
   private decrypt(encryptedText: string): string {
     if (!encryptedText) return encryptedText;
     
     try {
-      const decipher = createDecipher('aes-256-cbc', this.encryptionKey);
-      let decrypted = decipher.update(encryptedText, 'hex', 'utf8');
+      // Split the combined string: IV:authTag:encryptedData
+      const parts = encryptedText.split(':');
+      if (parts.length !== 3) {
+        throw new Error('Invalid encrypted data format');
+      }
+      
+      const iv = Buffer.from(parts[0], 'hex');
+      const authTag = Buffer.from(parts[1], 'hex');
+      const encrypted = parts[2];
+      
+      const decipher = createDecipherGCM('aes-256-gcm', Buffer.from(this.encryptionKey, 'hex'), iv);
+      decipher.setAAD(Buffer.from('elova-config', 'utf8'));
+      decipher.setAuthTag(authTag);
+      
+      let decrypted = decipher.update(encrypted, 'hex', 'utf8');
       decrypted += decipher.final('utf8');
       return decrypted;
     } catch (error) {

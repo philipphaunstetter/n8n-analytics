@@ -1,8 +1,10 @@
-version: '3.8'
+# Elova - Workflow Observability Platform
+# SQLite-based Docker Compose Configuration
+#
+# This is the main docker-compose.yml for the repository
+# Uses SQLite database (no separate database service needed)
 
-# Elova Docker Compose Configuration
-# The container will automatically append additional environment variables to .env on first startup
-# This includes runtime configuration, database settings, and feature flags
+version: '3.8'
 
 services:
   elova:
@@ -10,21 +12,29 @@ services:
     container_name: elova
     restart: unless-stopped
     ports:
-      - "${PORT:-3000}:3000"
+      - "${ELOVA_PORT:-3000}:3000"
     environment:
+      # Application settings
       - NODE_ENV=production
       - PORT=3000
-      # Supabase configuration (optional - will use SQLite if not provided)
-      - NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL:-}
-      - NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY:-}
-      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY:-}
-      # Development mode settings
-      - NEXT_PUBLIC_ENABLE_DEMO_MODE=${DEMO_MODE:-true}
+      
+      # Timezone configuration
+      - GENERIC_TIMEZONE=${GENERIC_TIMEZONE:-UTC}
+      - TZ=${TZ:-UTC}
+      
+      # Database configuration (SQLite-based)
+      - DATABASE_TYPE=sqlite
+      
+      # Optional: n8n connection (can be configured via web interface)
+      - N8N_HOST=${N8N_HOST:-}
+      - N8N_API_KEY=${N8N_API_KEY:-}
+      
+      # Feature flags
+      - ELOVA_DEMO_MODE=${ELOVA_DEMO_MODE:-false}
+      - ELOVA_FIRST_RUN=true
     volumes:
-      - elova_data:/app/data
-      - elova_logs:/app/logs
-    networks:
-      - elova_network
+      # SQLite database and application data stored here
+      - elova_data:/home/node/.elova
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
       interval: 30s
@@ -32,60 +42,6 @@ services:
       retries: 3
       start_period: 60s
 
-  # Optional: PostgreSQL database (if you don't want to use SQLite or Supabase)
-  postgres:
-    image: postgres:15-alpine
-    container_name: elova-db
-    restart: unless-stopped
-    environment:
-      - POSTGRES_DB=elova
-      - POSTGRES_USER=elova
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-elova_password}
-      - POSTGRES_INITDB_ARGS=--encoding=UTF8 --locale=C
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    networks:
-      - elova_network
-    ports:
-      - "${POSTGRES_PORT:-5432}:5432"
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U elova -d elova"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    profiles:
-      - with-postgres
-
-  # Optional: Redis for caching and session storage
-  redis:
-    image: redis:7-alpine
-    container_name: elova-redis
-    restart: unless-stopped
-    command: redis-server --requirepass ${REDIS_PASSWORD:-elova_redis}
-    volumes:
-      - redis_data:/data
-    networks:
-      - elova_network
-    ports:
-      - "${REDIS_PORT:-6379}:6379"
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 3s
-      retries: 5
-    profiles:
-      - with-redis
-
 volumes:
   elova_data:
     driver: local
-  elova_logs:
-    driver: local
-  postgres_data:
-    driver: local
-  redis_data:
-    driver: local
-
-networks:
-  elova_network:
-    driver: bridge

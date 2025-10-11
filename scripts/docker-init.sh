@@ -39,6 +39,50 @@ detect_database_config() {
     fi
 }
 
+# Function to initialize SQLite configuration database
+init_config_database() {
+    echo "Initializing configuration database..."
+    
+    # Create SQLite database with configuration table if it doesn't exist
+    sqlite3 "$DB_FILE" << 'EOF'
+CREATE TABLE IF NOT EXISTS config (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    key TEXT UNIQUE NOT NULL,
+    value TEXT,
+    encrypted BOOLEAN DEFAULT 0,
+    category TEXT DEFAULT 'general',
+    description TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Create trigger for updated_at
+CREATE TRIGGER IF NOT EXISTS update_config_timestamp 
+    AFTER UPDATE ON config
+    BEGIN
+        UPDATE config SET updated_at = CURRENT_TIMESTAMP WHERE id = NEW.id;
+    END;
+
+-- Insert default configuration values
+INSERT OR IGNORE INTO config (key, value, category, description) VALUES
+    ('app.version', '0.1.0', 'system', 'Application version'),
+    ('app.initialized', 'true', 'system', 'Application initialized marker'),
+    ('app.first_run', 'true', 'system', 'First run flag - triggers setup wizard'),
+    ('app.timezone', 'UTC', 'system', 'Application timezone'),
+    ('database.type', 'sqlite', 'database', 'Database type'),
+    ('database.file', '/app/data/elova.db', 'database', 'SQLite database file path'),
+    ('features.demo_mode', 'false', 'features', 'Enable demo mode with sample data'),
+    ('features.analytics_enabled', 'true', 'features', 'Enable built-in analytics'),
+    ('n8n.host', '', 'n8n', 'n8n instance URL'),
+    ('n8n.api_key', '', 'n8n', 'n8n API key (encrypted)'),
+    ('sync.executions_interval', '15m', 'sync', 'Execution sync interval'),
+    ('sync.workflows_interval', '6h', 'sync', 'Workflow sync interval'),
+    ('setup.completed', 'false', 'setup', 'Setup wizard completion status');
+EOF
+
+    echo "Configuration database initialized at: $DB_FILE"
+}
+
 # Function to set runtime configuration hints
 set_runtime_config() {
     local db_type="$1"
@@ -47,16 +91,17 @@ set_runtime_config() {
     # This provides hints for initial configuration setup
     cat > "$DATA_DIR/runtime-config.json" << EOF
 {
-  "firstRun": true,
+  "firstRun": $([ "$ELOVA_FIRST_RUN" = "true" ] && echo "true" || echo "false"),
   "detectedDatabaseType": "$db_type",
   "hasSupabaseEnv": $([ -n "$NEXT_PUBLIC_SUPABASE_URL" ] && echo "true" || echo "false"),
+  "hasN8nConfig": $([ -n "$N8N_HOST" ] && [ -n "$N8N_API_KEY" ] && echo "true" || echo "false"),
   "containerStartTime": "$(date -Iseconds)",
   "dataDirectory": "$DATA_DIR",
   "environment": {
     "nodeEnv": "${NODE_ENV:-production}",
     "port": "${PORT:-3000}",
     "hostname": "${HOSTNAME:-0.0.0.0}",
-    "demoMode": "${NEXT_PUBLIC_ENABLE_DEMO_MODE:-false}"
+    "demoMode": "${ELOVA_DEMO_MODE:-false}"
   }
 }
 EOF
@@ -71,8 +116,32 @@ if [ ! -f "$FIRST_RUN_MARKER" ]; then
     # Set up database and configuration system
     setup_database_config
     
+    # Initialize configuration database with default values
+    init_config_database
+    
     # Detect database type from environment
     DB_TYPE=$(detect_database_config)
+    
+    # Update any environment-provided configuration
+    if [ -n "$N8N_HOST" ]; then
+        sqlite3 "$DB_FILE" "UPDATE config SET value = '$N8N_HOST' WHERE key = 'n8n.host';"
+        echo "Updated n8n.host from environment"
+    fi
+    
+    if [ -n "$N8N_API_KEY" ]; then
+        sqlite3 "$DB_FILE" "UPDATE config SET value = '$N8N_API_KEY' WHERE key = 'n8n.api_key';"
+        echo "Updated n8n.api_key from environment"
+    fi
+    
+    if [ -n "$GENERIC_TIMEZONE" ]; then
+        sqlite3 "$DB_FILE" "UPDATE config SET value = '$GENERIC_TIMEZONE' WHERE key = 'app.timezone';"
+        echo "Updated timezone from environment"
+    fi
+    
+    if [ "$ELOVA_DEMO_MODE" = "true" ]; then
+        sqlite3 "$DB_FILE" "UPDATE config SET value = 'true' WHERE key = 'features.demo_mode';"
+        echo "Enabled demo mode from environment"
+    fi
     
     # Create runtime configuration hints
     set_runtime_config "$DB_TYPE"
@@ -82,7 +151,7 @@ if [ ! -f "$FIRST_RUN_MARKER" ]; then
     
     echo "Database configuration system initialized successfully"
     echo "Database type: $DB_TYPE"
-    echo "Configuration will be managed through the database"
+    echo "Configuration stored in SQLite database"
     echo "Runtime hints available at: $DATA_DIR/runtime-config.json"
 else
     echo "Configuration already exists, skipping initialization"
