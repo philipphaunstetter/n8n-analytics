@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
 import { AppLayout } from '@/components/app-layout'
+import { WithN8NConnection } from '@/components/with-n8n-connection'
 import { apiClient } from '@/lib/api-client'
 import { 
   ExecutionStatus,
@@ -384,7 +385,9 @@ export default function ExecutionsPage() {
 
   return (
     <AppLayout>
-      <ExecutionsContent />
+      <WithN8NConnection>
+        <ExecutionsContent />
+      </WithN8NConnection>
     </AppLayout>
   )
 }

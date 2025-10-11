@@ -1,34 +1,35 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
+import { getConfigManager } from '@/lib/config/config-manager'
 
-export async function POST(request: NextRequest) {
+export async function POST() {
   try {
-    const body = await request.json()
-    const { url, apiKey } = body
+    const configManager = getConfigManager()
+    await configManager.initialize()
 
-    if (!url || !apiKey) {
+    // Get current n8n configuration
+    const n8nUrl = await configManager.get('integrations.n8n.url')
+    const n8nApiKey = await configManager.get('integrations.n8n.api_key')
+
+    if (!n8nUrl || !n8nApiKey) {
       return NextResponse.json(
-        { error: 'URL and API key are required' },
+        { error: 'n8n URL or API key not configured' },
         { status: 400 }
       )
     }
 
-    // Clean up URL (remove trailing slash)
-    const cleanUrl = url.replace(/\/$/, '')
-
-    // Test connection to n8n instance
+    // Test the connection
+    const cleanUrl = n8nUrl.replace(/\/$/, '')
     const testResponse = await fetch(`${cleanUrl}/api/v1/workflows`, {
       method: 'GET',
       headers: {
-        'X-N8N-API-KEY': apiKey,
-        'Accept': 'application/json',
-        'Content-Type': 'application/json'
+        'X-N8N-API-KEY': n8nApiKey,
+        'Accept': 'application/json'
       },
-      // Add timeout
-      signal: AbortSignal.timeout(10000) // 10 second timeout
+      signal: AbortSignal.timeout(15000) // 15 second timeout for manual tests
     })
 
     if (!testResponse.ok) {
-      let errorMessage = 'Failed to connect to n8n instance'
+      let errorMessage = 'Connection failed'
       
       switch (testResponse.status) {
         case 401:
@@ -38,13 +39,13 @@ export async function POST(request: NextRequest) {
           errorMessage = 'n8n API endpoint not found - please check your URL'
           break
         case 403:
-          errorMessage = 'API access forbidden - please check your API key permissions'
+          errorMessage = 'API access forbidden - check API key permissions'
           break
         case 500:
           errorMessage = 'n8n server error - please check your n8n instance'
           break
         default:
-          errorMessage = `Connection failed with status ${testResponse.status}`
+          errorMessage = `Connection failed with HTTP ${testResponse.status}`
       }
 
       return NextResponse.json(
@@ -55,20 +56,26 @@ export async function POST(request: NextRequest) {
 
     const workflows = await testResponse.json()
     
-    // Also try to get instance info
-    let instanceInfo: { version?: string; id?: string } = {}
+    // Get additional instance info
+    let instanceInfo = {
+      version: 'Unknown',
+      instanceId: 'Unknown'
+    }
+    
     try {
       const infoResponse = await fetch(`${cleanUrl}/api/v1/owner`, {
         method: 'GET',
         headers: {
-          'X-N8N-API-KEY': apiKey,
+          'X-N8N-API-KEY': n8nApiKey,
           'Accept': 'application/json'
         },
         signal: AbortSignal.timeout(5000)
       })
       
       if (infoResponse.ok) {
-        instanceInfo = await infoResponse.json()
+        const info = await infoResponse.json()
+        instanceInfo.version = info.version || 'Unknown'
+        instanceInfo.instanceId = info.id || 'Unknown'
       }
     } catch (error) {
       // Info endpoint might not be available, that's okay
@@ -79,9 +86,10 @@ export async function POST(request: NextRequest) {
       success: true,
       message: 'Successfully connected to n8n instance',
       workflowCount: workflows.data?.length || workflows.length || 0,
-      version: instanceInfo.version || 'Unknown',
-      instanceId: instanceInfo.id || 'Unknown',
-      url: cleanUrl
+      version: instanceInfo.version,
+      instanceId: instanceInfo.instanceId,
+      url: cleanUrl,
+      testedAt: new Date().toISOString()
     })
 
   } catch (error) {

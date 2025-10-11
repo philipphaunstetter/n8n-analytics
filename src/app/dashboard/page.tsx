@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
 import { AppLayout } from '@/components/app-layout'
+import { WithN8NConnection } from '@/components/with-n8n-connection'
 import { apiClient } from '@/lib/api-client'
 import { DashboardStats, TimeRange } from '@/types'
 import { 
@@ -224,7 +225,9 @@ export default function Dashboard() {
 
   return (
     <AppLayout>
-      <DashboardContent />
+      <WithN8NConnection>
+        <DashboardContent />
+      </WithN8NConnection>
     </AppLayout>
   )
 }

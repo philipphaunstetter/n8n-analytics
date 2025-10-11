@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
 import { AppLayout } from '@/components/app-layout'
+import { WithN8NConnection } from '@/components/with-n8n-connection'
 import { apiClient } from '@/lib/api-client'
 import {
   PlayIcon,
@@ -406,7 +407,9 @@ export default function WorkflowsPage() {
 
   return (
     <AppLayout>
-      <WorkflowsContent />
+      <WithN8NConnection>
+        <WorkflowsContent />
+      </WithN8NConnection>
     </AppLayout>
   )
 }

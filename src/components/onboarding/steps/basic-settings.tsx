@@ -90,8 +90,7 @@ export function BasicSettingsStep({ initialData, onNext, onBack, loading }: Basi
               </Label>
               <Button
                 type="button"
-                variant="ghost"
-                size="sm"
+plain
                 onClick={detectTimezone}
                 className="text-xs"
               >
@@ -118,7 +117,7 @@ export function BasicSettingsStep({ initialData, onNext, onBack, loading }: Basi
           {/* Actions */}
           <div className="flex items-center justify-between pt-6 border-t">
             {onBack && (
-              <Button variant="ghost" onClick={onBack}>
+              <Button plain onClick={onBack}>
                 Back
               </Button>
             )}

@@ -158,7 +158,7 @@ export function N8NIntegrationStep({ initialData, onNext, onSkip, loading }: N8N
             <Button
               onClick={testConnection}
               disabled={!url || !apiKey || testing}
-              variant="outline"
+outline
               className="w-full"
             >
               {testing ? (
@@ -208,7 +208,7 @@ export function N8NIntegrationStep({ initialData, onNext, onSkip, loading }: N8N
           {/* Actions */}
           <div className="flex items-center justify-between pt-6 border-t">
             {onSkip && (
-              <Button variant="ghost" onClick={onSkip}>
+              <Button plain onClick={onSkip}>
                 Skip for Now
               </Button>
             )}

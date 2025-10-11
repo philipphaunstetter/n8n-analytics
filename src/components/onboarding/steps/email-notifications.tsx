@@ -135,7 +135,6 @@ export function EmailNotificationsStep({
               </p>
             </div>
             <Switch
-              id="enable-emails"
               checked={enabled}
               onCheckedChange={setEnabled}
             />
@@ -231,7 +230,7 @@ export function EmailNotificationsStep({
                 <Button
                   onClick={testEmailConfiguration}
                   disabled={!resendApiKey || !fromEmail || testing}
-                  variant="outline"
+outline
                   className="w-full"
                 >
                   {testing ? (
@@ -291,14 +290,14 @@ export function EmailNotificationsStep({
           {/* Actions */}
           <div className="flex items-center justify-between pt-6 border-t">
             {onBack && (
-              <Button variant="ghost" onClick={onBack}>
+              <Button plain onClick={onBack}>
                 Back
               </Button>
             )}
             
             <div className="flex space-x-3 ml-auto">
               {onSkip && !enabled && (
-                <Button variant="ghost" onClick={onSkip}>
+                <Button plain onClick={onSkip}>
                   Skip for Now
                 </Button>
               )}
