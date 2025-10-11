@@ -139,7 +139,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signIn = async (email: string, password: string) => {
     // Try dev auth first
     if (isDevMode) {
-      const devUser = DevAuth.authenticate(email, password)
+      const devUser = await DevAuth.authenticate(email, password)
       if (devUser) {
         DevAuth.setSession(devUser)
         setUser(devUser)

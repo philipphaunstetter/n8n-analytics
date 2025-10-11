@@ -62,11 +62,39 @@ export class DevAuth {
            process.env.NEXT_PUBLIC_ENABLE_DEV_AUTH === 'true'
   }
 
-  static authenticate(username: string, password: string): DevUser | null {
+  static async authenticate(username: string, password: string): Promise<DevUser | null> {
     if (!this.isDevelopment()) {
       return null
     }
 
+    // First, try to authenticate against database admin user
+    try {
+      const { getConfigManager } = await import('./config-manager')
+      const config = getConfigManager()
+      
+      const adminEmail = await config.get('setup.admin_email')
+      const adminName = await config.get('setup.admin_name')
+      const adminPasswordHash = await config.get('setup.admin_password_hash')
+      
+      if (adminEmail && adminPasswordHash && username.toLowerCase() === adminEmail.toLowerCase()) {
+        // Check password hash
+        const crypto = require('crypto')
+        const inputHash = crypto.createHash('sha256').update(password).digest('hex')
+        
+        if (inputHash === adminPasswordHash) {
+          return {
+            id: 'admin-001',
+            email: adminEmail,
+            name: adminName || 'Admin User',
+            role: 'admin'
+          }
+        }
+      }
+    } catch (error) {
+      console.warn('Failed to check database auth:', error)
+    }
+
+    // Fall back to hardcoded dev users
     const userEntry = DEV_USERS[username.toLowerCase()]
     if (!userEntry || userEntry.password !== password) {
       return null
