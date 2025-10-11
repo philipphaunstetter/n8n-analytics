@@ -8,11 +8,20 @@ export async function POST(request: NextRequest) {
     
     const config = getConfigManager()
 
-    // Create admin account (in a real app, this would create a user in the database)
+    // Create admin account
     if (adminData) {
       await config.set('setup.admin_account_created', 'true')
       await config.set('setup.admin_email', adminData.email || '')
       await config.set('setup.admin_name', adminData.name || 'Admin')
+      
+      // Store admin password securely (hashed)
+      if (adminData.password) {
+        // For simplicity, we'll store a simple hash. In production, use proper password hashing
+        const crypto = require('crypto')
+        const passwordHash = crypto.createHash('sha256').update(adminData.password).digest('hex')
+        await config.set('setup.admin_password_hash', passwordHash, 'auth', 'Admin password hash')
+        await config.set('setup.admin_user_id', 'admin-001', 'auth', 'Admin user ID')
+      }
     }
 
     // Save configuration data

@@ -19,6 +19,8 @@ import {
 interface SetupData {
   adminName: string
   adminEmail: string
+  adminPassword: string
+  adminPasswordConfirm: string
   timezone: string
   demoMode: boolean
   n8nUrl: string
@@ -33,6 +35,8 @@ export default function AdminSetupPage() {
   const [formData, setFormData] = useState<SetupData>({
     adminName: '',
     adminEmail: '',
+    adminPassword: '',
+    adminPasswordConfirm: '',
     timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
     demoMode: false,
     n8nUrl: '',
@@ -53,6 +57,20 @@ export default function AdminSetupPage() {
     setLoading(true)
     setError(null)
 
+    // Validate passwords match
+    if (formData.adminPassword !== formData.adminPasswordConfirm) {
+      setError('Passwords do not match')
+      setLoading(false)
+      return
+    }
+
+    // Validate password length
+    if (formData.adminPassword.length < 6) {
+      setError('Password must be at least 6 characters long')
+      setLoading(false)
+      return
+    }
+
     try {
       // Submit setup configuration
       const response = await fetch('/api/setup/complete', {
@@ -64,6 +82,7 @@ export default function AdminSetupPage() {
           adminData: {
             name: formData.adminName,
             email: formData.adminEmail,
+            password: formData.adminPassword,
           },
           config: {
             timezone: formData.timezone,
@@ -136,6 +155,30 @@ export default function AdminSetupPage() {
                 onChange={(e) => handleInputChange('adminEmail', e.target.value)}
                 placeholder="admin@example.com"
                 required
+              />
+            </div>
+            <div>
+              <Label htmlFor="adminPassword">Password</Label>
+              <Input
+                id="adminPassword"
+                type="password"
+                value={formData.adminPassword}
+                onChange={(e) => handleInputChange('adminPassword', e.target.value)}
+                placeholder="Enter a secure password (min 6 characters)"
+                required
+                minLength={6}
+              />
+            </div>
+            <div>
+              <Label htmlFor="adminPasswordConfirm">Confirm Password</Label>
+              <Input
+                id="adminPasswordConfirm"
+                type="password"
+                value={formData.adminPasswordConfirm}
+                onChange={(e) => handleInputChange('adminPasswordConfirm', e.target.value)}
+                placeholder="Confirm your password"
+                required
+                minLength={6}
               />
             </div>
           </CardContent>
@@ -256,7 +299,7 @@ export default function AdminSetupPage() {
           
           <Button
             type="submit"
-            disabled={loading || !formData.adminName || !formData.adminEmail}
+            disabled={loading || !formData.adminName || !formData.adminEmail || !formData.adminPassword || !formData.adminPasswordConfirm}
             className="flex items-center gap-2"
           >
             {loading ? (
