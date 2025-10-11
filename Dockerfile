@@ -71,8 +71,7 @@ RUN chmod +x /usr/local/bin/init.sh
 # Copy database migrations
 COPY --chown=elova:nodejs database/ ./database/
 
-# Copy .env template and make it writable
-COPY --chown=elova:nodejs .env.docker.template ./.env
+# No .env file needed - configuration is stored in database
 
 # Create necessary directories
 RUN mkdir -p /app/data /app/logs && \
