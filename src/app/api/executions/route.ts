@@ -40,8 +40,8 @@ export async function GET(request: NextRequest) {
     let allExecutions: Execution[] = []
     let totalCount = 0
 
-    // Try to fetch real n8n data first if API is configured
-    if (process.env.N8N_HOST && process.env.N8N_API_KEY && !isDemoMode()) {
+    // Try to fetch real n8n data first if not in demo mode
+    if (!isDemoMode()) {
       try {
         console.log('Fetching real executions from n8n API...')
         const n8nExecutions = await n8nApi.getExecutions({ limit: 100 })
@@ -61,7 +61,7 @@ export async function GET(request: NextRequest) {
       console.log('Using demo mode - generating demo executions')
       allExecutions = generateDemoExecutions(200)
     } else {
-      console.log('No n8n configuration found, using demo data')
+      console.log('No n8n configuration available, using demo data')
       allExecutions = generateDemoExecutions(200)
     }
 

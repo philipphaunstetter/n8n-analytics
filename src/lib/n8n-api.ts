@@ -1,9 +1,6 @@
-const N8N_HOST = process.env.N8N_HOST || 'http://localhost:5678';
-const N8N_API_KEY = process.env.N8N_API_KEY;
+import { getConfigManager } from './config-manager';
 
-if (!N8N_API_KEY) {
-  console.warn('N8N_API_KEY is not set. Please add it to your .env.local file.');
-}
+// Configuration will be loaded from database when needed
 
 export interface N8nExecution {
   id: string;
@@ -41,21 +38,22 @@ export interface ExecutionsResponse {
 }
 
 class N8nApiClient {
-  private baseUrl: string;
-  private apiKey: string;
+  private configManager = getConfigManager();
 
-  constructor() {
-    this.baseUrl = N8N_HOST;
-    this.apiKey = N8N_API_KEY || '';
+  private async getConfig() {
+    const host = await this.configManager.get('n8n.host') || 'http://localhost:5678';
+    const apiKey = await this.configManager.get('n8n.api_key') || '';
+    return { host, apiKey };
   }
 
   private async request<T>(endpoint: string, options?: RequestInit): Promise<T> {
-    const url = `${this.baseUrl}/api/v1${endpoint}`;
+    const { host, apiKey } = await this.getConfig();
+    const url = `${host}/api/v1${endpoint}`;
     
     const headers = {
       'Accept': 'application/json',
       'Content-Type': 'application/json',
-      ...(this.apiKey && { 'X-N8N-API-KEY': this.apiKey }),
+      ...(apiKey && { 'X-N8N-API-KEY': apiKey }),
       ...options?.headers,
     };
 

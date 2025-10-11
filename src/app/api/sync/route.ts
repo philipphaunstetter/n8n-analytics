@@ -31,13 +31,13 @@ export async function POST(request: NextRequest) {
       // Sync specific provider
       console.log(`🎯 Syncing specific provider: ${providerId}`)
       
-      // TODO: Get provider from database
+      // TODO: Get provider from database - for now use demo data
       const provider = {
         id: providerId,
         user_id: 'demo-user',
         name: 'Demo Provider',
-        base_url: process.env.N8N_HOST!,
-        api_key_encrypted: process.env.N8N_API_KEY!,
+        base_url: 'http://localhost:5678', // Will be loaded from ConfigManager by sync process
+        api_key_encrypted: 'demo-key', // Will be loaded from ConfigManager by sync process
         is_connected: true,
         status: 'healthy'
       }
