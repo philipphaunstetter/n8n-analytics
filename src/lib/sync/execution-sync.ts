@@ -2,11 +2,21 @@ import { createClient } from '@supabase/supabase-js'
 import { n8nApi } from '@/lib/n8n-api'
 import type { N8nExecution, N8nWorkflow } from '@/lib/n8n-api'
 
-// Supabase client with service role for background operations
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+// Lazy Supabase client initialization to avoid build-time environment dependency
+let supabase: ReturnType<typeof createClient> | null = null
+
+function getSupabaseClient() {
+  if (!supabase) {
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+      throw new Error('Missing required environment variables: NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY')
+    }
+    supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL,
+      process.env.SUPABASE_SERVICE_ROLE_KEY
+    )
+  }
+  return supabase
+}
 
 export interface Provider {
   id: string
@@ -39,7 +49,8 @@ export class ExecutionSyncService {
     
     try {
       // Get all active providers across all users
-      const { data: providers, error } = await supabase
+      const supabaseClient = getSupabaseClient()
+      const { data: providers, error } = await supabaseClient
         .from('providers')
         .select('*')
         .eq('is_connected', true)
@@ -84,7 +95,7 @@ export class ExecutionSyncService {
     const syncType = options.syncType || 'executions'
     
     // Create sync log entry
-    const { data: syncLog } = await this.createSyncLog(provider.id, syncType)
+    const syncLog = await this.createSyncLog(provider.id, syncType)
     
     try {
       console.log(`🔄 Syncing ${syncType} for provider: ${provider.name}`)
@@ -312,20 +323,21 @@ export class ExecutionSyncService {
    */
   private async upsertExecution(providerId: string, n8nExecution: N8nExecution) {
     // Get workflow UUID from provider workflow ID
-    const { data: workflow } = await supabase
+    const supabaseClient = getSupabaseClient()
+    const { data: workflow, error } = await supabaseClient
       .from('workflows')
       .select('id')
       .eq('provider_id', providerId)
       .eq('provider_workflow_id', n8nExecution.workflowId)
       .single()
     
-    if (!workflow) {
+    if (error || !workflow) {
       throw new Error(`Workflow not found: ${n8nExecution.workflowId}`)
     }
     
     const executionData = {
       provider_id: providerId,
-      workflow_id: workflow.id,
+      workflow_id: (workflow as { id: string }).id,
       provider_execution_id: n8nExecution.id,
       provider_workflow_id: n8nExecution.workflowId,
       status: this.mapN8nStatus(n8nExecution.status),
@@ -345,25 +357,25 @@ export class ExecutionSyncService {
     }
     
     // Check if execution exists
-    const { data: existing } = await supabase
+    const { data: existing, error: existingError } = await supabaseClient
       .from('executions')
       .select('id')
       .eq('provider_id', providerId)
       .eq('provider_execution_id', n8nExecution.id)
       .single()
     
-    if (existing) {
+    if (!existingError && existing) {
       // Update existing
-      const { error } = await supabase
+      const { error } = await (supabaseClient as any)
         .from('executions')
         .update(executionData)
-        .eq('id', existing.id)
+        .eq('id', (existing as { id: string }).id)
       
       if (error) throw error
       return { updated: true, inserted: false }
     } else {
       // Insert new
-      const { error } = await supabase
+      const { error } = await (supabaseClient as any)
         .from('executions')
         .insert(executionData)
       
@@ -387,25 +399,26 @@ export class ExecutionSyncService {
     }
     
     // Check if workflow exists
-    const { data: existing } = await supabase
+    const supabaseClient = getSupabaseClient()
+    const { data: existing, error: existingError } = await supabaseClient
       .from('workflows')
       .select('id')
       .eq('provider_id', providerId)
       .eq('provider_workflow_id', n8nWorkflow.id)
       .single()
     
-    if (existing) {
+    if (!existingError && existing) {
       // Update existing
-      const { error } = await supabase
+      const { error } = await (supabaseClient as any)
         .from('workflows')
         .update(workflowData)
-        .eq('id', existing.id)
+        .eq('id', (existing as { id: string }).id)
       
       if (error) throw error
       return { updated: true, inserted: false }
     } else {
       // Insert new
-      const { error } = await supabase
+      const { error } = await (supabaseClient as any)
         .from('workflows')
         .insert({
           ...workflowData,
@@ -422,7 +435,8 @@ export class ExecutionSyncService {
    */
   private async createWorkflowBackup(providerId: string, fullWorkflow: N8nWorkflow) {
     // Store in workflow_data field with timestamp
-    const { error } = await supabase
+    const supabaseClient = getSupabaseClient()
+    const { error } = await (supabaseClient as any)
       .from('workflows')
       .update({
         workflow_data: {
@@ -442,17 +456,18 @@ export class ExecutionSyncService {
    * Ensure workflows exist before processing executions
    */
   private async ensureWorkflowsExist(providerId: string, workflowIds: string[]) {
+    const supabaseClient = getSupabaseClient()
     for (const workflowId of workflowIds) {
-      const { data: existing } = await supabase
+      const { data: existing, error: existingError } = await supabaseClient
         .from('workflows')
         .select('id')
         .eq('provider_id', providerId)
         .eq('provider_workflow_id', workflowId)
         .single()
       
-      if (!existing) {
+      if (existingError || !existing) {
         // Create placeholder workflow
-        await supabase
+        await (supabaseClient as any)
           .from('workflows')
           .insert({
             provider_id: providerId,
@@ -465,8 +480,9 @@ export class ExecutionSyncService {
   }
   
   // Helper methods
-  private async createSyncLog(providerId: string, syncType: string) {
-    const { data, error } = await supabase
+  private async createSyncLog(providerId: string, syncType: string): Promise<{ id: string } | null> {
+    const supabaseClient = getSupabaseClient()
+    const { data, error } = await (supabaseClient as any)
       .from('sync_logs')
       .insert({
         provider_id: providerId,
@@ -476,12 +492,16 @@ export class ExecutionSyncService {
       .select('id')
       .single()
     
-    if (error) console.error('Failed to create sync log:', error)
-    return { data }
+    if (error) {
+      console.error('Failed to create sync log:', error)
+      return null
+    }
+    return data
   }
   
   private async completeSyncLog(logId: string, status: string, result: any, errorMessage?: string) {
-    await supabase
+    const supabaseClient = getSupabaseClient()
+    await (supabaseClient as any)
       .from('sync_logs')
       .update({
         status,
@@ -496,7 +516,8 @@ export class ExecutionSyncService {
   }
   
   private async updateProviderHealth(providerId: string, status: string, errorMessage?: string) {
-    await supabase
+    const supabaseClient = getSupabaseClient()
+    await (supabaseClient as any)
       .from('providers')
       .update({
         status,
@@ -506,8 +527,9 @@ export class ExecutionSyncService {
       .eq('id', providerId)
   }
   
-  private async getLastSyncCursor(providerId: string, syncType: string) {
-    const { data } = await supabase
+  private async getLastSyncCursor(providerId: string, syncType: string): Promise<{ last_cursor: string } | null> {
+    const supabaseClient = getSupabaseClient()
+    const { data, error } = await supabaseClient
       .from('sync_logs')
       .select('last_cursor')
       .eq('provider_id', providerId)
@@ -517,22 +539,26 @@ export class ExecutionSyncService {
       .limit(1)
       .single()
     
+    if (error) return null
     return data
   }
   
   private async updateSyncCursor(providerId: string, syncType: string, cursor: string) {
     // This would typically be done in the sync log completion
     // For now, we'll store it in provider metadata
-    const { data: provider } = await supabase
+    const supabaseClient = getSupabaseClient()
+    const { data: provider, error: providerError } = await supabaseClient
       .from('providers')
       .select('metadata')
       .eq('id', providerId)
       .single()
     
-    const metadata = provider?.metadata || {}
+    if (providerError) return
+    
+    const metadata = (provider as { metadata?: any })?.metadata || {}
     metadata[`last_${syncType}_cursor`] = cursor
     
-    await supabase
+    await (supabaseClient as any)
       .from('providers')
       .update({ metadata })
       .eq('id', providerId)
