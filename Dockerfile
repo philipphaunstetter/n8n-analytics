@@ -42,7 +42,7 @@ RUN addgroup -g 1001 -S nodejs && \
     adduser -S elova -u 1001
 
 # Install runtime dependencies
-RUN apk add --no-cache dumb-init curl jq bash
+RUN apk add --no-cache dumb-init curl jq bash sqlite
 
 # Set production environment
 ENV NODE_ENV=production

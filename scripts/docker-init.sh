@@ -41,46 +41,19 @@ detect_database_config() {
 
 # Function to initialize SQLite configuration database
 init_config_database() {
-    echo "Initializing configuration database..."
+    echo "Configuration database will be initialized by Node.js ConfigManager"
+    echo "Database file prepared at: $DB_FILE"
     
-    # Create SQLite database with configuration table if it doesn't exist
-    sqlite3 "$DB_FILE" << 'EOF'
-CREATE TABLE IF NOT EXISTS config (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    key TEXT UNIQUE NOT NULL,
-    value TEXT,
-    encrypted BOOLEAN DEFAULT 0,
-    category TEXT DEFAULT 'general',
-    description TEXT,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-);
-
--- Create trigger for updated_at
-CREATE TRIGGER IF NOT EXISTS update_config_timestamp 
-    AFTER UPDATE ON config
-    BEGIN
-        UPDATE config SET updated_at = CURRENT_TIMESTAMP WHERE id = NEW.id;
-    END;
-
--- Insert default configuration values
-INSERT OR IGNORE INTO config (key, value, category, description) VALUES
-    ('app.version', '0.1.0', 'system', 'Application version'),
-    ('app.initialized', 'true', 'system', 'Application initialized marker'),
-    ('app.first_run', 'true', 'system', 'First run flag - triggers setup wizard'),
-    ('app.timezone', 'UTC', 'system', 'Application timezone'),
-    ('database.type', 'sqlite', 'database', 'Database type'),
-    ('database.file', '/app/data/elova.db', 'database', 'SQLite database file path'),
-    ('features.demo_mode', 'false', 'features', 'Enable demo mode with sample data'),
-    ('features.analytics_enabled', 'true', 'features', 'Enable built-in analytics'),
-    ('n8n.host', '', 'n8n', 'n8n instance URL'),
-    ('n8n.api_key', '', 'n8n', 'n8n API key (encrypted)'),
-    ('sync.executions_interval', '15m', 'sync', 'Execution sync interval'),
-    ('sync.workflows_interval', '6h', 'sync', 'Workflow sync interval'),
-    ('app.initDone', 'false', 'app', 'Setup wizard completion status');
-EOF
-
-    echo "Configuration database initialized at: $DB_FILE"
+    # The Node.js ConfigManager will handle database initialization
+    # when the application starts. We just ensure the file exists and is writable.
+    touch "$DB_FILE"
+    chmod 644 "$DB_FILE"
+    
+    # Set environment variables for configuration defaults
+    export DB_PATH="$DB_FILE"
+    export ELOVA_FIRST_RUN="true"
+    
+    echo "Database initialization will be handled by the application"
 }
 
 # Function to set runtime configuration hints
@@ -122,25 +95,25 @@ if [ ! -f "$FIRST_RUN_MARKER" ]; then
     # Detect database type from environment
     DB_TYPE=$(detect_database_config)
     
-    # Update any environment-provided configuration
+    # Set environment variables for the Node.js app to read
     if [ -n "$N8N_HOST" ]; then
-        sqlite3 "$DB_FILE" "UPDATE config SET value = '$N8N_HOST' WHERE key = 'n8n.host';"
-        echo "Updated n8n.host from environment"
+        export N8N_HOST="$N8N_HOST"
+        echo "N8N_HOST environment variable set for application"
     fi
     
     if [ -n "$N8N_API_KEY" ]; then
-        sqlite3 "$DB_FILE" "UPDATE config SET value = '$N8N_API_KEY' WHERE key = 'n8n.api_key';"
-        echo "Updated n8n.api_key from environment"
+        export N8N_API_KEY="$N8N_API_KEY"
+        echo "N8N_API_KEY environment variable set for application"
     fi
     
     if [ -n "$GENERIC_TIMEZONE" ]; then
-        sqlite3 "$DB_FILE" "UPDATE config SET value = '$GENERIC_TIMEZONE' WHERE key = 'app.timezone';"
-        echo "Updated timezone from environment"
+        export GENERIC_TIMEZONE="$GENERIC_TIMEZONE"
+        echo "GENERIC_TIMEZONE environment variable set for application"
     fi
     
     if [ "$ELOVA_DEMO_MODE" = "true" ]; then
-        sqlite3 "$DB_FILE" "UPDATE config SET value = 'true' WHERE key = 'features.demo_mode';"
-        echo "Enabled demo mode from environment"
+        export ELOVA_DEMO_MODE="true"
+        echo "ELOVA_DEMO_MODE environment variable set for application"
     fi
     
     # Create runtime configuration hints
