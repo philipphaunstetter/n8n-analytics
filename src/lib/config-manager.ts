@@ -7,6 +7,7 @@
 
 import sqlite3 from 'sqlite3';
 import path from 'path';
+import fs from 'fs';
 
 interface ConfigValue {
   key: string;
@@ -28,7 +29,6 @@ export class ConfigManager {
     
     // Ensure directory exists
     const dir = path.dirname(this.dbPath);
-    const fs = require('fs');
     if (!fs.existsSync(dir)) {
       fs.mkdirSync(dir, { recursive: true });
     }
