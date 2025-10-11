@@ -118,7 +118,7 @@ function ExecutionsContent() {
     return (
       execution.id.toLowerCase().includes(searchLower) ||
       execution.workflowId.toLowerCase().includes(searchLower) ||
-      workflowName.toLowerCase().includes(searchLower) ||
+      (typeof workflowName === 'string' && workflowName.toLowerCase().includes(searchLower)) ||
       execution.error?.message?.toLowerCase().includes(searchLower)
     )
   })
@@ -164,7 +164,7 @@ function ExecutionsContent() {
         </div>
         <div className="flex space-x-3">
           <Button 
-            variant="outline" 
+            outline
             onClick={syncExecutions} 
             disabled={syncing || loading}
             className="flex items-center space-x-2"
@@ -230,7 +230,7 @@ function ExecutionsContent() {
         </div>
 
         <div className="flex items-end">
-          <Button variant="outline" className="flex items-center space-x-2">
+          <Button outline className="flex items-center space-x-2">
             <FunnelIcon className="h-4 w-4" />
             <span>More Filters</span>
           </Button>
@@ -312,7 +312,7 @@ function ExecutionsContent() {
                     <TableCell>
                       <div className="flex flex-col">
                         <span className="font-medium text-gray-900">
-                          {execution.metadata?.workflowName || 
+                          {(typeof execution.metadata?.workflowName === 'string' ? execution.metadata.workflowName : null) || 
                            DEMO_WORKFLOWS.find(w => w.id === execution.workflowId)?.name || 
                            execution.workflowId}
                         </span>
@@ -339,9 +339,9 @@ function ExecutionsContent() {
                     </TableCell>
                     <TableCell>
                       <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={(e) => {
+                        outline
+                        className="text-sm px-2 py-1"
+                        onClick={(e: React.MouseEvent) => {
                           e.stopPropagation()
                           router.push(`/executions/${execution.id}`)
                         }}

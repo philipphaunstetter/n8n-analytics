@@ -118,13 +118,15 @@ export class ExecutionSyncService {
     } catch (error) {
       console.error(`❌ ${syncType} sync failed for ${provider.name}:`, error)
       
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+      
       // Update sync log as failed
       if (syncLog) {
-        await this.completeSyncLog(syncLog.id, 'error', {}, error.message)
+        await this.completeSyncLog(syncLog.id, 'error', {}, errorMessage)
       }
       
       // Update provider health status
-      await this.updateProviderHealth(provider.id, 'error', error.message)
+      await this.updateProviderHealth(provider.id, 'error', errorMessage)
       
       throw error
     }
@@ -337,7 +339,7 @@ export class ExecutionSyncService {
       retry_of: n8nExecution.retryOf,
       retry_success_id: n8nExecution.retrySuccessId,
       metadata: {
-        waitTill: n8nExecution.waitTill,
+        waitTill: (n8nExecution as any).waitTill,
         originalData: n8nExecution
       }
     }
@@ -560,7 +562,7 @@ export class ExecutionSyncService {
     }
   }
   
-  private async decryptApiKey(encryptedKey: string): string {
+  private async decryptApiKey(encryptedKey: string): Promise<string> {
     // TODO: Implement proper encryption/decryption
     // For now, return as-is (assuming base64 or similar)
     return encryptedKey

@@ -175,7 +175,7 @@ function WorkflowsContent() {
         </div>
         <div className="flex space-x-3">
           <Button 
-            variant="outline" 
+            outline
             onClick={backupWorkflows} 
             disabled={backing || loading}
             className="flex items-center space-x-2"
@@ -184,7 +184,7 @@ function WorkflowsContent() {
             <span>{backing ? 'Backing up...' : 'Backup now'}</span>
           </Button>
           <Button 
-            variant="outline" 
+            outline
             onClick={syncWorkflows} 
             disabled={syncing || loading}
             className="flex items-center space-x-2"
@@ -232,7 +232,7 @@ function WorkflowsContent() {
         </div>
 
         <div className="flex items-end">
-          <Button variant="outline" className="flex items-center space-x-2">
+          <Button outline className="flex items-center space-x-2">
             <FunnelIcon className="h-4 w-4" />
             <span>More Filters</span>
           </Button>
@@ -362,9 +362,9 @@ function WorkflowsContent() {
                   </TableCell>
                   <TableCell>
                     <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={(e) => {
+                      outline 
+                      className="text-sm px-3 py-1"
+                      onClick={(e: React.MouseEvent) => {
                         e.stopPropagation()
                         router.push(`/workflows/${workflow.id}`)
                       }}

@@ -111,7 +111,7 @@ export interface ToastOptions {
 
 // Toast container component
 export function ToastContainer() {
-  const [toasts, setToasts] = useState<(ToastProps & { id: string })[]>([])
+  const [toasts, setToasts] = useState<(ToastOptions & { id: string })[]>([])
 
   const addToast = (options: ToastOptions) => {
     const id = Math.random().toString(36).substr(2, 9)
