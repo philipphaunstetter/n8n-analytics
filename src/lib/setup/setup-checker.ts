@@ -98,10 +98,17 @@ export class SetupChecker {
    */
   async markSetupComplete(): Promise<void> {
     try {
+      // Set both completion flags for compatibility
       await configProvider.set(
         'app.setup_completed',
         true,
         'Setup wizard completed successfully'
+      )
+      
+      await configProvider.set(
+        'app.initDone',
+        true,
+        'Application initialization completed'
       )
 
       await configProvider.set(
@@ -131,8 +138,10 @@ export class SetupChecker {
 
   private async isSetupComplete(): Promise<boolean> {
     try {
+      // Check both possible completion flags
       const setupCompleted = await configProvider.get<boolean>('app.setup_completed')
-      return setupCompleted === true
+      const initDone = await configProvider.get<boolean>('app.initDone')
+      return setupCompleted === true || initDone === true
     } catch (error) {
       return false
     }
@@ -161,10 +170,8 @@ export class SetupChecker {
   private async isAdminAccountSetup(): Promise<boolean> {
     try {
       // Check if an admin account has been created
-      // This would typically check the users table, but since we don't have that yet,
-      // we'll check for a setup configuration flag
-      const adminSetup = await configProvider.get<boolean>('setup.admin_account_created')
-      return adminSetup === true
+      const adminSetup = await configProvider.get<string>('setup.admin_account_created')
+      return adminSetup === 'true' || adminSetup === true
     } catch (error) {
       return false
     }
@@ -186,15 +193,17 @@ export class SetupChecker {
   private async areIntegrationsSetup(): Promise<boolean> {
     try {
       // Check if at least one integration is configured
-      // For now, we'll check for n8n integration as it's the primary one
       const n8nApiKey = await configProvider.get<string>('integrations.n8n.api_key')
+      const n8nUrl = await configProvider.get<string>('integrations.n8n.url')
       
       // Integrations are optional, so we'll consider this step complete if:
-      // 1. n8n API key is configured, OR
-      // 2. User has explicitly marked integrations as skipped
+      // 1. n8n integration is configured (both URL and key), OR
+      // 2. User has explicitly marked integrations as skipped, OR
+      // 3. Setup is marked as complete (integrations are optional)
       const integrationsSkipped = await configProvider.get<boolean>('setup.integrations_skipped')
+      const setupComplete = await this.isSetupComplete()
       
-      return Boolean(n8nApiKey) || integrationsSkipped === true
+      return Boolean(n8nApiKey && n8nUrl) || integrationsSkipped === true || setupComplete
     } catch (error) {
       return false
     }
