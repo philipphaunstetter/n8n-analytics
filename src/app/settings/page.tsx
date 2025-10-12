@@ -1,6 +1,9 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
+import { useAuth } from '@/contexts/AuthContext'
+import { AppLayout } from '@/components/app-layout'
 import { Button } from '@/components/button'
 import { Input } from '@/components/input'
 import { CogIcon } from '@heroicons/react/24/outline'
@@ -10,7 +13,7 @@ interface N8nConfig {
   apiKey: string
 }
 
-export default function SettingsPage() {
+function SettingsContent() {
   const [n8nConfig, setN8nConfig] = useState<N8nConfig>({ url: '', apiKey: '' })
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -138,7 +141,7 @@ export default function SettingsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="flex items-center justify-center py-12">
         <div className="text-center">
           <CogIcon className="h-8 w-8 animate-spin mx-auto mb-2 text-gray-600" />
           <p className="text-gray-600">Loading settings...</p>
@@ -148,16 +151,20 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-2xl mx-auto px-4">
+    <div className="space-y-8">
+      {/* Page Header */}
+      <div className="mb-8">
+        <div className="flex items-center space-x-2">
+          <CogIcon className="h-8 w-8 text-gray-900" />
+          <h1 className="text-2xl font-bold text-gray-900">Settings</h1>
+        </div>
+        <p className="mt-2 text-sm text-gray-600">
+          Configure your n8n integration and monitoring preferences
+        </p>
+      </div>
+
+      <div className="max-w-2xl">
         <div className="bg-white rounded-lg shadow-sm border">
-          <div className="px-6 py-4 border-b">
-            <div className="flex items-center space-x-2">
-              <CogIcon className="h-6 w-6 text-gray-600" />
-              <h1 className="text-xl font-semibold text-gray-900">Settings</h1>
-            </div>
-            <p className="text-gray-600 text-sm mt-1">Configure your n8n integration</p>
-          </div>
           
           <div className="px-6 py-6 space-y-6">
             {/* n8n Configuration */}
@@ -254,5 +261,34 @@ export default function SettingsPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function SettingsPage() {
+  const { user, loading } = useAuth()
+  const router = useRouter()
+
+  useEffect(() => {
+    if (!loading && !user) {
+      router.push('/auth/signin')
+    }
+  }, [user, loading, router])
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-indigo-600"></div>
+      </div>
+    )
+  }
+
+  if (!user) {
+    return null
+  }
+
+  return (
+    <AppLayout>
+      <SettingsContent />
+    </AppLayout>
   )
 }
