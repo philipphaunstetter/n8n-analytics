@@ -49,12 +49,6 @@ CREATE INDEX IF NOT EXISTS idx_app_config_category ON app_config(category);
 CREATE INDEX IF NOT EXISTS idx_config_audit_log_key ON config_audit_log(config_key);
 CREATE INDEX IF NOT EXISTS idx_config_audit_log_created_at ON config_audit_log(created_at);
 
--- Triggers to maintain updated_at timestamp
-CREATE TRIGGER IF NOT EXISTS tr_app_config_updated_at 
-    AFTER UPDATE ON app_config
-    BEGIN
-        UPDATE app_config SET updated_at = CURRENT_TIMESTAMP WHERE id = NEW.id;
-    END;
 
 -- Insert default configuration categories
 INSERT OR IGNORE INTO config_categories (name, display_name, description, icon, sort_order, is_system) VALUES

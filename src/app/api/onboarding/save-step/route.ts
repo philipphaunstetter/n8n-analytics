@@ -4,8 +4,10 @@ import { headers } from 'next/headers'
 
 export async function POST(request: NextRequest) {
   try {
+    console.log('[onboarding/save-step] request received')
     const body = await request.json()
     const { step, data } = body
+    console.log('[onboarding/save-step] parsed body:', { step, hasData: !!data })
 
     if (!step || !data) {
       return NextResponse.json(
@@ -15,7 +17,9 @@ export async function POST(request: NextRequest) {
     }
 
     const configManager = getConfigManager()
+    console.log('[onboarding/save-step] initializing config manager...')
     await configManager.initialize()
+    console.log('[onboarding/save-step] config manager initialized')
 
     // Get client info for audit
     const headersList = await headers()
@@ -34,8 +38,10 @@ export async function POST(request: NextRequest) {
     // Save configuration based on step
     switch (step) {
       case 'n8n-integration':
+        console.log('[onboarding/save-step] saving n8n integration config...')
         await configManager.set('integrations.n8n.url', data.url, updateOptions)
         await configManager.set('integrations.n8n.api_key', data.apiKey, updateOptions)
+        console.log('[onboarding/save-step] n8n integration config saved')
         break
 
       case 'regional-settings':

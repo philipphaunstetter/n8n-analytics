@@ -82,6 +82,13 @@ export class ConfigManager {
     
     if (this.db === null) {
       this.db = new Database(databasePath);
+      // Try to reduce lock contention
+      try {
+        const anyDb = this.db as any;
+        if (typeof anyDb.configure === 'function') {
+          anyDb.configure('busyTimeout', 5000);
+        }
+      } catch {}
       this.encryptionKey = this.getOrCreateEncryptionKey();
     }
   }
@@ -93,9 +100,31 @@ export class ConfigManager {
     if (this.isInitialized) return;
 
     try {
-      // Run the configuration migration
-      const migrationSql = await this.loadMigrationFile();
-      await this.executeSql(migrationSql);
+      if (!this.db) {
+        throw new Error('Database not initialized');
+      }
+
+      // Apply pragmas to improve concurrency and stability
+      await this.executeSql(`
+        PRAGMA journal_mode=WAL;
+        PRAGMA busy_timeout=5000;
+        PRAGMA synchronous=NORMAL;
+        PRAGMA foreign_keys=ON;
+      `);
+
+      // Only run migration if schema is missing
+      const hasSchema = await this.hasSchema();
+      if (!hasSchema) {
+        console.log('ConfigManager: schema missing – running migration');
+        const migrationSql = await this.loadMigrationFile();
+        await this.executeSql(migrationSql);
+        console.log('ConfigManager: migration completed');
+      } else {
+        // console.debug('ConfigManager: schema already present – skipping migration');
+      }
+
+      // Drop legacy timestamp trigger if present (we set updated_at explicitly)
+      await this.executeSql('DROP TRIGGER IF EXISTS tr_app_config_updated_at;');
       
       // Ensure encryption key is set
       await this.ensureEncryptionKey();
@@ -257,36 +286,25 @@ export class ConfigManager {
     return new Promise((resolve, reject) => {
       const updateSql = `
         UPDATE app_config 
-        SET value = ?, updated_by = ?
+        SET value = ?, updated_by = ?, updated_at = CURRENT_TIMESTAMP
         WHERE key = ?
       `;
 
       this.db!.run(
         updateSql,
         [serializedValue, options.changedBy || 'system', key],
-        (err: Error | null, result: any) => {
+        // Using regular function to access SQLite RunResult properties
+        function(this: any, err: Error | null) {
           if (err) {
             reject(err);
             return;
           }
 
-          if ((result as any).changes === 0) {
+          if (this.changes === 0) {
             reject(new Error(`Configuration key "${key}" not found`));
             return;
           }
 
-          // Log the change for audit
-          const auditData = {
-            configKey: key,
-            oldValue: current?.value,
-            newValue: serializedValue,
-            changedBy: options.changedBy || 'system',
-            changeReason: options.changeReason,
-            ipAddress: options.ipAddress,
-            userAgent: options.userAgent
-          };
-
-          this.logConfigChange(auditData).catch(console.error);
           resolve();
         }
       );
@@ -667,6 +685,23 @@ export class ConfigManager {
           resolve();
         }
       });
+    });
+  }
+
+  private async hasSchema(): Promise<boolean> {
+    if (!this.db) return false;
+    return new Promise((resolve) => {
+      this.db!.get(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name='app_config'",
+        [],
+        (err, row) => {
+          if (err) {
+            resolve(false);
+            return;
+          }
+          resolve(!!row);
+        }
+      );
     });
   }
 }

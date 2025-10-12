@@ -158,8 +158,8 @@ export function N8NConnectionStatus({ onConnectionRestored, showRetry = true }: 
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          stepName: 'n8n_integration',
-          stepData: { url, apiKey }
+          step: 'n8n-integration',
+          data: { url, apiKey }
         })
       })
       
