@@ -11,8 +11,8 @@ Successfully implemented real-time data retrieval from the n8n test instance for
 The integration uses environment variables from `.env.local`:
 
 ```env
-N8N_HOST="https://n8n.***REMOVED***/"
-N8N_API_KEY="***REMOVED***..."
+N8N_HOST="https://your-n8n-instance.app.n8n.cloud/"
+N8N_API_KEY="your_n8n_api_key_here"
 NEXT_PUBLIC_ENABLE_DEMO_MODE="false"
 ```
 
@@ -124,7 +124,7 @@ The dashboard stats function (`fetchN8nDashboardStats`) performs:
 
 ## Verified Test Instance Data
 
-**Connected to:** `https://n8n.***REMOVED***/`
+**Connected to:** `https://your-n8n-instance.app.n8n.cloud/`
 
 **Available Workflows:** 12 workflows including:
 - "Lead" workflow (primary activity - 90 executions in 7 days)
