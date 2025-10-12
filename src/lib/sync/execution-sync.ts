@@ -1,21 +1,92 @@
-import { createClient } from '@supabase/supabase-js'
 import { n8nApi } from '@/lib/n8n-api'
 import type { N8nExecution, N8nWorkflow } from '@/lib/n8n-api'
+import { Database } from 'sqlite3'
+import { ConfigManager } from '@/lib/config/config-manager'
+import path from 'path'
 
-// Lazy Supabase client initialization to avoid build-time environment dependency
-let supabase: ReturnType<typeof createClient> | null = null
+// SQLite database for execution storage
+let db: Database | null = null
 
-function getSupabaseClient() {
-  if (!supabase) {
-    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
-      throw new Error('Missing required environment variables: NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY')
-    }
-    supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL,
-      process.env.SUPABASE_SERVICE_ROLE_KEY
-    )
+function getSQLiteClient(): Database {
+  if (!db) {
+    const dbPath = ConfigManager.getDefaultDatabasePath()
+    db = new Database(dbPath)
+    
+    // Initialize execution tables if they don't exist
+    db.serialize(() => {
+      db!.run(`
+        CREATE TABLE IF NOT EXISTS providers (
+          id TEXT PRIMARY KEY,
+          user_id TEXT,
+          name TEXT NOT NULL,
+          base_url TEXT NOT NULL,
+          api_key_encrypted TEXT NOT NULL,
+          is_connected BOOLEAN DEFAULT 1,
+          status TEXT DEFAULT 'healthy',
+          last_checked_at TEXT,
+          metadata TEXT DEFAULT '{}'
+        )
+      `)
+      
+      db!.run(`
+        CREATE TABLE IF NOT EXISTS workflows (
+          id TEXT PRIMARY KEY,
+          provider_id TEXT,
+          provider_workflow_id TEXT,
+          name TEXT NOT NULL,
+          is_active BOOLEAN DEFAULT 1,
+          tags TEXT DEFAULT '[]',
+          node_count INTEGER DEFAULT 0,
+          workflow_data TEXT,
+          created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+          updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (provider_id) REFERENCES providers (id)
+        )
+      `)
+      
+      db!.run(`
+        CREATE TABLE IF NOT EXISTS executions (
+          id TEXT PRIMARY KEY,
+          provider_id TEXT,
+          workflow_id TEXT,
+          provider_execution_id TEXT UNIQUE,
+          provider_workflow_id TEXT,
+          status TEXT,
+          mode TEXT,
+          started_at TEXT,
+          stopped_at TEXT,
+          duration INTEGER,
+          finished BOOLEAN,
+          retry_of TEXT,
+          retry_success_id TEXT,
+          metadata TEXT DEFAULT '{}',
+          created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+          updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (provider_id) REFERENCES providers (id),
+          FOREIGN KEY (workflow_id) REFERENCES workflows (id)
+        )
+      `)
+      
+      db!.run(`
+        CREATE TABLE IF NOT EXISTS sync_logs (
+          id TEXT PRIMARY KEY,
+          provider_id TEXT,
+          sync_type TEXT,
+          status TEXT,
+          completed_at TEXT,
+          records_processed INTEGER DEFAULT 0,
+          records_inserted INTEGER DEFAULT 0,
+          records_updated INTEGER DEFAULT 0,
+          error_message TEXT,
+          metadata TEXT DEFAULT '{}',
+          last_cursor TEXT,
+          created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (provider_id) REFERENCES providers (id)
+        )
+      `)
+    })
   }
-  return supabase
+  return db
 }
 
 export interface Provider {
@@ -49,15 +120,19 @@ export class ExecutionSyncService {
     
     try {
       // Get all active providers across all users
-      const supabaseClient = getSupabaseClient()
-      const { data: providers, error } = await supabaseClient
-        .from('providers')
-        .select('*')
-        .eq('is_connected', true)
-        .eq('status', 'healthy')
+      const db = getSQLiteClient()
+      const providers = await new Promise<Provider[]>((resolve, reject) => {
+        db.all(
+          'SELECT * FROM providers WHERE is_connected = 1 AND status = ?',
+          ['healthy'],
+          (err, rows: Provider[]) => {
+            if (err) reject(err)
+            else resolve(rows || [])
+          }
+        )
+      })
       
-      if (error) throw error
-      if (!providers || providers.length === 0) {
+      if (providers.length === 0) {
         console.log('ℹ️ No active providers found')
         return { success: true, providers: 0 }
       }
@@ -323,21 +398,26 @@ export class ExecutionSyncService {
    */
   private async upsertExecution(providerId: string, n8nExecution: N8nExecution) {
     // Get workflow UUID from provider workflow ID
-    const supabaseClient = getSupabaseClient()
-    const { data: workflow, error } = await supabaseClient
-      .from('workflows')
-      .select('id')
-      .eq('provider_id', providerId)
-      .eq('provider_workflow_id', n8nExecution.workflowId)
-      .single()
+    const db = getSQLiteClient()
+    const workflow = await new Promise<{id: string} | null>((resolve, reject) => {
+      db.get(
+        'SELECT id FROM workflows WHERE provider_id = ? AND provider_workflow_id = ?',
+        [providerId, n8nExecution.workflowId],
+        (err, row: {id: string}) => {
+          if (err) reject(err)
+          else resolve(row || null)
+        }
+      )
+    })
     
-    if (error || !workflow) {
+    if (!workflow) {
       throw new Error(`Workflow not found: ${n8nExecution.workflowId}`)
     }
     
     const executionData = {
+      id: `exec_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       provider_id: providerId,
-      workflow_id: (workflow as { id: string }).id,
+      workflow_id: workflow.id,
       provider_execution_id: n8nExecution.id,
       provider_workflow_id: n8nExecution.workflowId,
       status: this.mapN8nStatus(n8nExecution.status),
@@ -347,87 +427,123 @@ export class ExecutionSyncService {
       duration: n8nExecution.stoppedAt 
         ? new Date(n8nExecution.stoppedAt).getTime() - new Date(n8nExecution.startedAt).getTime()
         : null,
-      finished: n8nExecution.finished,
+      finished: n8nExecution.finished ? 1 : 0,
       retry_of: n8nExecution.retryOf,
       retry_success_id: n8nExecution.retrySuccessId,
-      metadata: {
+      metadata: JSON.stringify({
         waitTill: (n8nExecution as any).waitTill,
         originalData: n8nExecution
-      }
+      })
     }
     
     // Check if execution exists
-    const { data: existing, error: existingError } = await supabaseClient
-      .from('executions')
-      .select('id')
-      .eq('provider_id', providerId)
-      .eq('provider_execution_id', n8nExecution.id)
-      .single()
+    const existing = await new Promise<{id: string} | null>((resolve, reject) => {
+      db.get(
+        'SELECT id FROM executions WHERE provider_id = ? AND provider_execution_id = ?',
+        [providerId, n8nExecution.id],
+        (err, row: {id: string}) => {
+          if (err) reject(err)
+          else resolve(row || null)
+        }
+      )
+    })
     
-    if (!existingError && existing) {
-      // Update existing
-      const { error } = await (supabaseClient as any)
-        .from('executions')
-        .update(executionData)
-        .eq('id', (existing as { id: string }).id)
-      
-      if (error) throw error
-      return { updated: true, inserted: false }
-    } else {
-      // Insert new
-      const { error } = await (supabaseClient as any)
-        .from('executions')
-        .insert(executionData)
-      
-      if (error) throw error
-      return { inserted: true, updated: false }
-    }
+    return new Promise<{updated: boolean, inserted: boolean}>((resolve, reject) => {
+      if (existing) {
+        // Update existing
+        db.run(`
+          UPDATE executions SET
+            workflow_id = ?, status = ?, mode = ?, started_at = ?, stopped_at = ?,
+            duration = ?, finished = ?, retry_of = ?, retry_success_id = ?, metadata = ?,
+            updated_at = CURRENT_TIMESTAMP
+          WHERE id = ?
+        `, [
+          executionData.workflow_id, executionData.status, executionData.mode,
+          executionData.started_at, executionData.stopped_at, executionData.duration,
+          executionData.finished, executionData.retry_of, executionData.retry_success_id,
+          executionData.metadata, existing.id
+        ], function(err) {
+          if (err) reject(err)
+          else resolve({ updated: true, inserted: false })
+        })
+      } else {
+        // Insert new
+        db.run(`
+          INSERT INTO executions (
+            id, provider_id, workflow_id, provider_execution_id, provider_workflow_id,
+            status, mode, started_at, stopped_at, duration, finished, retry_of,
+            retry_success_id, metadata
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `, [
+          executionData.id, executionData.provider_id, executionData.workflow_id,
+          executionData.provider_execution_id, executionData.provider_workflow_id,
+          executionData.status, executionData.mode, executionData.started_at,
+          executionData.stopped_at, executionData.duration, executionData.finished,
+          executionData.retry_of, executionData.retry_success_id, executionData.metadata
+        ], function(err) {
+          if (err) reject(err)
+          else resolve({ inserted: true, updated: false })
+        })
+      }
+    })
   }
   
   /**
    * Upsert workflow into database
    */
   private async upsertWorkflow(providerId: string, n8nWorkflow: N8nWorkflow) {
+    const db = getSQLiteClient()
     const workflowData = {
+      id: `wf_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       provider_id: providerId,
       provider_workflow_id: n8nWorkflow.id,
       name: n8nWorkflow.name,
-      is_active: n8nWorkflow.active,
-      tags: n8nWorkflow.tags || [],
-      node_count: n8nWorkflow.nodes?.length || 0,
-      updated_at: new Date().toISOString()
+      is_active: n8nWorkflow.active ? 1 : 0,
+      tags: JSON.stringify(n8nWorkflow.tags || []),
+      node_count: n8nWorkflow.nodes?.length || 0
     }
     
     // Check if workflow exists
-    const supabaseClient = getSupabaseClient()
-    const { data: existing, error: existingError } = await supabaseClient
-      .from('workflows')
-      .select('id')
-      .eq('provider_id', providerId)
-      .eq('provider_workflow_id', n8nWorkflow.id)
-      .single()
+    const existing = await new Promise<{id: string} | null>((resolve, reject) => {
+      db.get(
+        'SELECT id FROM workflows WHERE provider_id = ? AND provider_workflow_id = ?',
+        [providerId, n8nWorkflow.id],
+        (err, row: {id: string}) => {
+          if (err) reject(err)
+          else resolve(row || null)
+        }
+      )
+    })
     
-    if (!existingError && existing) {
-      // Update existing
-      const { error } = await (supabaseClient as any)
-        .from('workflows')
-        .update(workflowData)
-        .eq('id', (existing as { id: string }).id)
-      
-      if (error) throw error
-      return { updated: true, inserted: false }
-    } else {
-      // Insert new
-      const { error } = await (supabaseClient as any)
-        .from('workflows')
-        .insert({
-          ...workflowData,
-          created_at: new Date().toISOString()
+    return new Promise<{updated: boolean, inserted: boolean}>((resolve, reject) => {
+      if (existing) {
+        // Update existing
+        db.run(`
+          UPDATE workflows SET
+            name = ?, is_active = ?, tags = ?, node_count = ?, updated_at = CURRENT_TIMESTAMP
+          WHERE id = ?
+        `, [
+          workflowData.name, workflowData.is_active, workflowData.tags,
+          workflowData.node_count, existing.id
+        ], function(err) {
+          if (err) reject(err)
+          else resolve({ updated: true, inserted: false })
         })
-      
-      if (error) throw error
-      return { inserted: true, updated: false }
-    }
+      } else {
+        // Insert new
+        db.run(`
+          INSERT INTO workflows (
+            id, provider_id, provider_workflow_id, name, is_active, tags, node_count
+          ) VALUES (?, ?, ?, ?, ?, ?, ?)
+        `, [
+          workflowData.id, workflowData.provider_id, workflowData.provider_workflow_id,
+          workflowData.name, workflowData.is_active, workflowData.tags, workflowData.node_count
+        ], function(err) {
+          if (err) reject(err)
+          else resolve({ inserted: true, updated: false })
+        })
+      }
+    })
   }
   
   /**
@@ -435,133 +551,163 @@ export class ExecutionSyncService {
    */
   private async createWorkflowBackup(providerId: string, fullWorkflow: N8nWorkflow) {
     // Store in workflow_data field with timestamp
-    const supabaseClient = getSupabaseClient()
-    const { error } = await (supabaseClient as any)
-      .from('workflows')
-      .update({
-        workflow_data: {
-          ...fullWorkflow,
-          backup_timestamp: new Date().toISOString(),
-          nodes: fullWorkflow.nodes,
-          connections: fullWorkflow.connections
-        }
-      })
-      .eq('provider_id', providerId)
-      .eq('provider_workflow_id', fullWorkflow.id)
+    const db = getSQLiteClient()
+    const backupData = JSON.stringify({
+      ...fullWorkflow,
+      backup_timestamp: new Date().toISOString(),
+      nodes: fullWorkflow.nodes,
+      connections: fullWorkflow.connections
+    })
     
-    if (error) throw error
+    return new Promise<void>((resolve, reject) => {
+      db.run(`
+        UPDATE workflows SET 
+          workflow_data = ?, updated_at = CURRENT_TIMESTAMP
+        WHERE provider_id = ? AND provider_workflow_id = ?
+      `, [backupData, providerId, fullWorkflow.id], function(err) {
+        if (err) reject(err)
+        else resolve()
+      })
+    })
   }
   
   /**
    * Ensure workflows exist before processing executions
    */
   private async ensureWorkflowsExist(providerId: string, workflowIds: string[]) {
-    const supabaseClient = getSupabaseClient()
+    const db = getSQLiteClient()
     for (const workflowId of workflowIds) {
-      const { data: existing, error: existingError } = await supabaseClient
-        .from('workflows')
-        .select('id')
-        .eq('provider_id', providerId)
-        .eq('provider_workflow_id', workflowId)
-        .single()
+      const existing = await new Promise<{id: string} | null>((resolve, reject) => {
+        db.get(
+          'SELECT id FROM workflows WHERE provider_id = ? AND provider_workflow_id = ?',
+          [providerId, workflowId],
+          (err, row: {id: string}) => {
+            if (err) reject(err)
+            else resolve(row || null)
+          }
+        )
+      })
       
-      if (existingError || !existing) {
+      if (!existing) {
         // Create placeholder workflow
-        await (supabaseClient as any)
-          .from('workflows')
-          .insert({
-            provider_id: providerId,
-            provider_workflow_id: workflowId,
-            name: `Workflow ${workflowId}`,
-            is_active: true
+        await new Promise<void>((resolve, reject) => {
+          const id = `wf_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+          db.run(`
+            INSERT INTO workflows (
+              id, provider_id, provider_workflow_id, name, is_active
+            ) VALUES (?, ?, ?, ?, ?)
+          `, [id, providerId, workflowId, `Workflow ${workflowId}`, 1], function(err) {
+            if (err) reject(err)
+            else resolve()
           })
+        })
       }
     }
   }
   
   // Helper methods
   private async createSyncLog(providerId: string, syncType: string): Promise<{ id: string } | null> {
-    const supabaseClient = getSupabaseClient()
-    const { data, error } = await (supabaseClient as any)
-      .from('sync_logs')
-      .insert({
-        provider_id: providerId,
-        sync_type: syncType,
-        status: 'running'
-      })
-      .select('id')
-      .single()
+    const db = getSQLiteClient()
+    const id = `log_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
     
-    if (error) {
+    try {
+      await new Promise<void>((resolve, reject) => {
+        db.run(`
+          INSERT INTO sync_logs (id, provider_id, sync_type, status)
+          VALUES (?, ?, ?, ?)
+        `, [id, providerId, syncType, 'running'], function(err) {
+          if (err) reject(err)
+          else resolve()
+        })
+      })
+      return { id }
+    } catch (error) {
       console.error('Failed to create sync log:', error)
       return null
     }
-    return data
   }
   
   private async completeSyncLog(logId: string, status: string, result: any, errorMessage?: string) {
-    const supabaseClient = getSupabaseClient()
-    await (supabaseClient as any)
-      .from('sync_logs')
-      .update({
-        status,
-        completed_at: new Date().toISOString(),
-        records_processed: result.processed || 0,
-        records_inserted: result.inserted || 0,
-        records_updated: result.updated || 0,
-        error_message: errorMessage,
-        metadata: result
+    const db = getSQLiteClient()
+    return new Promise<void>((resolve, reject) => {
+      db.run(`
+        UPDATE sync_logs SET
+          status = ?, completed_at = CURRENT_TIMESTAMP,
+          records_processed = ?, records_inserted = ?, records_updated = ?,
+          error_message = ?, metadata = ?
+        WHERE id = ?
+      `, [
+        status, result.processed || 0, result.inserted || 0, result.updated || 0,
+        errorMessage, JSON.stringify(result), logId
+      ], function(err) {
+        if (err) reject(err)
+        else resolve()
       })
-      .eq('id', logId)
+    })
   }
   
   private async updateProviderHealth(providerId: string, status: string, errorMessage?: string) {
-    const supabaseClient = getSupabaseClient()
-    await (supabaseClient as any)
-      .from('providers')
-      .update({
-        status,
-        last_checked_at: new Date().toISOString(),
-        metadata: errorMessage ? { last_error: errorMessage } : {}
+    const db = getSQLiteClient()
+    const metadata = errorMessage ? JSON.stringify({ last_error: errorMessage }) : '{}'
+    
+    return new Promise<void>((resolve, reject) => {
+      db.run(`
+        UPDATE providers SET
+          status = ?, last_checked_at = CURRENT_TIMESTAMP, metadata = ?
+        WHERE id = ?
+      `, [status, metadata, providerId], function(err) {
+        if (err) reject(err)
+        else resolve()
       })
-      .eq('id', providerId)
+    })
   }
   
   private async getLastSyncCursor(providerId: string, syncType: string): Promise<{ last_cursor: string } | null> {
-    const supabaseClient = getSupabaseClient()
-    const { data, error } = await supabaseClient
-      .from('sync_logs')
-      .select('last_cursor')
-      .eq('provider_id', providerId)
-      .eq('sync_type', syncType)
-      .eq('status', 'success')
-      .order('completed_at', { ascending: false })
-      .limit(1)
-      .single()
+    const db = getSQLiteClient()
     
-    if (error) return null
-    return data
+    return new Promise((resolve, reject) => {
+      db.get(`
+        SELECT last_cursor FROM sync_logs
+        WHERE provider_id = ? AND sync_type = ? AND status = 'success'
+        ORDER BY completed_at DESC
+        LIMIT 1
+      `, [providerId, syncType], (err, row: { last_cursor: string }) => {
+        if (err) reject(err)
+        else resolve(row || null)
+      })
+    })
   }
   
   private async updateSyncCursor(providerId: string, syncType: string, cursor: string) {
-    // This would typically be done in the sync log completion
-    // For now, we'll store it in provider metadata
-    const supabaseClient = getSupabaseClient()
-    const { data: provider, error: providerError } = await supabaseClient
-      .from('providers')
-      .select('metadata')
-      .eq('id', providerId)
-      .single()
+    // Store cursor in provider metadata
+    const db = getSQLiteClient()
     
-    if (providerError) return
+    // First get current metadata
+    const currentMetadata = await new Promise<string>((resolve, reject) => {
+      db.get(
+        'SELECT metadata FROM providers WHERE id = ?',
+        [providerId],
+        (err, row: { metadata: string }) => {
+          if (err) reject(err)
+          else resolve(row?.metadata || '{}')
+        }
+      )
+    })
     
-    const metadata = (provider as { metadata?: any })?.metadata || {}
+    // Update metadata with cursor
+    const metadata = JSON.parse(currentMetadata)
     metadata[`last_${syncType}_cursor`] = cursor
     
-    await (supabaseClient as any)
-      .from('providers')
-      .update({ metadata })
-      .eq('id', providerId)
+    return new Promise<void>((resolve, reject) => {
+      db.run(
+        'UPDATE providers SET metadata = ? WHERE id = ?',
+        [JSON.stringify(metadata), providerId],
+        function(err) {
+          if (err) reject(err)
+          else resolve()
+        }
+      )
+    })
   }
   
   private mapN8nStatus(n8nStatus: string): string {

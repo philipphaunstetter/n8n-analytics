@@ -1,7 +1,6 @@
 // Session Health Check Utility
 // Helps debug session persistence issues
 
-import { supabase } from './supabase'
 import { DevAuth } from './dev-auth'
 
 export interface SessionHealthReport {
@@ -13,12 +12,6 @@ export interface SessionHealthReport {
     sessionData: any
     localStorage: any
     sessionStorage: any
-  }
-  supabase: {
-    hasSession: boolean
-    sessionData: any
-    localStorage: any
-    user: any
   }
   browser: {
     userAgent: string
@@ -38,12 +31,6 @@ export class SessionHealthChecker {
         sessionData: null,
         localStorage: null,
         sessionStorage: null
-      },
-      supabase: {
-        hasSession: false,
-        sessionData: null,
-        localStorage: null,
-        user: null
       },
       browser: {
         userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'N/A',
@@ -66,28 +53,6 @@ export class SessionHealthChecker {
       }
     }
 
-    // Check Supabase session
-    try {
-      const { data: { session }, error } = await supabase.auth.getSession()
-      report.supabase.hasSession = !!session
-      report.supabase.sessionData = session ? {
-        userId: session.user.id,
-        email: session.user.email,
-        expiresAt: session.expires_at,
-        tokenType: session.token_type
-      } : null
-      report.supabase.user = session?.user || null
-
-      // Check Supabase localStorage
-      if (typeof window !== 'undefined') {
-        // Try to find Supabase auth token in localStorage
-        const keys = Object.keys(localStorage)
-        const supabaseAuthKey = keys.find(key => key.includes('supabase') && key.includes('auth-token'))
-        report.supabase.localStorage = supabaseAuthKey ? localStorage.getItem(supabaseAuthKey) : null
-      }
-    } catch (error) {
-      console.error('Error checking Supabase session:', error)
-    }
 
     return report
   }
@@ -112,14 +77,6 @@ export class SessionHealthChecker {
     console.log('SessionStorage:', report.devAuth.sessionStorage)
     console.groupEnd()
     
-    console.group('🔐 Supabase')
-    console.log('Has Session:', report.supabase.hasSession)
-    if (report.supabase.sessionData) {
-      console.log('User:', report.supabase.sessionData.email)
-      console.log('Expires:', new Date(report.supabase.sessionData.expiresAt * 1000))
-    }
-    console.log('LocalStorage Key Present:', !!report.supabase.localStorage)
-    console.groupEnd()
     
     console.group('🌐 Browser')
     console.log('LocalStorage Available:', report.browser.localStorage)
@@ -137,10 +94,9 @@ export class SessionHealthChecker {
     
     const interval = setInterval(async () => {
       const report = await this.generateReport()
-      if (report.devAuth.hasSession || report.supabase.hasSession) {
+      if (report.devAuth.hasSession) {
         console.log('✅ Session active:', 
-          report.devAuth.hasSession ? `Dev: ${report.devAuth.sessionData?.email}` : '',
-          report.supabase.hasSession ? `Supabase: ${report.supabase.sessionData?.email}` : ''
+          report.devAuth.hasSession ? `Dev: ${report.devAuth.sessionData?.email}` : ''
         )
       } else {
         console.log('❌ No active session detected')

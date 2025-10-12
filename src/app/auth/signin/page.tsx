@@ -3,15 +3,12 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Auth } from '@supabase/auth-ui-react'
-import { ThemeSupa } from '@supabase/auth-ui-shared'
-import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
 import { ChartPieIcon } from '@heroicons/react/24/outline'
 import { DevAuth } from '@/lib/dev-auth'
 
 export default function SignIn() {
-  const { user, signIn, isDevMode } = useAuth()
+  const { user, signIn } = useAuth()
   const router = useRouter()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -26,7 +23,7 @@ export default function SignIn() {
     try {
       const result = await signIn(email, password)
       if (result.error) {
-        setError(typeof result.error === 'string' ? result.error : result.error.message)
+        setError(result.error || 'Authentication failed')
       } else {
         router.push('/dashboard')
       }

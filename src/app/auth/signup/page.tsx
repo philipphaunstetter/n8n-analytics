@@ -3,9 +3,6 @@
 import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Auth } from '@supabase/auth-ui-react'
-import { ThemeSupa } from '@supabase/auth-ui-shared'
-import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
 import { ChartPieIcon } from '@heroicons/react/24/outline'
 
@@ -38,23 +35,10 @@ export default function SignUp() {
 
       <div className="mt-10 sm:mx-auto sm:w-full sm:max-w-[480px]">
         <div className="bg-white px-6 py-12 shadow sm:rounded-lg sm:px-12">
-          <Auth
-            supabaseClient={supabase}
-            view="sign_up"
-            appearance={{
-              theme: ThemeSupa,
-              variables: {
-                default: {
-                  colors: {
-                    brand: '#4f46e5',
-                    brandAccent: '#4338ca',
-                  },
-                },
-              },
-            }}
-            providers={['google', 'github']}
-            redirectTo={`${typeof window !== 'undefined' ? window.location.origin : process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/auth/callback`}
-          />
+          <div className="text-center py-8">
+            <p className="text-gray-600 mb-4">Sign up functionality is not available in development mode.</p>
+            <p className="text-sm text-gray-500">Please use the sign in page with any credentials.</p>
+          </div>
           
           <p className="mt-6 text-center text-sm text-gray-500">
             Already have an account?{' '}

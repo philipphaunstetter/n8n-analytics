@@ -1,27 +1,25 @@
 'use client'
 
 import { createContext, useContext, useEffect, useState } from 'react'
-import { User, Session, AuthError } from '@supabase/supabase-js'
-import { supabase } from '@/lib/supabase'
 import { DevAuth, DevUser } from '@/lib/dev-auth'
 import { SessionHealthChecker } from '@/lib/session-health'
 
 interface AuthContextType {
-  user: User | DevUser | null
-  session: Session | null
+  user: DevUser | null
+  session: null
   loading: boolean
-  signIn: (email: string, password: string) => Promise<{ error: AuthError | string | null }>
-  signUp: (email: string, password: string) => Promise<{ error: AuthError | string | null }>
-  signOut: () => Promise<{ error: AuthError | string | null }>
-  resetPassword: (email: string) => Promise<{ error: AuthError | string | null }>
+  signIn: (email: string, password: string) => Promise<{ error: string | null }>
+  signUp: (email: string, password: string) => Promise<{ error: string | null }>
+  signOut: () => Promise<{ error: string | null }>
+  resetPassword: (email: string) => Promise<{ error: string | null }>
   isDevMode: boolean
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | DevUser | null>(null)
-  const [session, setSession] = useState<Session | null>(null)
+  const [user, setUser] = useState<DevUser | null>(null)
+  const session = null
   const [loading, setLoading] = useState(true)
   const isDevMode = DevAuth.isDevelopment()
   
@@ -111,19 +109,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   const signUp = async (email: string, password: string) => {
-    try {
-      const { error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/auth/callback`
-        }
-      })
-      return { error }
-    } catch (error) {
-      console.error('Supabase sign up failed:', error)
-      return { error: 'Sign up failed - please check your configuration' }
-    }
+    // Sign up functionality removed - using dev auth only
+    return { error: 'Sign up not implemented in dev mode' }
   }
 
   const signOut = async () => {
@@ -133,7 +120,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.log('Clearing session')
       DevAuth.clearSession()
       setUser(null)
-      setSession(null)
       return { error: null }
     } catch (error) {
       console.error('Error during sign out:', error)
@@ -142,15 +128,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   const resetPassword = async (email: string) => {
-    try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/auth/reset-password`
-      })
-      return { error }
-    } catch (error) {
-      console.error('Supabase password reset failed:', error)
-      return { error: 'Password reset failed - please check your configuration' }
-    }
+    // Password reset functionality removed - using dev auth only
+    return { error: 'Password reset not implemented in dev mode' }
   }
 
   const value = {
