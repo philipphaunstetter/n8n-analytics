@@ -50,8 +50,8 @@ export interface ConfigUpdateOptions {
  * Handles reading, writing, validation, and encryption of configuration values
  */
 export class ConfigManager {
-  private db: Database;
-  private encryptionKey: string;
+  private db: Database | null = null;
+  private encryptionKey: string | null = null;
   private isInitialized = false;
 
   /**
@@ -61,18 +61,29 @@ export class ConfigManager {
     if (process.env.NODE_ENV === 'development') {
       return path.join(process.cwd(), 'data', 'elova.db');
     }
+    // For build time, use a temp path that won't cause issues
+    if (process.env.NODE_ENV === 'production' && process.env.NEXT_PHASE === 'phase-production-build') {
+      return path.join(process.cwd(), 'data', 'elova.db');
+    }
     return '/app/data/elova.db';
   }
 
   constructor(private databasePath: string = ConfigManager.getDefaultDatabasePath()) {
+    // Skip initialization during build phase
+    if (process.env.NEXT_PHASE === 'phase-production-build') {
+      return;
+    }
+    
     // Ensure the database directory exists
     const dbDir = path.dirname(databasePath);
     if (!fs.existsSync(dbDir)) {
       fs.mkdirSync(dbDir, { recursive: true });
     }
     
-    this.db = new Database(databasePath);
-    this.encryptionKey = this.getOrCreateEncryptionKey();
+    if (this.db === null) {
+      this.db = new Database(databasePath);
+      this.encryptionKey = this.getOrCreateEncryptionKey();
+    }
   }
 
   /**
@@ -101,8 +112,16 @@ export class ConfigManager {
    * Get a configuration value by key
    */
   async get<T = string>(key: string): Promise<T | null> {
+    if (process.env.NEXT_PHASE === 'phase-production-build') {
+      return null as T;
+    }
+    
+    if (!this.db) {
+      return Promise.resolve(null as T);
+    }
+    
     return new Promise((resolve, reject) => {
-      this.db.get(
+      this.db!.get(
         'SELECT * FROM config_view WHERE key = ?',
         [key],
         (err, row: ConfigItem) => {
@@ -131,9 +150,17 @@ export class ConfigManager {
    * Get multiple configuration values by keys
    */
   async getMany(keys: string[]): Promise<Record<string, any>> {
+    if (process.env.NEXT_PHASE === 'phase-production-build') {
+      return Promise.resolve({});
+    }
+    
+    if (!this.db) {
+      return Promise.resolve({});
+    }
+    
     return new Promise((resolve, reject) => {
       const placeholders = keys.map(() => '?').join(',');
-      this.db.all(
+      this.db!.all(
         `SELECT * FROM config_view WHERE key IN (${placeholders})`,
         keys,
         (err, rows: ConfigItem[]) => {
@@ -162,8 +189,16 @@ export class ConfigManager {
    * Get all configuration values in a category
    */
   async getByCategory(category: string): Promise<Record<string, any>> {
+    if (process.env.NEXT_PHASE === 'phase-production-build') {
+      return Promise.resolve({});
+    }
+    
+    if (!this.db) {
+      return Promise.resolve({});
+    }
+    
     return new Promise((resolve, reject) => {
-      this.db.all(
+      this.db!.all(
         'SELECT * FROM config_view WHERE category = ? ORDER BY key',
         [category],
         (err, rows: ConfigItem[]) => {
@@ -211,6 +246,14 @@ export class ConfigManager {
     // Serialize and potentially encrypt the value
     const serializedValue = this.serializeValue(value, current?.valueType || 'string');
 
+    if (process.env.NEXT_PHASE === 'phase-production-build') {
+      return Promise.resolve();
+    }
+    
+    if (!this.db) {
+      return Promise.resolve();
+    }
+    
     return new Promise((resolve, reject) => {
       const updateSql = `
         UPDATE app_config 
@@ -218,7 +261,7 @@ export class ConfigManager {
         WHERE key = ?
       `;
 
-      this.db.run(
+      this.db!.run(
         updateSql,
         [serializedValue, options.changedBy || 'system', key],
         (err: Error | null, result: any) => {
@@ -254,8 +297,16 @@ export class ConfigManager {
    * Get all configuration categories
    */
   async getCategories(): Promise<ConfigCategory[]> {
+    if (process.env.NEXT_PHASE === 'phase-production-build') {
+      return Promise.resolve([]);
+    }
+    
+    if (!this.db) {
+      return Promise.resolve([]);
+    }
+    
     return new Promise((resolve, reject) => {
-      this.db.all(
+      this.db!.all(
         'SELECT * FROM config_categories ORDER BY sort_order, name',
         [],
         (err, rows: ConfigCategory[]) => {
@@ -273,8 +324,16 @@ export class ConfigManager {
    * Get all configuration items for admin interface
    */
   async getAllConfig(): Promise<ConfigItem[]> {
+    if (process.env.NEXT_PHASE === 'phase-production-build') {
+      return Promise.resolve([]);
+    }
+    
+    if (!this.db) {
+      return Promise.resolve([]);
+    }
+    
     return new Promise((resolve, reject) => {
-      this.db.all(
+      this.db!.all(
         'SELECT * FROM config_view ORDER BY category_icon, key',
         [],
         (err, rows: ConfigItem[]) => {
@@ -299,8 +358,16 @@ export class ConfigManager {
    * Get configuration audit log
    */
   async getAuditLog(limit = 100): Promise<ConfigAuditEntry[]> {
+    if (process.env.NEXT_PHASE === 'phase-production-build') {
+      return Promise.resolve([]);
+    }
+    
+    if (!this.db) {
+      return Promise.resolve([]);
+    }
+    
     return new Promise((resolve, reject) => {
-      this.db.all(
+      this.db!.all(
         'SELECT * FROM config_audit_log ORDER BY created_at DESC LIMIT ?',
         [limit],
         (err, rows: ConfigAuditEntry[]) => {
@@ -337,6 +404,11 @@ export class ConfigManager {
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
       `;
 
+      if (!this.db) {
+        reject(new Error('Database not initialized'));
+        return;
+      }
+      
       this.db.run(
         sql,
         [key, serializedValue, valueType, category, description, isSensitive, isReadonly, validationRules, options.changedBy || 'system'],
@@ -358,11 +430,19 @@ export class ConfigManager {
   async resetToDefaults(): Promise<void> {
     const migrationSql = await this.loadMigrationFile();
     
+    if (process.env.NEXT_PHASE === 'phase-production-build') {
+      return Promise.resolve();
+    }
+    
+    if (!this.db) {
+      return Promise.resolve();
+    }
+    
     return new Promise((resolve, reject) => {
-      this.db.serialize(() => {
-        this.db.run('DELETE FROM app_config');
-        this.db.run('DELETE FROM config_categories');
-        this.db.exec(migrationSql, (err) => {
+      this.db!.serialize(() => {
+        this.db!.run('DELETE FROM app_config');
+        this.db!.run('DELETE FROM config_categories');
+        this.db!.exec(migrationSql, (err) => {
           if (err) {
             reject(err);
           } else {
@@ -377,8 +457,12 @@ export class ConfigManager {
    * Close the database connection
    */
   async close(): Promise<void> {
+    if (!this.db) {
+      return Promise.resolve();
+    }
+    
     return new Promise((resolve) => {
-      this.db.close(() => {
+      this.db!.close(() => {
         resolve();
       });
     });
@@ -387,8 +471,12 @@ export class ConfigManager {
   // Private helper methods
 
   private async getConfigItem(key: string): Promise<ConfigItem | null> {
+    if (!this.db) {
+      return Promise.resolve(null);
+    }
+    
     return new Promise((resolve, reject) => {
-      this.db.get(
+      this.db!.get(
         'SELECT * FROM config_view WHERE key = ?',
         [key],
         (err, row: ConfigItem) => {
@@ -437,7 +525,7 @@ export class ConfigManager {
   }
 
   private encrypt(text: string): string {
-    if (!text) return text;
+    if (!text || !this.encryptionKey) return text;
     
     // Simple encryption for compatibility - in production use better methods
     const cipher = createCipher('aes-256-cbc', this.encryptionKey);
@@ -448,7 +536,7 @@ export class ConfigManager {
   }
 
   private decrypt(encryptedText: string): string {
-    if (!encryptedText) return encryptedText;
+    if (!encryptedText || !this.encryptionKey) return encryptedText;
     
     try {
       const decipher = createDecipher('aes-256-cbc', this.encryptionKey);
@@ -533,6 +621,11 @@ export class ConfigManager {
         VALUES (?, ?, ?, ?, ?, ?, ?)
       `;
 
+      if (!this.db) {
+        resolve();
+        return;
+      }
+      
       this.db.run(
         sql,
         [
@@ -562,8 +655,12 @@ export class ConfigManager {
   }
 
   private async executeSql(sql: string): Promise<void> {
+    if (!this.db) {
+      return Promise.resolve();
+    }
+    
     return new Promise((resolve, reject) => {
-      this.db.exec(sql, (err) => {
+      this.db!.exec(sql, (err) => {
         if (err) {
           reject(err);
         } else {

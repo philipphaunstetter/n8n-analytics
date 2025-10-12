@@ -20,13 +20,20 @@ interface ConfigValue {
 }
 
 export class ConfigManager {
-  private db: sqlite3.Database;
+  private db: sqlite3.Database | null = null;
   private dbPath: string;
-  private initPromise: Promise<void>;
+  private initPromise: Promise<void> | null = null;
 
   constructor(dbPath?: string) {
     // Default to the same database file used by the Docker init script
-    this.dbPath = dbPath || process.env.DB_PATH || '/app/data/elova.db';
+    // For build time, use a local path that won't cause issues
+    if (process.env.NEXT_PHASE === 'phase-production-build') {
+      this.dbPath = dbPath || path.join(process.cwd(), 'data', 'elova.db');
+      // Skip database initialization during build
+      return;
+    } else {
+      this.dbPath = dbPath || process.env.DB_PATH || '/app/data/elova.db';
+    }
     
     // Ensure directory exists
     const dir = path.dirname(this.dbPath);
@@ -34,18 +41,24 @@ export class ConfigManager {
       fs.mkdirSync(dir, { recursive: true });
     }
 
-    this.db = new sqlite3.Database(this.dbPath);
-    this.initPromise = this.initializeDatabase();
+    if (this.db === null) {
+      this.db = new sqlite3.Database(this.dbPath);
+      this.initPromise = this.initializeDatabase();
+    }
   }
 
   private async ensureInitialized(): Promise<void> {
-    await this.initPromise;
+    if (this.initPromise) {
+      await this.initPromise;
+    }
   }
 
   private async initializeDatabase(): Promise<void> {
+    if (!this.db) return Promise.resolve();
+    
     return new Promise((resolve, reject) => {
       // Create config table if it doesn't exist
-      this.db.run(`
+      this.db!.run(`
         CREATE TABLE IF NOT EXISTS config (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           key TEXT UNIQUE NOT NULL,
@@ -63,7 +76,7 @@ export class ConfigManager {
         }
         
         // Create trigger for updated_at
-        this.db.run(`
+        this.db!.run(`
           CREATE TRIGGER IF NOT EXISTS update_config_timestamp 
             AFTER UPDATE ON config
             BEGIN
@@ -87,6 +100,8 @@ export class ConfigManager {
   }
 
   private async insertDefaultConfig(): Promise<void> {
+    if (!this.db) return Promise.resolve();
+    
     const defaultConfigs = [
       { key: 'app.version', value: '0.1.0', category: 'system', description: 'Application version' },
       { key: 'app.initialized', value: 'true', category: 'system', description: 'Application initialized marker' },
@@ -113,7 +128,7 @@ export class ConfigManager {
       }
 
       for (const config of defaultConfigs) {
-        this.db.run(
+        this.db!.run(
           'INSERT OR IGNORE INTO config (key, value, category, description) VALUES (?, ?, ?, ?)',
           [config.key, config.value, config.category, config.description],
           (err) => {
@@ -138,9 +153,18 @@ export class ConfigManager {
    * Get a configuration value by key
    */
   async get(key: string): Promise<string | null> {
+    if (process.env.NEXT_PHASE === 'phase-production-build') {
+      return null;
+    }
+    
     await this.ensureInitialized();
+    
+    if (!this.db) {
+      return Promise.resolve(null);
+    }
+    
     return new Promise((resolve, reject) => {
-      this.db.get('SELECT value FROM config WHERE key = ?', [key], (err, row: ConfigValue) => {
+      this.db!.get('SELECT value FROM config WHERE key = ?', [key], (err, row: ConfigValue) => {
         if (err) {
           reject(err);
           return;
@@ -154,9 +178,18 @@ export class ConfigManager {
    * Set a configuration value
    */
   async set(key: string, value: string, category: string = 'general', description?: string): Promise<void> {
+    if (process.env.NEXT_PHASE === 'phase-production-build') {
+      return Promise.resolve();
+    }
+    
     await this.ensureInitialized();
+    
+    if (!this.db) {
+      return Promise.resolve();
+    }
+    
     return new Promise((resolve, reject) => {
-      this.db.run(
+      this.db!.run(
         `INSERT OR REPLACE INTO config (key, value, category, description) 
          VALUES (?, ?, ?, ?)`,
         [key, value, category, description],
@@ -175,9 +208,18 @@ export class ConfigManager {
    * Get all configuration values for a category
    */
   async getCategory(category: string): Promise<Record<string, string | null>> {
+    if (process.env.NEXT_PHASE === 'phase-production-build') {
+      return Promise.resolve({});
+    }
+    
     await this.ensureInitialized();
+    
+    if (!this.db) {
+      return Promise.resolve({});
+    }
+    
     return new Promise((resolve, reject) => {
-      this.db.all('SELECT key, value FROM config WHERE category = ?', [category], (err, rows: ConfigValue[]) => {
+      this.db!.all('SELECT key, value FROM config WHERE category = ?', [category], (err, rows: ConfigValue[]) => {
         if (err) {
           reject(err);
           return;
@@ -196,9 +238,18 @@ export class ConfigManager {
    * Get all configuration values
    */
   async getAll(): Promise<Record<string, string | null>> {
+    if (process.env.NEXT_PHASE === 'phase-production-build') {
+      return Promise.resolve({});
+    }
+    
     await this.ensureInitialized();
+    
+    if (!this.db) {
+      return Promise.resolve({});
+    }
+    
     return new Promise((resolve, reject) => {
-      this.db.all('SELECT key, value FROM config', [], (err, rows: ConfigValue[]) => {
+      this.db!.all('SELECT key, value FROM config', [], (err, rows: ConfigValue[]) => {
         if (err) {
           reject(err);
           return;
@@ -289,7 +340,9 @@ export class ConfigManager {
    * Close database connection
    */
   close(): void {
-    this.db.close();
+    if (this.db) {
+      this.db.close();
+    }
   }
 }
 
