@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -8,15 +8,12 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { 
   ChartPieIcon,
-  CheckIcon,
   EyeIcon,
   EyeSlashIcon,
   CogIcon,
-  BellIcon,
   LinkIcon,
-  ClockIcon,
-  BarChart3Icon,
-  MailIcon,
+  ChartBarIcon,
+  EnvelopeIcon,
   ServerIcon
 } from '@heroicons/react/24/outline'
 import { CheckIcon as CheckIconSolid } from '@heroicons/react/24/solid'
@@ -46,8 +43,8 @@ interface SetupData {
 const steps = [
   { id: '01', name: 'Admin Account', icon: CogIcon, description: 'Create your administrator account' },
   { id: '02', name: 'n8n Integration', icon: LinkIcon, description: 'Connect to your n8n instance' },
-  { id: '03', name: 'Configuration', icon: BarChart3Icon, description: 'Set up sync and analytics' },
-  { id: '04', name: 'Notifications', icon: MailIcon, description: 'Configure email settings' },
+  { id: '03', name: 'Configuration', icon: ChartBarIcon, description: 'Set up sync and analytics' },
+  { id: '04', name: 'Notifications', icon: EnvelopeIcon, description: 'Configure email settings' },
 ]
 
 export default function SetupWizardPage() {
@@ -311,7 +308,7 @@ export default function SetupWizardPage() {
                 type="button"
                 onClick={testN8nConnection}
                 disabled={testingConnection || !formData.n8nUrl || !formData.n8nApiKey}
-                variant="outline"
+                outline
                 className="w-full"
               >
                 {testingConnection ? (
@@ -551,7 +548,7 @@ export default function SetupWizardPage() {
             <div className="flex justify-between mt-8">
               <Button
                 type="button"
-                variant="outline"
+                outline
                 onClick={handleBack}
                 disabled={currentStep === 1}
               >
