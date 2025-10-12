@@ -4,26 +4,32 @@ import { getConfigManager } from '@/lib/config-manager'
 export async function GET() {
   try {
     const config = getConfigManager()
+    await config.initialize()
     
-    // Check the simple initDone flag
-    const initDone = await config.get('app.initDone')
-    const setupCompleted = initDone === 'true'
+    // Check if admin account actually exists (not just flags)
+    const adminEmail = await config.get('setup.admin_email')
+    const adminPasswordHash = await config.get('setup.admin_password_hash')
+    const adminUserId = await config.get('setup.admin_user_id')
     
-    if (setupCompleted) {
+    const hasAdminData = Boolean(adminEmail && adminPasswordHash && adminUserId)
+    
+    if (hasAdminData) {
+      console.log(`Setup status: Admin account found (${adminEmail})`)
       // Setup is complete - redirect to sign in
       return NextResponse.json({
         initDone: true,
         requiresSetup: false,
         nextStep: 'signin',
-        message: 'Setup completed - ready for sign in'
+        message: `Setup completed - admin account: ${adminEmail}`
       })
     } else {
+      console.log('Setup status: No admin account found - setup required')
       // Setup is required - redirect to setup wizard
       return NextResponse.json({
         initDone: false,
         requiresSetup: true,
         nextStep: 'setup',
-        message: 'Initial setup required'
+        message: 'Initial setup required - no admin account found'
       })
     }
   } catch (error) {

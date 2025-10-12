@@ -169,10 +169,23 @@ export class SetupChecker {
 
   private async isAdminAccountSetup(): Promise<boolean> {
     try {
-      // Check if an admin account has been created
-      const adminSetup = await configProvider.get<string>('setup.admin_account_created')
-      return adminSetup === 'true'
+      // Check if admin user data actually exists (not just a flag)
+      const adminEmail = await configProvider.get<string>('setup.admin_email')
+      const adminPasswordHash = await configProvider.get<string>('setup.admin_password_hash')
+      const adminUserId = await configProvider.get<string>('setup.admin_user_id')
+      
+      // Admin account is considered set up if we have email, password hash, and user ID
+      const hasAdminData = Boolean(adminEmail && adminPasswordHash && adminUserId)
+      
+      if (hasAdminData) {
+        console.log(`Admin account found: ${adminEmail} (ID: ${adminUserId})`)
+        return true
+      }
+      
+      console.log('No admin account data found - setup required')
+      return false
     } catch (error) {
+      console.error('Error checking admin account setup:', error)
       return false
     }
   }
