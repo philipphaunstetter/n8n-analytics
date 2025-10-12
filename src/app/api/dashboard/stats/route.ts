@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { authenticateRequest } from '@/lib/api-auth'
 import { DashboardStats, TimeRange } from '@/types'
-import { generateDemoDashboardStats, isDemoMode } from '@/lib/demo-data'
 import { n8nApi } from '@/lib/n8n-api'
 
 /**
@@ -135,14 +134,7 @@ export async function GET(request: NextRequest) {
     const timeRange = (searchParams.get('timeRange') as TimeRange) || '24h'
     const providerId = searchParams.get('providerId') || undefined
 
-    // Return demo data if demo mode is enabled (skip auth for demo)
-    if (isDemoMode()) {
-      const demoStats = generateDemoDashboardStats(timeRange)
-      return NextResponse.json({
-        success: true,
-        data: demoStats
-      })
-    }
+    // Always use real n8n data - no demo mode
 
     // Check if n8n is configured (we'll check during the fetch, no need to warn here)
     // The n8n API client now loads configuration from database dynamically

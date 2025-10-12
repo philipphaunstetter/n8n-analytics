@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { ProviderRegistry } from '@/lib/providers'
 import { Provider, ExecutionFilters, ExecutionStatus, Execution } from '@/types'
-import { generateDemoExecutions, isDemoMode, DEMO_WORKFLOWS } from '@/lib/demo-data'
 import { authenticateRequest } from '@/lib/api-auth'
 import { n8nApi, N8nExecution, N8nWorkflow } from '@/lib/n8n-api'
 
@@ -36,33 +35,26 @@ export async function GET(request: NextRequest) {
       filters.timeRange = 'custom'
     }
 
-    // Fetch executions from n8n API or use demo data as fallback
+    // Fetch executions from n8n API - always use real data
     let allExecutions: Execution[] = []
     let totalCount = 0
 
-    // Try to fetch real n8n data first if not in demo mode
-    if (!isDemoMode()) {
-      try {
-        console.log('Fetching real executions from n8n API...')
-        const n8nExecutions = await n8nApi.getExecutions({ limit: 100 })
-        const n8nWorkflows = await n8nApi.getWorkflows()
-        
-        // Convert n8n executions to our internal format
-        allExecutions = convertN8nExecutions(n8nExecutions.data, n8nWorkflows)
-        totalCount = allExecutions.length
-        
-        console.log(`Fetched ${allExecutions.length} real executions from n8n`)
-      } catch (error) {
-        console.error('Failed to fetch real n8n data, falling back to demo data:', error)
-        // Fall back to demo data if n8n API fails
-        allExecutions = generateDemoExecutions(200)
-      }
-    } else if (isDemoMode()) {
-      console.log('Using demo mode - generating demo executions')
-      allExecutions = generateDemoExecutions(200)
-    } else {
-      console.log('No n8n configuration available, using demo data')
-      allExecutions = generateDemoExecutions(200)
+    try {
+      console.log('Fetching real executions from n8n API...')
+      const n8nExecutions = await n8nApi.getExecutions({ limit: 100 })
+      const n8nWorkflows = await n8nApi.getWorkflows()
+      
+      // Convert n8n executions to our internal format
+      allExecutions = convertN8nExecutions(n8nExecutions.data, n8nWorkflows)
+      totalCount = allExecutions.length
+      
+      console.log(`Fetched ${allExecutions.length} real executions from n8n`)
+    } catch (error) {
+      console.error('Failed to fetch n8n executions:', error)
+      return NextResponse.json(
+        { error: 'Failed to connect to n8n API. Please check your n8n configuration.' },
+        { status: 503 }
+      )
     }
 
     // Apply filters
@@ -159,10 +151,8 @@ function applyExecutionFilters(executions: Execution[], filters: ExecutionFilter
         return true
       }
       
-      // Search in workflow name (try metadata first, then demo workflows)
-      const workflowName = exec.metadata?.workflowName || 
-                          DEMO_WORKFLOWS.find(w => w.id === exec.workflowId)?.name ||
-                          ''
+      // Search in workflow name from metadata
+      const workflowName = exec.metadata?.workflowName || ''
       if (typeof workflowName === 'string' && workflowName.toLowerCase().includes(searchTerm)) {
         return true
       }

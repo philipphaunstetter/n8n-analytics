@@ -3,7 +3,6 @@ import { ProviderRegistry } from '@/lib/providers'
 import { Provider, WorkflowFilters } from '@/types'
 import { authenticateRequest } from '@/lib/api-auth'
 import { n8nApi, N8nWorkflow } from '@/lib/n8n-api'
-import { isDemoMode } from '@/lib/demo-data'
 
 // GET /api/workflows - List workflows across all providers
 export async function GET(request: NextRequest) {
@@ -23,33 +22,26 @@ export async function GET(request: NextRequest) {
       search: searchParams.get('search') || undefined
     }
 
-    // Fetch workflows from n8n API or use demo data as fallback
+    // Fetch workflows from n8n API - always use real data
     let allWorkflows: any[] = []
     let totalCount = 0
 
-    // Try to fetch real n8n data first if not in demo mode
-    if (!isDemoMode()) {
-      try {
-        console.log('Fetching real workflows from n8n API...')
-        const n8nWorkflows = await n8nApi.getWorkflows()
-        const n8nExecutions = await n8nApi.getExecutions({ limit: 1000 }) // Get more executions for workflow stats
-        
-        // Convert n8n workflows to our internal format
-        allWorkflows = convertN8nWorkflows(n8nWorkflows, n8nExecutions.data)
-        totalCount = allWorkflows.length
-        
-        console.log(`Fetched ${allWorkflows.length} real workflows from n8n`)
-      } catch (error) {
-        console.error('Failed to fetch real n8n workflows, falling back to demo data:', error)
-        // Fall back to demo workflows if n8n API fails
-        allWorkflows = generateDemoWorkflows()
-      }
-    } else if (isDemoMode()) {
-      console.log('Using demo mode - generating demo workflows')
-      allWorkflows = generateDemoWorkflows()
-    } else {
-      console.log('No n8n configuration available, using demo data')
-      allWorkflows = generateDemoWorkflows()
+    try {
+      console.log('Fetching real workflows from n8n API...')
+      const n8nWorkflows = await n8nApi.getWorkflows()
+      const n8nExecutions = await n8nApi.getExecutions({ limit: 1000 }) // Get more executions for workflow stats
+      
+      // Convert n8n workflows to our internal format
+      allWorkflows = convertN8nWorkflows(n8nWorkflows, n8nExecutions.data)
+      totalCount = allWorkflows.length
+      
+      console.log(`Fetched ${allWorkflows.length} real workflows from n8n`)
+    } catch (error) {
+      console.error('Failed to fetch n8n workflows:', error)
+      return NextResponse.json(
+        { error: 'Failed to connect to n8n API. Please check your n8n configuration.' },
+        { status: 503 }
+      )
     }
 
     // Apply filters
@@ -110,66 +102,6 @@ function convertN8nWorkflows(n8nWorkflows: N8nWorkflow[], executions: any[]): an
   })
 }
 
-// Helper function to generate demo workflows (fallback)
-function generateDemoWorkflows(): any[] {
-  return [
-    {
-      id: 'demo-workflow-1',
-      name: 'Daily Sales Report',
-      active: true,
-      tags: ['sales', 'reports', 'daily'],
-      createdAt: new Date('2024-01-15T10:00:00Z'),
-      updatedAt: new Date('2024-02-01T14:30:00Z'),
-      executionCount: 45,
-      lastExecutionStatus: 'success',
-      lastExecutionAt: new Date(Date.now() - 2 * 60 * 60 * 1000) // 2 hours ago
-    },
-    {
-      id: 'demo-workflow-2', 
-      name: 'User Onboarding Email Sequence',
-      active: true,
-      tags: ['email', 'onboarding', 'automation'],
-      createdAt: new Date('2024-01-20T09:15:00Z'),
-      updatedAt: new Date('2024-01-25T16:45:00Z'),
-      executionCount: 127,
-      lastExecutionStatus: 'success',
-      lastExecutionAt: new Date(Date.now() - 30 * 60 * 1000) // 30 minutes ago
-    },
-    {
-      id: 'demo-workflow-3',
-      name: 'Invoice Processing',
-      active: false,
-      tags: ['finance', 'invoices'],
-      createdAt: new Date('2024-01-10T11:30:00Z'),
-      updatedAt: new Date('2024-01-12T09:20:00Z'),
-      executionCount: 8,
-      lastExecutionStatus: 'error',
-      lastExecutionAt: new Date(Date.now() - 24 * 60 * 60 * 1000) // 24 hours ago
-    },
-    {
-      id: 'demo-workflow-4',
-      name: 'Slack Notifications',
-      active: true,
-      tags: ['notifications', 'slack'],
-      createdAt: new Date('2024-02-01T08:45:00Z'),
-      updatedAt: new Date('2024-02-05T12:10:00Z'),
-      executionCount: 203,
-      lastExecutionStatus: 'success',
-      lastExecutionAt: new Date(Date.now() - 10 * 60 * 1000) // 10 minutes ago
-    },
-    {
-      id: 'demo-workflow-5',
-      name: 'Database Backup',
-      active: true,
-      tags: ['backup', 'database', 'maintenance'],
-      createdAt: new Date('2024-01-05T15:20:00Z'),
-      updatedAt: new Date('2024-01-28T11:55:00Z'),
-      executionCount: 12,
-      lastExecutionStatus: 'success', 
-      lastExecutionAt: new Date(Date.now() - 6 * 60 * 60 * 1000) // 6 hours ago
-    }
-  ]
-}
 
 // Helper function to apply filters to workflows
 function applyWorkflowFilters(workflows: any[], filters: WorkflowFilters): any[] {
