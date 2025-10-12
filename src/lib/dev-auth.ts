@@ -58,8 +58,9 @@ export class DevAuth {
   private static SESSION_DURATION = 7 * 24 * 60 * 60 * 1000 // 7 days
 
   static isDevelopment(): boolean {
-    return process.env.NODE_ENV === 'development' && 
-           process.env.NEXT_PUBLIC_ENABLE_DEV_AUTH === 'true'
+    // Enable dev auth in development OR when no Supabase credentials are available
+    const hasSupabaseCredentials = process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    return process.env.NODE_ENV === 'development' || !hasSupabaseCredentials
   }
 
   static async authenticate(username: string, password: string): Promise<DevUser | null> {

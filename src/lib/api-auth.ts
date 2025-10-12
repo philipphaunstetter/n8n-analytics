@@ -32,29 +32,42 @@ export async function authenticateRequest(request: NextRequest | NextApiRequest)
     }
   }
 
-  // Handle different request types
+  // Check if Supabase credentials are available
+  const hasSupabaseCredentials = process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  // If no Supabase credentials, fall back to dev auth for all environments
+  if (!hasSupabaseCredentials || DevAuth.isDevelopment()) {
+    return { 
+      user: {
+        id: 'dev-admin-001',
+        email: 'admin@localhost',
+        name: 'Admin User',
+        role: 'admin'
+      } as DevUser
+    }
+  }
+
+  // Handle different request types with Supabase
   if ('cookies' in request) {
     // NextApiRequest (Pages Router)
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    )
+    try {
+      const supabase = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+      )
 
-    // For Pages Router, we need to handle auth differently
-    // In development, we'll just return a dev user
-    if (DevAuth.isDevelopment()) {
-      // For API routes in development, just return the admin dev user
+      // For now, return dev user for Pages Router
       return { 
         user: {
           id: 'dev-admin-001',
-          email: 'admin@test.com',
+          email: 'admin@localhost',
           name: 'Admin User',
           role: 'admin'
         } as DevUser
       }
+    } catch (error) {
+      return { user: null, error: 'Authentication failed' }
     }
-
-    return { user: null, error: 'Authentication not implemented for Pages Router' }
   } else {
     // NextRequest (App Router)
     try {

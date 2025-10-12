@@ -1,4 +1,4 @@
-import { getConfigManager } from './config-manager';
+import { getConfigManager } from './config/config-manager';
 
 // Configuration will be loaded from database when needed
 
@@ -41,8 +41,9 @@ class N8nApiClient {
   private configManager = getConfigManager();
 
   private async getConfig() {
-    const host = await this.configManager.get('n8n.host') || 'http://localhost:5678';
-    const apiKey = await this.configManager.get('n8n.api_key') || '';
+    await this.configManager.initialize();
+    const host = await this.configManager.get('integrations.n8n.url') || 'http://localhost:5678';
+    const apiKey = await this.configManager.get('integrations.n8n.api_key') || '';
     return { host, apiKey };
   }
 

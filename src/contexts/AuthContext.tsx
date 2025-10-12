@@ -80,7 +80,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [isDevMode]) // Include isDevMode in dependencies
 
   const signIn = async (email: string, password: string) => {
-    // Always try SQLite authentication first (works in all environments)
     try {
       const response = await fetch('/api/auth/signin', {
         method: 'POST',
@@ -93,9 +92,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (response.ok) {
         const data = await response.json()
         if (data.success && data.user) {
-          // Use DevAuth session management for all users
+          // Store session and update state
           DevAuth.setSession(data.user)
           setUser(data.user)
+          console.log('Session stored for user:', data.user.email)
           return { error: null }
         }
       } else {
