@@ -12,11 +12,11 @@ services:
     container_name: elova
     restart: unless-stopped
     ports:
-      - "${ELOVA_PORT:-3000}:3000"
+      - "${ELOVA_PORT:-3000}:1234"
     environment:
       # Application settings
       - NODE_ENV=production
-      - PORT=3000
+      - PORT=1234
       
       # Timezone configuration
       - GENERIC_TIMEZONE=${GENERIC_TIMEZONE:-UTC}
