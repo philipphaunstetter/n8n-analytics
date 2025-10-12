@@ -77,6 +77,7 @@ INSERT OR IGNORE INTO app_config (key, value, value_type, category, description,
     -- Feature flags
     ('features.sync_enabled', 'true', 'boolean', 'features', 'Enable automatic data synchronization', FALSE, FALSE, '{"type": "boolean"}'),
     ('features.sync_interval_minutes', '5', 'number', 'features', 'Data sync interval in minutes', FALSE, FALSE, '{"type": "number", "minimum": 1, "maximum": 1440}'),
+    ('features.workflow_sync_interval_minutes', '15', 'number', 'features', 'Workflow sync interval in minutes', FALSE, FALSE, '{"type": "number", "minimum": 5, "maximum": 1440}'),
     ('features.demo_mode', 'false', 'boolean', 'features', 'Enable demo mode with sample data', FALSE, FALSE, '{"type": "boolean"}'),
     ('features.analytics_enabled', 'true', 'boolean', 'features', 'Enable usage analytics collection', FALSE, FALSE, '{"type": "boolean"}'),
     ('features.export_enabled', 'true', 'boolean', 'features', 'Enable data export functionality', FALSE, FALSE, '{"type": "boolean"}'),

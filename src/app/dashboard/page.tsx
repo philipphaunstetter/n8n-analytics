@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
 import { AppLayout } from '@/components/app-layout'
 import { WithN8NConnection } from '@/components/with-n8n-connection'
+import { ExecutionCharts } from '@/components/charts/execution-charts'
 import { apiClient } from '@/lib/api-client'
 import { DashboardStats, TimeRange } from '@/types'
 import { 
@@ -12,7 +13,8 @@ import {
   ClockIcon,
   CheckCircleIcon,
   XCircleIcon,
-  ExclamationTriangleIcon 
+  ExclamationTriangleIcon,
+  ChartBarIcon 
 } from '@heroicons/react/24/outline'
 
 function DashboardContent() {
@@ -20,6 +22,7 @@ function DashboardContent() {
   const [timeRange, setTimeRange] = useState<TimeRange>('24h')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [activeTab, setActiveTab] = useState<'overview' | 'charts'>('overview')
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -90,113 +93,156 @@ function DashboardContent() {
     <div className="space-y-8">
       {/* Page Header */}
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-        <p className="mt-2 text-sm text-gray-600">
-          Overview of your workflow automation across all platforms
-        </p>
-      </div>
-
-      {/* Stats */}
-      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4 mb-8">
-        {statsDisplay.map((item) => (
-          <div key={item.name} className="bg-white px-4 py-5 sm:p-6 shadow rounded-lg overflow-hidden">
-            <dt className="text-sm font-medium text-gray-500 truncate flex items-center">
-              <item.icon className="h-5 w-5 mr-2 text-gray-400" />
-              {item.name}
-            </dt>
-            <dd className="mt-1 text-3xl font-semibold text-gray-900">{item.value}</dd>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
+            <p className="mt-2 text-sm text-gray-600">
+              Overview of your workflow automation across all platforms
+            </p>
           </div>
-        ))}
-      </div>
-
-      {/* Setup Instructions */}
-      <div className="bg-white shadow sm:rounded-lg">
-        <div className="px-4 py-5 sm:p-6">
-          <h3 className="text-lg font-medium text-gray-900 mb-4">Get Started</h3>
-          <div className="space-y-4">
-            <div className="flex items-start">
-              <div className="flex-shrink-0">
-                <div className="flex h-6 w-6 items-center justify-center rounded-full bg-indigo-100">
-                  <span className="text-sm font-medium text-indigo-600">1</span>
-                </div>
-              </div>
-              <div className="ml-3">
-                <h4 className="text-sm font-medium text-gray-900">Connect your first platform</h4>
-                <p className="text-sm text-gray-500">
-                  Add API credentials for n8n, Zapier, Make.com, or other automation platforms
-                </p>
-              </div>
-            </div>
-            <div className="flex items-start">
-              <div className="flex-shrink-0">
-                <div className="flex h-6 w-6 items-center justify-center rounded-full bg-gray-100">
-                  <span className="text-sm font-medium text-gray-400">2</span>
-                </div>
-              </div>
-              <div className="ml-3">
-                <h4 className="text-sm font-medium text-gray-500">Configure monitoring</h4>
-                <p className="text-sm text-gray-500">
-                  Set up alerts and monitoring preferences for your workflows
-                </p>
-              </div>
-            </div>
-            <div className="flex items-start">
-              <div className="flex-shrink-0">
-                <div className="flex h-6 w-6 items-center justify-center rounded-full bg-gray-100">
-                  <span className="text-sm font-medium text-gray-400">3</span>
-                </div>
-              </div>
-              <div className="ml-3">
-                <h4 className="text-sm font-medium text-gray-500">Start monitoring</h4>
-                <p className="text-sm text-gray-500">
-                  View execution history, debug failures, and optimize performance
-                </p>
-              </div>
-            </div>
-          </div>
-          <div className="mt-6">
+          
+          {/* Tab Navigation */}
+          <div className="flex space-x-1 bg-gray-100 p-1 rounded-lg">
             <button
-              type="button"
-              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+              onClick={() => setActiveTab('overview')}
+              className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+                activeTab === 'overview'
+                  ? 'bg-white text-gray-900 shadow-sm'
+                  : 'text-gray-500 hover:text-gray-700'
+              }`}
             >
-              Connect Platform
+              Overview
+            </button>
+            <button
+              onClick={() => setActiveTab('charts')}
+              className={`px-4 py-2 text-sm font-medium rounded-md transition-colors flex items-center ${
+                activeTab === 'charts'
+                  ? 'bg-white text-gray-900 shadow-sm'
+                  : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              <ChartBarIcon className="h-4 w-4 mr-1" />
+              Analytics
             </button>
           </div>
         </div>
       </div>
 
-      {/* Quick Actions */}
-      <div className="grid grid-cols-1 gap-5 sm:grid-cols-3">
-        <div className="bg-white px-4 py-5 sm:p-6 shadow rounded-lg">
-          <h3 className="text-lg font-medium text-gray-900 mb-2">Workflows</h3>
-          <p className="text-sm text-gray-500 mb-4">
-            View and manage your automation workflows
-          </p>
-          <button className="text-sm font-medium text-indigo-600 hover:text-indigo-500">
-            View workflows →
-          </button>
-        </div>
-        
-        <div className="bg-white px-4 py-5 sm:p-6 shadow rounded-lg">
-          <h3 className="text-lg font-medium text-gray-900 mb-2">Executions</h3>
-          <p className="text-sm text-gray-500 mb-4">
-            Monitor execution history and debug issues
-          </p>
-          <button className="text-sm font-medium text-indigo-600 hover:text-indigo-500">
-            View executions →
-          </button>
-        </div>
-        
-        <div className="bg-white px-4 py-5 sm:p-6 shadow rounded-lg">
-          <h3 className="text-lg font-medium text-gray-900 mb-2">Settings</h3>
-          <p className="text-sm text-gray-500 mb-4">
-            Configure platforms and monitoring preferences
-          </p>
-          <button className="text-sm font-medium text-indigo-600 hover:text-indigo-500">
-            Go to settings →
-          </button>
-        </div>
-      </div>
+      {/* Content based on active tab */}
+      {activeTab === 'overview' ? (
+        <>
+          {/* Stats */}
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4 mb-8">
+            {statsDisplay.map((item) => (
+              <div key={item.name} className="bg-white px-4 py-5 sm:p-6 shadow rounded-lg overflow-hidden">
+                <dt className="text-sm font-medium text-gray-500 truncate flex items-center">
+                  <item.icon className="h-5 w-5 mr-2 text-gray-400" />
+                  {item.name}
+                </dt>
+                <dd className="mt-1 text-3xl font-semibold text-gray-900">{item.value}</dd>
+              </div>
+            ))}
+          </div>
+
+          {/* Setup Instructions */}
+          <div className="bg-white shadow sm:rounded-lg">
+            <div className="px-4 py-5 sm:p-6">
+              <h3 className="text-lg font-medium text-gray-900 mb-4">Get Started</h3>
+              <div className="space-y-4">
+                <div className="flex items-start">
+                  <div className="flex-shrink-0">
+                    <div className="flex h-6 w-6 items-center justify-center rounded-full bg-indigo-100">
+                      <span className="text-sm font-medium text-indigo-600">1</span>
+                    </div>
+                  </div>
+                  <div className="ml-3">
+                    <h4 className="text-sm font-medium text-gray-900">Connect your first platform</h4>
+                    <p className="text-sm text-gray-500">
+                      Add API credentials for n8n, Zapier, Make.com, or other automation platforms
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-start">
+                  <div className="flex-shrink-0">
+                    <div className="flex h-6 w-6 items-center justify-center rounded-full bg-gray-100">
+                      <span className="text-sm font-medium text-gray-400">2</span>
+                    </div>
+                  </div>
+                  <div className="ml-3">
+                    <h4 className="text-sm font-medium text-gray-500">Configure monitoring</h4>
+                    <p className="text-sm text-gray-500">
+                      Set up alerts and monitoring preferences for your workflows
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-start">
+                  <div className="flex-shrink-0">
+                    <div className="flex h-6 w-6 items-center justify-center rounded-full bg-gray-100">
+                      <span className="text-sm font-medium text-gray-400">3</span>
+                    </div>
+                  </div>
+                  <div className="ml-3">
+                    <h4 className="text-sm font-medium text-gray-500">Start monitoring</h4>
+                    <p className="text-sm text-gray-500">
+                      View execution history, debug failures, and optimize performance
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <div className="mt-6">
+                <button
+                  type="button"
+                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                >
+                  Connect Platform
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Quick Actions */}
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-3">
+            <div className="bg-white px-4 py-5 sm:p-6 shadow rounded-lg">
+              <h3 className="text-lg font-medium text-gray-900 mb-2">Workflows</h3>
+              <p className="text-sm text-gray-500 mb-4">
+                View and manage your automation workflows
+              </p>
+              <button className="text-sm font-medium text-indigo-600 hover:text-indigo-500">
+                View workflows →
+              </button>
+            </div>
+            
+            <div className="bg-white px-4 py-5 sm:p-6 shadow rounded-lg">
+              <h3 className="text-lg font-medium text-gray-900 mb-2">Executions</h3>
+              <p className="text-sm text-gray-500 mb-4">
+                Monitor execution history and debug issues
+              </p>
+              <button className="text-sm font-medium text-indigo-600 hover:text-indigo-500">
+                View executions →
+              </button>
+            </div>
+            
+            <div className="bg-white px-4 py-5 sm:p-6 shadow rounded-lg">
+              <h3 className="text-lg font-medium text-gray-900 mb-2">Analytics</h3>
+              <p className="text-sm text-gray-500 mb-4">
+                View detailed charts and performance insights
+              </p>
+              <button 
+                onClick={() => setActiveTab('charts')}
+                className="text-sm font-medium text-indigo-600 hover:text-indigo-500"
+              >
+                View analytics →
+              </button>
+            </div>
+          </div>
+        </>
+      ) : (
+        /* Charts Tab */
+        <ExecutionCharts 
+          timeRange={timeRange} 
+          onTimeRangeChange={setTimeRange}
+        />
+      )}
     </div>
   )
 }
