@@ -53,6 +53,20 @@ export class ConfigManager {
     }
   }
 
+  private async getConfigCount(): Promise<number> {
+    if (!this.db) return Promise.resolve(0);
+    
+    return new Promise((resolve, reject) => {
+      this.db!.get('SELECT COUNT(*) as count FROM config', [], (err, row: { count: number }) => {
+        if (err) {
+          reject(err);
+          return;
+        }
+        resolve(row?.count || 0);
+      });
+    });
+  }
+
   private async initializeDatabase(): Promise<void> {
     if (!this.db) return Promise.resolve();
     
@@ -101,6 +115,13 @@ export class ConfigManager {
 
   private async insertDefaultConfig(): Promise<void> {
     if (!this.db) return Promise.resolve();
+    
+    // First check if configuration already exists (to avoid resetting completed setup)
+    const existingCount = await this.getConfigCount();
+    if (existingCount > 0) {
+      console.log('Configuration already exists, skipping default config insertion');
+      return Promise.resolve();
+    }
     
     const defaultConfigs = [
       { key: 'app.version', value: '0.1.0', category: 'system', description: 'Application version' },

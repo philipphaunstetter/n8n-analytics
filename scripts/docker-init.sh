@@ -84,9 +84,33 @@ EOF
 }
 
 # Initialize configuration on first run
+# Check both marker file AND database state to prevent reset after setup completion
 if [ ! -f "$FIRST_RUN_MARKER" ]; then
-    echo "First run detected - initializing configuration..."
+    echo "Marker file not found - checking if database has existing configuration..."
     
+    # Check if database exists and has configuration data
+    if [ -f "$DB_FILE" ]; then
+        CONFIG_COUNT=$(sqlite3 "$DB_FILE" "SELECT COUNT(*) FROM config WHERE key = 'app.initDone'" 2>/dev/null || echo "0")
+        if [ "$CONFIG_COUNT" -gt 0 ]; then
+            INIT_DONE=$(sqlite3 "$DB_FILE" "SELECT value FROM config WHERE key = 'app.initDone'" 2>/dev/null || echo "false")
+            if [ "$INIT_DONE" = "true" ]; then
+                echo "Database indicates setup is already complete - creating marker file"
+                touch "$FIRST_RUN_MARKER"
+                DB_TYPE=$(detect_database_config)
+                set_runtime_config "$DB_TYPE" "false"
+                echo "Skipping initialization - setup already completed"
+                # Skip to the end of initialization
+                skip_init=true
+            fi
+        fi
+    fi
+    
+    echo "First run detected - initializing configuration..."
+    skip_init=false
+fi
+
+# Only run initialization if not skipped
+if [ "$skip_init" != "true" ]; then
     # Set up database and configuration system
     setup_database_config
     
@@ -127,7 +151,10 @@ if [ ! -f "$FIRST_RUN_MARKER" ]; then
     echo "Database type: $DB_TYPE"
     echo "Configuration stored in SQLite database"
     echo "Runtime hints available at: $DATA_DIR/runtime-config.json"
-else
+fi
+
+# Handle existing installations (non-first-run)
+if [ -f "$FIRST_RUN_MARKER" ] && [ "$skip_init" = "true" ]; then
     echo "Configuration already exists, skipping initialization"
     
     # Still update runtime config for current environment
@@ -164,6 +191,11 @@ fi
 if [ ! -f "/app/database/migrations/001_create_configuration_tables.sql" ]; then
     echo "WARNING: Database migration files not found"
     echo "Configuration system may not work properly"
+fi
+
+# Ensure DB_TYPE is set for summary display
+if [ -z "$DB_TYPE" ]; then
+    DB_TYPE=$(detect_database_config)
 fi
 
 # Display configuration summary

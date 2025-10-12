@@ -159,3 +159,30 @@ Just use the updated `docker-compose.yml` - everything will work correctly from 
 - ✅ **Settings retention** works as expected
 
 The "volume reset" was actually a path mismatch + forced reinitialization issue, not a Docker volume problem.
+
+## Additional Fix: Preventing Setup Reset on Container Updates
+
+### Issue 3: ConfigManager Reset (Discovered Later)
+
+Even after fixing the volume paths, the setup wizard was still appearing because:
+
+1. **ConfigManager reinitializes defaults** - `insertDefaultConfig()` always reset `app.initDone` to `false`
+2. **Init script only checked marker file** - didn't verify actual database state
+3. **Database state ignored** - setup completion stored in database was being overwritten
+
+### Additional Fix Applied:
+
+**ConfigManager (src/lib/config-manager.ts):**
+- Added `getConfigCount()` method to check existing configuration
+- Skip default config insertion if configuration already exists
+- Prevents overwriting completed setup data
+
+**Docker Init Script (scripts/docker-init.sh):**
+- Check database state for `app.initDone = 'true'` before initializing
+- If setup is complete, create marker file and skip initialization
+- Prevents setup wizard from appearing when database shows completion
+
+**Result:**
+- Setup completion now persists through container updates
+- No more unexpected setup wizard after configuration
+- Database state takes precedence over marker files
