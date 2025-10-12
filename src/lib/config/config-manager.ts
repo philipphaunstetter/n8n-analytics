@@ -7,24 +7,24 @@ import fs from 'fs';
 export interface ConfigItem {
   key: string;
   value: string;
-  valueType: 'string' | 'number' | 'boolean' | 'json' | 'encrypted';
+  value_type: 'string' | 'number' | 'boolean' | 'json' | 'encrypted';
   category: string;
   description?: string;
-  isSensitive: boolean;
-  isReadonly: boolean;
-  validationRules?: string;
-  updatedAt: string;
-  categoryDisplayName?: string;
-  categoryIcon?: string;
+  is_sensitive: boolean;
+  is_readonly: boolean;
+  validation_rules?: string;
+  updated_at: string;
+  category_display_name?: string;
+  category_icon?: string;
 }
 
 export interface ConfigCategory {
   name: string;
-  displayName: string;
+  display_name: string;
   description?: string;
   icon?: string;
-  sortOrder: number;
-  isSystem: boolean;
+  sort_order: number;
+  is_system: boolean;
 }
 
 export interface ConfigAuditEntry {
@@ -165,7 +165,7 @@ export class ConfigManager {
           }
 
           try {
-            const value = this.deserializeValue(row.value, row.valueType);
+            const value = this.deserializeValue(row.value, row.value_type);
             resolve(value as T);
           } catch (error) {
             reject(error);
@@ -201,7 +201,7 @@ export class ConfigManager {
           const result: Record<string, any> = {};
           for (const row of rows) {
             try {
-              result[row.key] = this.deserializeValue(row.value, row.valueType);
+              result[row.key] = this.deserializeValue(row.value, row.value_type);
             } catch (error) {
               console.error(`Error deserializing config key ${row.key}:`, error);
               result[row.key] = null;
@@ -239,7 +239,7 @@ export class ConfigManager {
           const result: Record<string, any> = {};
           for (const row of rows) {
             try {
-              result[row.key] = this.deserializeValue(row.value, row.valueType);
+              result[row.key] = this.deserializeValue(row.value, row.value_type);
             } catch (error) {
               console.error(`Error deserializing config key ${row.key}:`, error);
               result[row.key] = null;
@@ -263,17 +263,17 @@ export class ConfigManager {
     // First, get the current configuration to check if it's readonly and for audit
     const current = await this.getConfigItem(key);
     
-    if (current?.isReadonly) {
+    if (current?.is_readonly) {
       throw new Error(`Configuration key "${key}" is readonly and cannot be modified`);
     }
 
     // Validate the new value
-    if (current?.validationRules) {
-      await this.validateValue(value, current.validationRules);
+    if (current?.validation_rules) {
+      await this.validateValue(value, current.validation_rules);
     }
 
     // Serialize and potentially encrypt the value
-    const serializedValue = this.serializeValue(value, current?.valueType || 'string');
+    const serializedValue = this.serializeValue(value, current?.value_type || 'string');
 
     if (process.env.NEXT_PHASE === 'phase-production-build') {
       return Promise.resolve();
@@ -363,7 +363,7 @@ export class ConfigManager {
           // Don't expose sensitive values in admin interface
           const sanitized = rows.map(row => ({
             ...row,
-            value: row.isSensitive ? '***HIDDEN***' : row.value
+            value: row.is_sensitive ? '***HIDDEN***' : row.value
           }));
 
           resolve(sanitized);
@@ -405,7 +405,7 @@ export class ConfigManager {
   async upsert(
     key: string,
     value: any,
-    valueType: ConfigItem['valueType'] = 'string',
+    valueType: ConfigItem['value_type'] = 'string',
     category = 'general',
     description?: string,
     isSensitive = false,
@@ -508,7 +508,7 @@ export class ConfigManager {
     });
   }
 
-  private serializeValue(value: any, valueType: ConfigItem['valueType']): string {
+  private serializeValue(value: any, valueType: ConfigItem['value_type']): string {
     switch (valueType) {
       case 'string':
         return String(value);
@@ -525,7 +525,7 @@ export class ConfigManager {
     }
   }
 
-  private deserializeValue(value: string, valueType: ConfigItem['valueType']): any {
+  private deserializeValue(value: string, valueType: ConfigItem['value_type']): any {
     switch (valueType) {
       case 'string':
         return value;
