@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getConfigManager } from '../../../../lib/config-manager'
+import { getConfigManager } from '@/lib/config/config-manager'
+import { createSessionToken } from '@/lib/api-auth'
 import crypto from 'crypto'
 
 export async function POST(request: NextRequest) {
@@ -15,58 +16,50 @@ export async function POST(request: NextRequest) {
     }
 
     const config = getConfigManager()
+    await config.initialize()
     
-    // First, try to authenticate against database admin user
+    // Authenticate against database admin user
     const adminEmail = await config.get('setup.admin_email')
     const adminName = await config.get('setup.admin_name')
     const adminPasswordHash = await config.get('setup.admin_password_hash')
     
-    if (adminEmail && adminPasswordHash && email.toLowerCase() === adminEmail.toLowerCase()) {
+    if (!adminEmail || !adminPasswordHash) {
+      return NextResponse.json(
+        { error: 'No admin account configured. Please complete setup first.' },
+        { status: 401 }
+      )
+    }
+    
+    if (email.toLowerCase() === adminEmail.toLowerCase()) {
       // Check password hash
       const inputHash = crypto.createHash('sha256').update(password).digest('hex')
       
       if (inputHash === adminPasswordHash) {
-        return NextResponse.json({
-          success: true,
-          user: {
-            id: 'admin-001',
-            email: adminEmail,
-            name: adminName || 'Admin User',
-            role: 'admin'
-          }
-        })
-      }
-    }
-
-    // Fallback to hardcoded dev users for development/testing
-    if (process.env.NODE_ENV === 'development') {
-      const DEV_USERS: Record<string, { password: string; user: any }> = {
-        'dev@example.com': {
-          password: 'dev123',
-          user: {
-            id: 'dev-001',
-            email: 'dev@example.com',
-            name: 'Dev User',
-            role: 'developer'
-          }
-        },
-        'admin@example.com': {
-          password: 'admin123',
-          user: {
-            id: 'admin-002',
-            email: 'admin@example.com',
-            name: 'Admin User',
-            role: 'admin'
-          }
+        const user = {
+          id: 'admin-001',
+          email: adminEmail,
+          name: adminName || 'Admin User',
+          role: 'admin' as const
         }
-      }
-
-      const userEntry = DEV_USERS[email.toLowerCase()]
-      if (userEntry && userEntry.password === password) {
-        return NextResponse.json({
+        
+        // Create session token
+        const sessionToken = createSessionToken(user)
+        
+        const response = NextResponse.json({
           success: true,
-          user: userEntry.user
+          user,
+          sessionToken
         })
+        
+        // Set session cookie
+        response.cookies.set('sessionToken', sessionToken, {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: 'lax',
+          maxAge: 7 * 24 * 60 * 60 // 7 days
+        })
+        
+        return response
       }
     }
 

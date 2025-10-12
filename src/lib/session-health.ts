@@ -1,13 +1,11 @@
 // Session Health Check Utility
 // Helps debug session persistence issues
 
-import { DevAuth } from './dev-auth'
 
 export interface SessionHealthReport {
   timestamp: string
   mode: 'development' | 'production'
-  devAuth: {
-    enabled: boolean
+  sessionAuth: {
     hasSession: boolean
     sessionData: any
     localStorage: any
@@ -25,8 +23,7 @@ export class SessionHealthChecker {
     const report: SessionHealthReport = {
       timestamp: new Date().toISOString(),
       mode: process.env.NODE_ENV === 'development' ? 'development' : 'production',
-      devAuth: {
-        enabled: DevAuth.isDevelopment(),
+      sessionAuth: {
         hasSession: false,
         sessionData: null,
         localStorage: null,
@@ -39,17 +36,23 @@ export class SessionHealthChecker {
       }
     }
 
-    // Check dev auth
-    if (typeof window !== 'undefined' && DevAuth.isDevelopment()) {
-      report.devAuth.hasSession = DevAuth.isAuthenticated()
-      report.devAuth.sessionData = DevAuth.getSession()
-      report.devAuth.localStorage = {
-        session: localStorage.getItem('dev_auth_session'),
-        expiry: localStorage.getItem('dev_auth_expiry')
+    // Check session auth
+    if (typeof window !== 'undefined') {
+      const sessionToken = localStorage.getItem('sessionToken')
+      report.sessionAuth.hasSession = !!sessionToken
+      if (sessionToken) {
+        try {
+          const decoded = Buffer.from(sessionToken, 'base64').toString('utf-8')
+          report.sessionAuth.sessionData = JSON.parse(decoded)
+        } catch {
+          report.sessionAuth.sessionData = 'Invalid token'
+        }
       }
-      report.devAuth.sessionStorage = {
-        session: sessionStorage.getItem('dev_auth_session'),
-        expiry: sessionStorage.getItem('dev_auth_expiry')
+      report.sessionAuth.localStorage = {
+        sessionToken: !!localStorage.getItem('sessionToken')
+      }
+      report.sessionAuth.sessionStorage = {
+        sessionToken: !!sessionStorage.getItem('sessionToken')
       }
     }
 
@@ -67,14 +70,16 @@ export class SessionHealthChecker {
     console.log('📅 Timestamp:', report.timestamp)
     console.log('⚙️  Mode:', report.mode)
     
-    console.group('🛠️  Dev Auth')
-    console.log('Enabled:', report.devAuth.enabled)
-    console.log('Has Session:', report.devAuth.hasSession)
-    if (report.devAuth.sessionData) {
-      console.log('User:', report.devAuth.sessionData.email)
+    console.group('🔐 Session Auth')
+    console.log('Has Session:', report.sessionAuth.hasSession)
+    if (report.sessionAuth.sessionData) {
+      console.log('User:', report.sessionAuth.sessionData.email)
+      if (report.sessionAuth.sessionData.expires) {
+        console.log('Expires:', new Date(report.sessionAuth.sessionData.expires))
+      }
     }
-    console.log('LocalStorage:', report.devAuth.localStorage)
-    console.log('SessionStorage:', report.devAuth.sessionStorage)
+    console.log('LocalStorage:', report.sessionAuth.localStorage)
+    console.log('SessionStorage:', report.sessionAuth.sessionStorage)
     console.groupEnd()
     
     
@@ -94,9 +99,9 @@ export class SessionHealthChecker {
     
     const interval = setInterval(async () => {
       const report = await this.generateReport()
-      if (report.devAuth.hasSession) {
+      if (report.sessionAuth.hasSession) {
         console.log('✅ Session active:', 
-          report.devAuth.hasSession ? `Dev: ${report.devAuth.sessionData?.email}` : ''
+          `User: ${report.sessionAuth.sessionData?.email || 'Unknown'}`
         )
       } else {
         console.log('❌ No active session detected')

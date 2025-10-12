@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useAuth } from '@/contexts/AuthContext'
 import { ChartPieIcon } from '@heroicons/react/24/outline'
-import { DevAuth } from '@/lib/dev-auth'
 
 export default function SignIn() {
   const { user, signIn } = useAuth()

@@ -1,81 +1,87 @@
 'use client'
 
 import { createContext, useContext, useEffect, useState } from 'react'
-import { DevAuth, DevUser } from '@/lib/dev-auth'
+import { User } from '@/lib/api-auth'
 import { SessionHealthChecker } from '@/lib/session-health'
 
 interface AuthContextType {
-  user: DevUser | null
+  user: User | null
   session: null
   loading: boolean
   signIn: (email: string, password: string) => Promise<{ error: string | null }>
   signUp: (email: string, password: string) => Promise<{ error: string | null }>
   signOut: () => Promise<{ error: string | null }>
   resetPassword: (email: string) => Promise<{ error: string | null }>
-  isDevMode: boolean
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<DevUser | null>(null)
+  const [user, setUser] = useState<User | null>(null)
   const session = null
   const [loading, setLoading] = useState(true)
-  const isDevMode = DevAuth.isDevelopment()
   
   // Session restoration state to prevent unnecessary re-renders
   const [sessionRestored, setSessionRestored] = useState(false)
 
   // Initialize and manage session state
   useEffect(() => {
-    let devAuthCleanup: (() => void) | null = null
-
     const initializeAuth = async () => {
-      console.log('Initializing auth with SQLite session management')
+      console.log('Initializing auth with session token management')
       
-      // Always use DevAuth session management (works for all users)
-      const existingUser = DevAuth.getSession()
-      if (existingUser) {
-        console.log('Found existing session:', existingUser.email)
-        setUser(existingUser)
-      } else {
-        console.log('No existing session found')
+      try {
+        // Check for existing session token in localStorage
+        const sessionToken = localStorage.getItem('sessionToken')
+        
+        if (sessionToken) {
+          // Validate session token by making a request to a protected endpoint
+          const response = await fetch('/api/user/profile', {
+            headers: {
+              'Authorization': `Bearer ${sessionToken}`
+            }
+          })
+          
+          if (response.ok) {
+            const userData = await response.json()
+            console.log('Found valid session:', userData.user?.email)
+            setUser(userData.user)
+          } else {
+            // Invalid token, remove it
+            localStorage.removeItem('sessionToken')
+            console.log('Invalid session token removed')
+          }
+        } else {
+          console.log('No existing session found')
+        }
+      } catch (error) {
+        console.error('Error validating session:', error)
+        localStorage.removeItem('sessionToken')
       }
       
       setLoading(false)
-      setSessionRestored(true)
-
-      // Set up cross-tab synchronization
-      devAuthCleanup = DevAuth.setupSessionSync((newUser) => {
-        console.log('Session changed from another tab:', newUser?.email || 'signed out')
-        setUser(newUser)
-      })
     }
 
     initializeAuth()
 
-    // Enable session health monitoring in development
-    let healthMonitorCleanup: (() => void) | undefined
-    if (process.env.NODE_ENV === 'development') {
-      // Initial health report
-      setTimeout(() => {
-        SessionHealthChecker.logReport()
-      }, 1000)
-      
-      // Start monitoring (optional - can be disabled by commenting out)
-      // healthMonitorCleanup = SessionHealthChecker.startMonitoring(30000)
+    // Set up cross-tab session synchronization
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'sessionToken') {
+        if (e.newValue) {
+          // Session was set in another tab, validate it
+          initializeAuth()
+        } else {
+          // Session was cleared in another tab
+          setUser(null)
+        }
+      }
     }
 
-    // Cleanup function
+    window.addEventListener('storage', handleStorageChange)
+
     return () => {
-      if (devAuthCleanup) {
-        devAuthCleanup()
-      }
-      if (healthMonitorCleanup) {
-        healthMonitorCleanup()
-      }
+      window.removeEventListener('storage', handleStorageChange)
     }
-  }, [isDevMode]) // Include isDevMode in dependencies
+  }, [])
 
   const signIn = async (email: string, password: string) => {
     try {
@@ -89,9 +95,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (response.ok) {
         const data = await response.json()
-        if (data.success && data.user) {
-          // Store session and update state
-          DevAuth.setSession(data.user)
+        if (data.success && data.user && data.sessionToken) {
+          // Store session token and update state
+          localStorage.setItem('sessionToken', data.sessionToken)
           setUser(data.user)
           console.log('Session stored for user:', data.user.email)
           return { error: null }
@@ -118,7 +124,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     
     try {
       console.log('Clearing session')
-      DevAuth.clearSession()
+      localStorage.removeItem('sessionToken')
       setUser(null)
       return { error: null }
     } catch (error) {
@@ -140,7 +146,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     signUp,
     signOut,
     resetPassword,
-    isDevMode,
   }
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

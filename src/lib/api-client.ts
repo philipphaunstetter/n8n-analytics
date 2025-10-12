@@ -1,14 +1,5 @@
-import { DevAuth, DevUser } from './dev-auth'
-
 /**
- * Create dev auth token for API requests
- */
-function createDevAuthToken(user: DevUser): string {
-  return `dev:${encodeURIComponent(JSON.stringify(user))}`
-}
-
-/**
- * API client that handles both Supabase and development authentication
+ * API client that handles session-based authentication
  */
 export class ApiClient {
   private baseUrl: string
@@ -22,17 +13,13 @@ export class ApiClient {
       'Content-Type': 'application/json',
     }
 
-    // Check for dev auth first
-    if (DevAuth.isDevelopment()) {
-      const devUser = DevAuth.getSession()
-      if (devUser) {
-        headers['Authorization'] = `Bearer ${createDevAuthToken(devUser)}`
-        return headers
+    // Check for session token in localStorage
+    if (typeof window !== 'undefined') {
+      const sessionToken = localStorage.getItem('sessionToken')
+      if (sessionToken) {
+        headers['Authorization'] = `Bearer ${sessionToken}`
       }
     }
-
-    // TODO: Add Supabase auth headers when needed
-    // For now, Supabase auth works through cookies in server components
 
     return headers
   }

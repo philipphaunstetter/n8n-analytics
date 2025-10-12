@@ -26,7 +26,7 @@ export function DashboardIcon({ className, ...props }: IconProps) {
   )
 }
 
-// Executions Icon - Terminal/Code
+// Executions Icon - Play Button
 export function ExecutionsIcon({ className, ...props }: IconProps) {
   return (
     <svg
@@ -41,7 +41,12 @@ export function ExecutionsIcon({ className, ...props }: IconProps) {
       <path
         strokeLinecap="round"
         strokeLinejoin="round"
-        d="m6.75 7.5 3 2.25-3 2.25m4.5 0h3m-9 8.25h13.5A2.25 2.25 0 0 0 21 18V6a2.25 2.25 0 0 0-2.25-2.25H5.25A2.25 2.25 0 0 0 3 6v12a2.25 2.25 0 0 0 2.25 2.25Z"
+        d="M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
+      />
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M15.91 11.672a.375.375 0 0 1 0 .656l-5.603 3.113a.375.375 0 0 1-.557-.328V8.887c0-.286.307-.466.557-.327l5.603 3.112Z"
       />
     </svg>
   )
