@@ -14,28 +14,29 @@ import {
   SidebarLabel 
 } from './sidebar'
 import {
-  ChartPieIcon,
-  PlayIcon,
-  QueueListIcon,
-  Cog6ToothIcon,
-  ClockIcon,
-  ServerIcon,
-  ChartBarIcon,
-  UserIcon
-} from '@heroicons/react/24/outline'
+  DashboardIcon,
+  ExecutionsIcon,
+  WorkflowsIcon,
+  AnalyticsIcon,
+  MonitorsIcon,
+  HistoryIcon,
+  SettingsIcon,
+  ProfileIcon,
+  ToolsIcon
+} from './icons'
 import { Navbar, NavbarItem, NavbarSection, NavbarSpacer } from './navbar'
 import { Dropdown, DropdownButton, DropdownItem, DropdownMenu } from './dropdown'
 import { Avatar } from './avatar'
 import { ToastContainer } from './toast'
 
 const navigation = [
-  { name: 'Dashboard', href: '/dashboard', icon: ChartPieIcon, current: true },
-  { name: 'Executions', href: '/executions', icon: PlayIcon, current: false },
-  { name: 'Workflows', href: '/workflows', icon: QueueListIcon, current: false },
-  { name: 'Analytics', href: '/analytics', icon: ChartBarIcon, current: false },
-  { name: 'Monitors', href: '/monitors', icon: ServerIcon, current: false },
-  { name: 'History', href: '/history', icon: ClockIcon, current: false },
-  { name: 'Settings', href: '/settings', icon: Cog6ToothIcon, current: false },
+  { name: 'Dashboard', href: '/dashboard', icon: DashboardIcon, current: true },
+  { name: 'Executions', href: '/executions', icon: ExecutionsIcon, current: false },
+  { name: 'Workflows', href: '/workflows', icon: WorkflowsIcon, current: false },
+  { name: 'Analytics', href: '/analytics', icon: AnalyticsIcon, current: false },
+  { name: 'Monitors', href: '/monitors', icon: MonitorsIcon, current: false },
+  { name: 'History', href: '/history', icon: HistoryIcon, current: false },
+  { name: 'Settings', href: '/settings', icon: SettingsIcon, current: false },
 ]
 
 function AppSidebar() {
@@ -45,7 +46,7 @@ function AppSidebar() {
     <Sidebar>
       <SidebarHeader>
         <div className="flex items-center space-x-2">
-          <ChartPieIcon className="h-8 w-8 text-indigo-600" />
+          <DashboardIcon className="h-8 w-8 text-indigo-600" />
           <span className="text-lg font-semibold text-gray-900 dark:text-white">
             Elova
           </span>
@@ -94,11 +95,11 @@ function UserProfileSection() {
       </DropdownButton>
       <DropdownMenu className="min-w-64" anchor="top start">
         <DropdownItem href="/profile">
-          <UserIcon />
+          <ProfileIcon />
           My Profile
         </DropdownItem>
         <DropdownItem href="/settings">
-          <Cog6ToothIcon />
+          <ToolsIcon />
           Settings
         </DropdownItem>
         <DropdownItem
@@ -122,7 +123,7 @@ function AppNavbar() {
     <Navbar>
       <NavbarSection>
         <NavbarItem href="/dashboard" aria-label="Home">
-          <ChartPieIcon />
+          <DashboardIcon />
         </NavbarItem>
         {currentPage && (
           <span className="text-lg font-semibold text-gray-900 dark:text-white">
