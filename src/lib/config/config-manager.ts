@@ -112,16 +112,17 @@ export class ConfigManager {
         PRAGMA foreign_keys=ON;
       `);
 
-      // Only run migration if schema is missing
-      const hasSchema = await this.hasSchema();
-      if (!hasSchema) {
-        console.log('ConfigManager: schema missing – running migration');
+      // Always ensure complete schema exists
+      const hasCompleteSchema = await this.hasSchema();
+      if (!hasCompleteSchema) {
+        console.log('ConfigManager: schema incomplete – running migration');
         const migrationSql = await this.loadMigrationFile();
         await this.executeSql(migrationSql);
         console.log('ConfigManager: migration completed');
-      } else {
-        // console.debug('ConfigManager: schema already present – skipping migration');
       }
+
+      // Always ensure the config_view exists (critical for operation)
+      await this.ensureConfigView();
 
       // Drop legacy timestamp trigger if present (we set updated_at explicitly)
       await this.executeSql('DROP TRIGGER IF EXISTS tr_app_config_updated_at;');
@@ -691,18 +692,47 @@ export class ConfigManager {
   private async hasSchema(): Promise<boolean> {
     if (!this.db) return false;
     return new Promise((resolve) => {
+      // Check for both required table and view
       this.db!.get(
-        "SELECT name FROM sqlite_master WHERE type='table' AND name='app_config'",
+        "SELECT COUNT(*) as count FROM sqlite_master WHERE (type='table' AND name='app_config') OR (type='view' AND name='config_view')",
         [],
-        (err, row) => {
+        (err, row: any) => {
           if (err) {
             resolve(false);
             return;
           }
-          resolve(!!row);
+          // Both table and view should exist (count = 2)
+          resolve(row && row.count >= 2);
         }
       );
     });
+  }
+
+  /**
+   * Ensure the config_view exists - critical for all config operations
+   */
+  private async ensureConfigView(): Promise<void> {
+    const viewSql = `
+      CREATE VIEW IF NOT EXISTS config_view AS
+      SELECT 
+        c.key,
+        c.value,
+        c.value_type,
+        c.category,
+        c.description,
+        c.is_sensitive,
+        c.is_readonly,
+        c.validation_rules,
+        c.updated_at,
+        cat.display_name as category_display_name,
+        cat.icon as category_icon
+      FROM app_config c
+      LEFT JOIN config_categories cat ON c.category = cat.name
+      ORDER BY cat.sort_order, c.key;
+    `;
+    
+    await this.executeSql(viewSql);
+    console.log('ConfigManager: config_view ensured');
   }
 }
 
