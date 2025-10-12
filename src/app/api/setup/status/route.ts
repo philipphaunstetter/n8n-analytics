@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { getConfigManager } from '@/lib/config-manager'
+import { getConfigManager } from '@/lib/config/config-manager'
 
 export async function GET() {
   try {
