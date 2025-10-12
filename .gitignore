@@ -58,3 +58,26 @@ next-env.d.ts
 # Runtime files
 runtime-config.json
 runtime_config.json
+
+# Local development artifacts (container-only deployment)
+.initialized
+.encryption-key
+*.db-journal
+*.db-wal
+*.db-shm
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
