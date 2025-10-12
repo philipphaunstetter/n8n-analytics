@@ -31,10 +31,11 @@ services:
       
       # Feature flags
       - ELOVA_DEMO_MODE=${ELOVA_DEMO_MODE:-false}
-      - ELOVA_FIRST_RUN=true
+      # First run detection should be based on volume state, not hardcoded
+      # - ELOVA_FIRST_RUN=true  # Removed - let init script detect this
     volumes:
-      # SQLite database and application data stored here
-      - elova_data:/home/node/.elova
+      # SQLite database and application data stored here - fixed path
+      - elova_data:/app/data
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
       interval: 30s

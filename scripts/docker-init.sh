@@ -51,7 +51,7 @@ init_config_database() {
     
     # Set environment variables for configuration defaults
     export DB_PATH="$DB_FILE"
-    export ELOVA_FIRST_RUN="true"
+    # Note: ELOVA_FIRST_RUN is determined by marker file existence, not hardcoded
     
     echo "Database initialization will be handled by the application"
 }
@@ -59,12 +59,13 @@ init_config_database() {
 # Function to set runtime configuration hints
 set_runtime_config() {
     local db_type="$1"
+    local is_first_run="$2"
     
     # Create a runtime configuration file that the Node.js app can read
     # This provides hints for initial configuration setup
     cat > "$DATA_DIR/runtime-config.json" << EOF
 {
-  "firstRun": $([ "$ELOVA_FIRST_RUN" = "true" ] && echo "true" || echo "false"),
+  "firstRun": $is_first_run,
   "detectedDatabaseType": "$db_type",
   "hasSupabaseEnv": $([ -n "$NEXT_PUBLIC_SUPABASE_URL" ] && echo "true" || echo "false"),
   "hasN8nConfig": $([ -n "$N8N_HOST" ] && [ -n "$N8N_API_KEY" ] && echo "true" || echo "false"),
@@ -117,7 +118,7 @@ if [ ! -f "$FIRST_RUN_MARKER" ]; then
     fi
     
     # Create runtime configuration hints
-    set_runtime_config "$DB_TYPE"
+    set_runtime_config "$DB_TYPE" "true"
     
     # Create marker file
     touch "$FIRST_RUN_MARKER"
