@@ -90,9 +90,9 @@ if [ ! -f "$FIRST_RUN_MARKER" ]; then
     
     # Check if database exists and has configuration data
     if [ -f "$DB_FILE" ]; then
-        CONFIG_COUNT=$(sqlite3 "$DB_FILE" "SELECT COUNT(*) FROM config WHERE key = 'app.initDone'" 2>/dev/null || echo "0")
+        CONFIG_COUNT=$(sqlite3 "$DB_FILE" "SELECT COUNT(*) FROM app_config WHERE key = 'app.initDone'" 2>/dev/null || echo "0")
         if [ "$CONFIG_COUNT" -gt 0 ]; then
-            INIT_DONE=$(sqlite3 "$DB_FILE" "SELECT value FROM config WHERE key = 'app.initDone'" 2>/dev/null || echo "false")
+            INIT_DONE=$(sqlite3 "$DB_FILE" "SELECT value FROM app_config WHERE key = 'app.initDone'" 2>/dev/null || echo "false")
             if [ "$INIT_DONE" = "true" ]; then
                 echo "Database indicates setup is already complete - creating marker file"
                 touch "$FIRST_RUN_MARKER"

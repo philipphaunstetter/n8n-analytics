@@ -57,7 +57,7 @@ export class ConfigManager {
     if (!this.db) return Promise.resolve(0);
     
     return new Promise((resolve, reject) => {
-      this.db!.get('SELECT COUNT(*) as count FROM config', [], (err, row: { count: number }) => {
+      this.db!.get('SELECT COUNT(*) as count FROM app_config', [], (err, row: { count: number }) => {
         if (err) {
           reject(err);
           return;
@@ -71,17 +71,21 @@ export class ConfigManager {
     if (!this.db) return Promise.resolve();
     
     return new Promise((resolve, reject) => {
-      // Create config table if it doesn't exist
+      // Create app_config table if it doesn't exist (matching migration schema)
       this.db!.run(`
-        CREATE TABLE IF NOT EXISTS config (
+        CREATE TABLE IF NOT EXISTS app_config (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
-          key TEXT UNIQUE NOT NULL,
-          value TEXT,
-          encrypted BOOLEAN DEFAULT 0,
-          category TEXT DEFAULT 'general',
+          key TEXT NOT NULL UNIQUE,
+          value TEXT NOT NULL,
+          value_type TEXT NOT NULL DEFAULT 'string',
+          category TEXT NOT NULL DEFAULT 'general',
           description TEXT,
+          is_sensitive BOOLEAN NOT NULL DEFAULT FALSE,
+          is_readonly BOOLEAN NOT NULL DEFAULT FALSE,
+          validation_rules TEXT,
           created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          updated_by TEXT DEFAULT 'system'
         )
       `, (err) => {
         if (err) {
@@ -91,10 +95,10 @@ export class ConfigManager {
         
         // Create trigger for updated_at
         this.db!.run(`
-          CREATE TRIGGER IF NOT EXISTS update_config_timestamp 
-            AFTER UPDATE ON config
+          CREATE TRIGGER IF NOT EXISTS update_app_config_timestamp 
+            AFTER UPDATE ON app_config
             BEGIN
-              UPDATE config SET updated_at = CURRENT_TIMESTAMP WHERE id = NEW.id;
+              UPDATE app_config SET updated_at = CURRENT_TIMESTAMP WHERE id = NEW.id;
             END
         `, (err) => {
           if (err) {
@@ -124,19 +128,19 @@ export class ConfigManager {
     }
     
     const defaultConfigs = [
-      { key: 'app.version', value: '0.1.0', category: 'system', description: 'Application version' },
-      { key: 'app.initialized', value: 'true', category: 'system', description: 'Application initialized marker' },
-      { key: 'app.first_run', value: 'true', category: 'system', description: 'First run flag - triggers setup wizard' },
-      { key: 'app.timezone', value: process.env.GENERIC_TIMEZONE || 'UTC', category: 'system', description: 'Application timezone' },
-      { key: 'database.type', value: 'sqlite', category: 'database', description: 'Database type' },
-      { key: 'database.file', value: this.dbPath, category: 'database', description: 'SQLite database file path' },
-      { key: 'features.demo_mode', value: process.env.ELOVA_DEMO_MODE === 'true' ? 'true' : 'false', category: 'features', description: 'Enable demo mode with sample data' },
-      { key: 'features.analytics_enabled', value: 'true', category: 'features', description: 'Enable built-in analytics' },
-      { key: 'n8n.host', value: process.env.N8N_HOST || '', category: 'n8n', description: 'n8n instance URL' },
-      { key: 'n8n.api_key', value: process.env.N8N_API_KEY || '', category: 'n8n', description: 'n8n API key' },
-      { key: 'sync.executions_interval', value: '15m', category: 'sync', description: 'Execution sync interval' },
-      { key: 'sync.workflows_interval', value: '6h', category: 'sync', description: 'Workflow sync interval' },
-      { key: 'app.initDone', value: 'false', category: 'app', description: 'Setup wizard completion status' },
+      { key: 'app.version', value: '0.1.0', value_type: 'string', category: 'system', description: 'Application version' },
+      { key: 'app.initialized', value: 'true', value_type: 'string', category: 'system', description: 'Application initialized marker' },
+      { key: 'app.first_run', value: 'true', value_type: 'string', category: 'system', description: 'First run flag - triggers setup wizard' },
+      { key: 'app.timezone', value: process.env.GENERIC_TIMEZONE || 'UTC', value_type: 'string', category: 'system', description: 'Application timezone' },
+      { key: 'database.type', value: 'sqlite', value_type: 'string', category: 'database', description: 'Database type' },
+      { key: 'database.path', value: this.dbPath, value_type: 'string', category: 'database', description: 'SQLite database file path' },
+      { key: 'features.demo_mode', value: process.env.ELOVA_DEMO_MODE === 'true' ? 'true' : 'false', value_type: 'boolean', category: 'features', description: 'Enable demo mode with sample data' },
+      { key: 'features.analytics_enabled', value: 'true', value_type: 'boolean', category: 'features', description: 'Enable built-in analytics' },
+      { key: 'integrations.n8n.url', value: process.env.N8N_HOST || '', value_type: 'string', category: 'integration', description: 'n8n instance URL' },
+      { key: 'integrations.n8n.api_key', value: process.env.N8N_API_KEY || '', value_type: 'encrypted', category: 'integration', description: 'n8n API key' },
+      { key: 'sync.executions_interval', value: '15m', value_type: 'string', category: 'sync', description: 'Execution sync interval' },
+      { key: 'sync.workflows_interval', value: '6h', value_type: 'string', category: 'sync', description: 'Workflow sync interval' },
+      { key: 'app.initDone', value: 'false', value_type: 'boolean', category: 'general', description: 'Setup wizard completion status' },
     ];
 
     return new Promise((resolve, reject) => {
@@ -150,8 +154,8 @@ export class ConfigManager {
 
       for (const config of defaultConfigs) {
         this.db!.run(
-          'INSERT OR IGNORE INTO config (key, value, category, description) VALUES (?, ?, ?, ?)',
-          [config.key, config.value, config.category, config.description],
+          'INSERT OR IGNORE INTO app_config (key, value, value_type, category, description) VALUES (?, ?, ?, ?, ?)',
+          [config.key, config.value, config.value_type, config.category, config.description],
           (err) => {
             if (err && !hasError) {
               hasError = true;
@@ -185,7 +189,7 @@ export class ConfigManager {
     }
     
     return new Promise((resolve, reject) => {
-      this.db!.get('SELECT value FROM config WHERE key = ?', [key], (err, row: ConfigValue) => {
+      this.db!.get('SELECT value FROM app_config WHERE key = ?', [key], (err, row: ConfigValue) => {
         if (err) {
           reject(err);
           return;
@@ -211,8 +215,8 @@ export class ConfigManager {
     
     return new Promise((resolve, reject) => {
       this.db!.run(
-        `INSERT OR REPLACE INTO config (key, value, category, description) 
-         VALUES (?, ?, ?, ?)`,
+        `INSERT OR REPLACE INTO app_config (key, value, value_type, category, description) 
+         VALUES (?, ?, 'string', ?, ?)`,
         [key, value, category, description],
         function(err) {
           if (err) {
@@ -240,7 +244,7 @@ export class ConfigManager {
     }
     
     return new Promise((resolve, reject) => {
-      this.db!.all('SELECT key, value FROM config WHERE category = ?', [category], (err, rows: ConfigValue[]) => {
+      this.db!.all('SELECT key, value FROM app_config WHERE category = ?', [category], (err, rows: ConfigValue[]) => {
         if (err) {
           reject(err);
           return;
@@ -270,7 +274,7 @@ export class ConfigManager {
     }
     
     return new Promise((resolve, reject) => {
-      this.db!.all('SELECT key, value FROM config', [], (err, rows: ConfigValue[]) => {
+      this.db!.all('SELECT key, value FROM app_config', [], (err, rows: ConfigValue[]) => {
         if (err) {
           reject(err);
           return;
