@@ -4,10 +4,10 @@ import { workflowSync } from '@/lib/sync/workflow-sync'
 // PATCH /api/workflows/[id] - Update workflow settings (archive, backup toggle)
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = params
+    const { id } = await params
     const body = await request.json()
     const { action, ...data } = body
 
@@ -46,10 +46,10 @@ export async function PATCH(
 // DELETE /api/workflows/[id] - Delete workflow backup from database
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = params
+    const { id } = await params
     
     console.log(`🗑️ Deleting workflow backup: ${id}`)
     

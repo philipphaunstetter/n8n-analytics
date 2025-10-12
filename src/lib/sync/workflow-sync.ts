@@ -16,6 +16,7 @@ export class WorkflowSyncService {
     created: number
     updated: number
     archived: number
+    skipped: number
     errors: string[]
   }> {
     const db = this.getSQLiteClient()
@@ -101,6 +102,7 @@ export class WorkflowSyncService {
         }
 
         const workflowData = {
+          ...n8nWorkflow,
           id: n8nWorkflow.id,
           name: n8nWorkflow.name,
           active: n8nWorkflow.active,
@@ -108,8 +110,7 @@ export class WorkflowSyncService {
           updatedAt: n8nWorkflow.updatedAt,
           nodes: n8nWorkflow.nodes || [],
           connections: n8nWorkflow.connections || {},
-          tags: n8nWorkflow.tags || [],
-          ...n8nWorkflow
+          tags: n8nWorkflow.tags || []
         }
 
         const now = new Date().toISOString()

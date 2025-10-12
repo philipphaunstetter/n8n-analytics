@@ -296,6 +296,8 @@ async function storeWorkflowWithJson(db: Database, n8nWorkflow: N8nWorkflow): Pr
     
     // Store complete workflow data as JSON
     const workflowData = {
+      ...n8nWorkflow,
+      // Ensure these properties are included
       id: n8nWorkflow.id,
       name: n8nWorkflow.name,
       active: n8nWorkflow.active,
@@ -303,9 +305,7 @@ async function storeWorkflowWithJson(db: Database, n8nWorkflow: N8nWorkflow): Pr
       updatedAt: n8nWorkflow.updatedAt,
       nodes: n8nWorkflow.nodes || [],
       connections: n8nWorkflow.connections || {},
-      tags: n8nWorkflow.tags || [],
-      // Additional n8n workflow properties
-      ...n8nWorkflow
+      tags: n8nWorkflow.tags || []
     }
     
     db.run(`

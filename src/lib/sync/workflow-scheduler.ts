@@ -18,7 +18,7 @@ export class WorkflowScheduler {
     await this.configManager.initialize()
     
     // Get sync interval from config (default 15 minutes)
-    const syncIntervalMinutes = await this.configManager.get('features.workflow_sync_interval_minutes') || 15
+    const syncIntervalMinutes = Number(await this.configManager.get('features.workflow_sync_interval_minutes') || 15)
     const syncInterval = syncIntervalMinutes * 60 * 1000 // Convert to milliseconds
     
     console.log(`🕒 Starting workflow sync scheduler (every ${syncIntervalMinutes} minutes)`)
