@@ -139,9 +139,9 @@ export class SetupChecker {
   private async isSetupComplete(): Promise<boolean> {
     try {
       // Check both possible completion flags
-      const setupCompleted = await configProvider.get<boolean>('app.setup_completed')
-      const initDone = await configProvider.get<boolean>('app.initDone')
-      return setupCompleted === true || initDone === true
+      const setupCompleted = await configProvider.get<string>('app.setup_completed')
+      const initDone = await configProvider.get<string>('app.initDone')
+      return setupCompleted === 'true' || initDone === 'true'
     } catch (error) {
       return false
     }
@@ -171,7 +171,7 @@ export class SetupChecker {
     try {
       // Check if an admin account has been created
       const adminSetup = await configProvider.get<string>('setup.admin_account_created')
-      return adminSetup === 'true' || adminSetup === true
+      return adminSetup === 'true'
     } catch (error) {
       return false
     }
@@ -200,10 +200,10 @@ export class SetupChecker {
       // 1. n8n integration is configured (both URL and key), OR
       // 2. User has explicitly marked integrations as skipped, OR
       // 3. Setup is marked as complete (integrations are optional)
-      const integrationsSkipped = await configProvider.get<boolean>('setup.integrations_skipped')
+      const integrationsSkipped = await configProvider.get<string>('setup.integrations_skipped')
       const setupComplete = await this.isSetupComplete()
       
-      return Boolean(n8nApiKey && n8nUrl) || integrationsSkipped === true || setupComplete
+      return Boolean(n8nApiKey && n8nUrl) || integrationsSkipped === 'true' || setupComplete
     } catch (error) {
       return false
     }
