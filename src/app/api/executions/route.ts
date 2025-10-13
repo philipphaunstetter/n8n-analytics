@@ -171,16 +171,26 @@ function applyExecutionFilters(executions: Execution[], filters: ExecutionFilter
 
 /**
  * Extract first node information for better mode display
+ * Now properly detects scheduled triggers (cron, interval)
  */
 function getFirstNodeInfo(nodes: any[]): { type?: string; name?: string } | undefined {
   if (!nodes || nodes.length === 0) return undefined;
   
-  // Find trigger or webhook node (usually the first node)
-  const triggerNode = nodes.find(node => 
+  // Find trigger nodes - prioritize scheduled triggers
+  const scheduledTriggerNode = nodes.find(node => 
+    node.type && (
+      node.type.includes('cronTrigger') ||
+      node.type.includes('intervalTrigger') ||
+      node.type.includes('scheduleTrigger') ||
+      (node.type.includes('trigger') && node.parameters?.rule?.interval) // Some triggers have interval in parameters
+    )
+  );
+  
+  // Find other trigger types
+  const triggerNode = scheduledTriggerNode || nodes.find(node => 
     node.type && (
       node.type.includes('trigger') ||
       node.type.includes('webhook') ||
-      node.type.includes('cron') ||
       node.type.includes('manual')
     )
   );
@@ -190,7 +200,7 @@ function getFirstNodeInfo(nodes: any[]): { type?: string; name?: string } | unde
   
   // Extract the node type and create a friendly display name
   const nodeType = firstNode.type || 'Unknown';
-  const displayName = getNodeDisplayName(nodeType);
+  const displayName = getScheduledTriggerDisplayName(nodeType, firstNode.parameters);
   
   return {
     type: nodeType,
@@ -199,7 +209,47 @@ function getFirstNodeInfo(nodes: any[]): { type?: string; name?: string } | unde
 }
 
 /**
- * Convert node type to display name
+ * Convert node type to display name with enhanced scheduled trigger detection
+ */
+function getScheduledTriggerDisplayName(nodeType: string, parameters?: any): string {
+  // First, check for scheduled triggers specifically
+  if (nodeType.includes('cronTrigger') || nodeType.includes('cron')) {
+    return 'Scheduled (Cron)';
+  }
+  
+  if (nodeType.includes('intervalTrigger')) {
+    // Try to extract interval details from parameters
+    if (parameters?.interval) {
+      const interval = parameters.interval;
+      if (typeof interval === 'number') {
+        if (interval < 60) return `Scheduled (${interval}s)`;
+        if (interval < 3600) return `Scheduled (${Math.round(interval/60)}m)`;
+        return `Scheduled (${Math.round(interval/3600)}h)`;
+      }
+    }
+    return 'Scheduled (Interval)';
+  }
+  
+  if (nodeType.includes('scheduleTrigger') || nodeType.includes('schedule')) {
+    return 'Scheduled';
+  }
+  
+  // Check if it's a generic trigger with scheduling parameters
+  if (nodeType.includes('trigger') && parameters) {
+    if (parameters.rule?.interval || parameters.interval) {
+      return 'Scheduled (Timer)';
+    }
+    if (parameters.cron || parameters.cronExpression) {
+      return 'Scheduled (Cron)';
+    }
+  }
+  
+  // Fall back to the original node display name logic
+  return getNodeDisplayName(nodeType);
+}
+
+/**
+ * Original node type to display name converter
  */
 function getNodeDisplayName(nodeType: string): string {
   // Extract meaningful name from node type
@@ -212,7 +262,7 @@ function getNodeDisplayName(nodeType: string): string {
   if (nodeType.includes('discord')) return 'Discord';
   if (nodeType.includes('webhook')) return 'Webhook';
   if (nodeType.includes('httpRequest')) return 'HTTP Request';
-  if (nodeType.includes('cron')) return 'Cron';
+  if (nodeType.includes('cron')) return 'Cron Job';
   if (nodeType.includes('manual')) return 'Manual';
   if (nodeType.includes('trigger')) return 'Trigger';
   if (nodeType.includes('airtable')) return 'Airtable';
@@ -274,23 +324,36 @@ function convertN8nExecutions(n8nExecutions: N8nExecution[], workflows: N8nWorkf
         status = 'unknown'
     }
     
-    // Map n8n mode to our internal mode format
+    // Map n8n mode to our internal mode format with enhanced scheduled detection
     let mode: 'manual' | 'trigger' | 'webhook' | 'cron' | 'unknown' = 'unknown'
-    switch (n8nExec.mode) {
-      case 'manual':
-        mode = 'manual'
-        break
-      case 'trigger':
-        mode = 'trigger'
-        break
-      case 'webhook':
-        mode = 'webhook'
-        break
-      case 'cron':
-        mode = 'cron'
-        break
-      default:
-        mode = 'unknown'
+    
+    // First check if it's a scheduled trigger based on workflow nodes
+    const firstNodeInfo = getFirstNodeInfo(workflow?.nodes || [])
+    const isScheduledTrigger = firstNodeInfo?.name?.includes('Scheduled') || 
+                              firstNodeInfo?.type?.includes('cron') ||
+                              firstNodeInfo?.type?.includes('interval') ||
+                              firstNodeInfo?.type?.includes('schedule')
+    
+    if (isScheduledTrigger) {
+      mode = 'cron' // Use 'cron' for all scheduled triggers
+    } else {
+      // Fall back to n8n's mode classification
+      switch (n8nExec.mode) {
+        case 'manual':
+          mode = 'manual'
+          break
+        case 'trigger':
+          mode = 'trigger'
+          break
+        case 'webhook':
+          mode = 'webhook'
+          break
+        case 'cron':
+          mode = 'cron'
+          break
+        default:
+          mode = 'unknown'
+      }
     }
     
     const execution: Execution = {
