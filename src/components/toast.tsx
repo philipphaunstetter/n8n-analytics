@@ -49,6 +49,10 @@ export function Toast({ id, type, title, message, duration = 5000, onClose }: To
   const Icon = icons[type]
 
   useEffect(() => {
+    if (duration === 0) {
+      return // Don't auto-dismiss if duration is 0
+    }
+    
     const timer = setTimeout(() => {
       setShow(false)
       setTimeout(() => onClose(id), 300) // Wait for transition

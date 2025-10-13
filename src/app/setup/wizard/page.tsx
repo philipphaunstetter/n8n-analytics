@@ -17,6 +17,7 @@ import {
   ServerIcon
 } from '@heroicons/react/24/outline'
 import { CheckIcon as CheckIconSolid } from '@heroicons/react/24/solid'
+import { showToast } from '@/components/toast'
 import { normalizeUrl } from '@/lib/utils'
 
 interface SetupData {
@@ -203,8 +204,55 @@ export default function SetupWizardPage() {
         throw new Error(errorData.error || 'Setup failed')
       }
 
-      // Redirect to dashboard
-      router.push('/dashboard')
+      const result = await response.json()
+      
+      // Show syncing toast
+      const syncToastId = Math.random().toString(36).substr(2, 9)
+      showToast({
+        type: 'info',
+        title: 'Syncing your n8n data...',
+        message: 'Please wait while we fetch your workflows and executions',
+        duration: 0 // Don't auto-dismiss
+      })
+      
+      // Start initial sync in background
+      try {
+        const syncResponse = await fetch('/api/setup/initial-sync', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' }
+        })
+        
+        if (syncResponse.ok) {
+          // Show completion toast
+          showToast({
+            type: 'success',
+            title: 'Setup completed successfully!',
+            message: 'Your n8n data has been synced and is ready to view',
+            duration: 5000
+          })
+        } else {
+          // Show warning but don't fail setup
+          showToast({
+            type: 'error',
+            title: 'Setup completed with warnings',
+            message: 'Initial sync failed, but you can trigger it manually from the dashboard',
+            duration: 7000
+          })
+        }
+      } catch (syncError) {
+        console.warn('Initial sync failed:', syncError)
+        showToast({
+          type: 'error',
+          title: 'Setup completed with warnings',
+          message: 'Initial sync failed, but you can trigger it manually from the dashboard',
+          duration: 7000
+        })
+      }
+      
+      // Small delay to show the toast, then redirect
+      setTimeout(() => {
+        router.push('/dashboard')
+      }, 1500)
     } catch (error) {
       console.error('Setup failed:', error)
       setError(error instanceof Error ? error.message : 'Setup failed')
