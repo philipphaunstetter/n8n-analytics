@@ -35,6 +35,7 @@ function getSQLiteClient(): Database {
           provider_workflow_id TEXT,
           name TEXT NOT NULL,
           is_active BOOLEAN DEFAULT 1,
+          is_archived BOOLEAN DEFAULT 0,
           tags TEXT DEFAULT '[]',
           node_count INTEGER DEFAULT 0,
           workflow_data TEXT,
@@ -531,6 +532,7 @@ export class ExecutionSyncService {
       provider_workflow_id: n8nWorkflow.id,
       name: n8nWorkflow.name,
       is_active: n8nWorkflow.active ? 1 : 0,
+      is_archived: n8nWorkflow.isArchived ? 1 : 0,
       tags: JSON.stringify(n8nWorkflow.tags || []),
       node_count: n8nWorkflow.nodes?.length || 0
     }
@@ -552,10 +554,10 @@ export class ExecutionSyncService {
         // Update existing
         db.run(`
           UPDATE workflows SET
-            name = ?, is_active = ?, tags = ?, node_count = ?, updated_at = CURRENT_TIMESTAMP
+            name = ?, is_active = ?, is_archived = ?, tags = ?, node_count = ?, updated_at = CURRENT_TIMESTAMP
           WHERE id = ?
         `, [
-          workflowData.name, workflowData.is_active, workflowData.tags,
+          workflowData.name, workflowData.is_active, workflowData.is_archived, workflowData.tags,
           workflowData.node_count, existing.id
         ], function(err) {
           if (err) reject(err)
@@ -565,11 +567,11 @@ export class ExecutionSyncService {
         // Insert new
         db.run(`
           INSERT INTO workflows (
-            id, provider_id, provider_workflow_id, name, is_active, tags, node_count
-          ) VALUES (?, ?, ?, ?, ?, ?, ?)
+            id, provider_id, provider_workflow_id, name, is_active, is_archived, tags, node_count
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         `, [
           workflowData.id, workflowData.provider_id, workflowData.provider_workflow_id,
-          workflowData.name, workflowData.is_active, workflowData.tags, workflowData.node_count
+          workflowData.name, workflowData.is_active, workflowData.is_archived, workflowData.tags, workflowData.node_count
         ], function(err) {
           if (err) reject(err)
           else resolve({ inserted: true, updated: false })
@@ -889,10 +891,21 @@ export class ExecutionSyncService {
       const triggerNode = workflowNodes.find(node => 
         node.type?.includes('trigger') || 
         node.type?.includes('webhook') ||
-        node.type?.includes('manual')
+        node.type?.includes('manual') ||
+        node.type?.includes('error')
       )
       
       if (triggerNode) {
+        // Detect error triggers
+        if (triggerNode.type?.includes('errorTrigger') ||
+            triggerNode.type?.includes('Error Trigger') ||
+            triggerNode.type === '@n8n/n8n-nodes-base.errorTrigger' ||
+            triggerNode.type === 'n8n-nodes-base.errorTrigger' ||
+            triggerNode.name?.includes('Error Trigger') ||
+            triggerNode.displayName?.includes('Error Trigger')) {
+          return 'error'
+        }
+        
         // Detect scheduled triggers
         if (triggerNode.type?.includes('schedule') || 
             triggerNode.type?.includes('cron') ||
@@ -919,6 +932,7 @@ export class ExecutionSyncService {
       case 'trigger': return 'cron' // Default trigger to cron since most are scheduled
       case 'webhook': return 'webhook'
       case 'cron': return 'cron'
+      case 'error': return 'error'
       default: return 'unknown'
     }
   }

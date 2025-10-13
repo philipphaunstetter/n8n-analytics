@@ -25,6 +25,7 @@ export interface N8nWorkflow {
   id: string;
   name: string;
   active: boolean;
+  isArchived: boolean;
   createdAt: string;
   updatedAt: string;
   nodes: any[];
