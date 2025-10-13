@@ -273,13 +273,15 @@ function WorkflowDetailContent() {
           <h3 className="text-lg font-medium text-gray-900">Workflow Visualization</h3>
           <p className="text-sm text-gray-500 mt-1">Interactive preview of your n8n workflow</p>
         </div>
-        <div className="flex-1 flex flex-col" style={{ minHeight: '70vh', height: '70vh' }}>
+        <div className="flex-1 flex flex-col" style={{ minHeight: '85vh', height: '85vh' }}>
           {workflow.workflowJson ? (
             <N8nDemoWorkflow 
               workflow={workflow.workflowJson} 
-              height="70vh"
+              height="85vh"
               className="flex-1"
               frame={true}
+              fitView={true}
+              zoom={0.8}
             />
           ) : (
             <div className="text-center py-12 flex-1 flex items-center justify-center">

@@ -4,6 +4,8 @@ n8n-demo {
   width: 100% !important;
   height: 100% !important;
   min-height: inherit !important;
+  margin: 0 !important;
+  padding: 0 !important;
 }
 
 /* Style the iframe inside the n8n-demo component */
@@ -13,11 +15,32 @@ n8n-demo iframe {
   min-height: inherit !important;
   border: none !important;
   border-radius: 8px !important;
+  margin: 0 !important;
+  padding: 0 !important;
 }
 
 /* Ensure proper sizing for the shadow DOM content */
 n8n-demo::part(container) {
-  width: 100%;
-  height: 100%;
-  min-height: inherit;
+  width: 100% !important;
+  height: 100% !important;
+  min-height: inherit !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+/* Additional selectors to target potential internal elements */
+n8n-demo * {
+  box-sizing: border-box !important;
+}
+
+/* Try to target the canvas or workflow container inside */
+n8n-demo canvas,
+n8n-demo .workflow-container,
+n8n-demo .n8n-workflow,
+n8n-demo [data-test-id="canvas"] {
+  width: 100% !important;
+  height: 100% !important;
+  min-height: inherit !important;
+  margin: 0 !important;
+  padding: 0 !important;
 }

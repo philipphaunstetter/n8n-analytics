@@ -14,6 +14,8 @@ interface N8nDemoWorkflowProps {
   collapseForMobile?: boolean
   className?: string
   height?: string
+  zoom?: number
+  fitView?: boolean
 }
 
 // Extend JSX intrinsic elements to include the n8n-demo web component
@@ -30,6 +32,8 @@ declare global {
         disableinteractivity?: string
         hidecanvaserrors?: string
         collapseformobile?: string
+        zoom?: string
+        fitview?: string
         style?: React.CSSProperties
       }
     }
@@ -45,7 +49,9 @@ export function N8nDemoWorkflow({
   hideCanvasErrors = true,
   collapseForMobile = true,
   className = '',
-  height = '700px'
+  height = '700px',
+  zoom,
+  fitView = true
 }: N8nDemoWorkflowProps) {
   const [isLoaded, setIsLoaded] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -169,6 +175,8 @@ export function N8nDemoWorkflow({
         disableinteractivity: disableInteractivity ? 'true' : 'false',
         hidecanvaserrors: hideCanvasErrors ? 'true' : 'false',
         collapseformobile: collapseForMobile ? 'true' : 'false',
+        zoom: zoom?.toString(),
+        fitview: fitView ? 'true' : 'false',
         style: { 
           width: '100%', 
           height: '100%',
