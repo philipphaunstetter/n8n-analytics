@@ -13,13 +13,16 @@ export class ApiClient {
       'Content-Type': 'application/json',
     }
 
-    // Check for session token in localStorage
+    // Check for session token in localStorage first
     if (typeof window !== 'undefined') {
       const sessionToken = localStorage.getItem('sessionToken')
       if (sessionToken) {
         headers['Authorization'] = `Bearer ${sessionToken}`
       }
     }
+    
+    // Note: If no localStorage token, fetch() will automatically include cookies
+    // which is how the server-side session authentication works
 
     return headers
   }
@@ -30,6 +33,7 @@ export class ApiClient {
     const response = await fetch(`${this.baseUrl}${endpoint}`, {
       method: 'GET',
       headers,
+      credentials: 'include', // Include cookies for session authentication
     })
 
     if (!response.ok) {
@@ -45,6 +49,7 @@ export class ApiClient {
     const response = await fetch(`${this.baseUrl}${endpoint}`, {
       method: 'POST',
       headers,
+      credentials: 'include', // Include cookies for session authentication
       body: data ? JSON.stringify(data) : undefined,
     })
 
@@ -61,6 +66,7 @@ export class ApiClient {
     const response = await fetch(`${this.baseUrl}${endpoint}`, {
       method: 'PUT',
       headers,
+      credentials: 'include', // Include cookies for session authentication
       body: data ? JSON.stringify(data) : undefined,
     })
 
@@ -77,6 +83,7 @@ export class ApiClient {
     const response = await fetch(`${this.baseUrl}${endpoint}`, {
       method: 'DELETE',
       headers,
+      credentials: 'include', // Include cookies for session authentication
     })
 
     if (!response.ok) {

@@ -36,6 +36,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (sessionToken) {
           // Validate session token by making a request to a protected endpoint
           const response = await fetch('/api/user/profile', {
+            credentials: 'include', // Include cookies for session authentication
             headers: {
               'Authorization': `Bearer ${sessionToken}`
             }
@@ -87,6 +88,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const response = await fetch('/api/auth/signin', {
         method: 'POST',
+        credentials: 'include', // Include cookies for session authentication
         headers: {
           'Content-Type': 'application/json',
         },
