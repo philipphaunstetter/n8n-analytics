@@ -44,7 +44,7 @@ export function N8nDemoWorkflow({
   hideCanvasErrors = true,
   collapseForMobile = true,
   className = '',
-  height = '500px'
+  height = '700px'
 }: N8nDemoWorkflowProps) {
   const [isLoaded, setIsLoaded] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -152,8 +152,11 @@ export function N8nDemoWorkflow({
         collapseformobile: collapseForMobile ? 'true' : 'false',
         style: { 
           width: '100%', 
+          height: height,
           minHeight: height,
-          display: 'block'
+          display: 'block',
+          border: 'none',
+          borderRadius: '8px'
         }
       })}
     </div>

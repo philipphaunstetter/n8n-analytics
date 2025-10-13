@@ -273,9 +273,17 @@ function WorkflowDetailContent() {
           <h3 className="text-lg font-medium text-gray-900">Workflow Visualization</h3>
           <p className="text-sm text-gray-500 mt-1">Interactive preview of your n8n workflow</p>
         </div>
-        <div className="p-6">
+        <div className="p-2" style={{
+          '--n8n-workflow-min-height': '800px',
+          '--n8n-iframe-border-radius': '8px'
+        } as React.CSSProperties}>
           {workflow.workflowJson ? (
-            <N8nDemoWorkflow workflow={workflow.workflowJson} />
+            <N8nDemoWorkflow 
+              workflow={workflow.workflowJson} 
+              height="800px"
+              className="w-full"
+              frame={true}
+            />
           ) : (
             <div className="text-center py-12">
               <ExclamationTriangleIcon className="mx-auto h-12 w-12 text-gray-400" />
