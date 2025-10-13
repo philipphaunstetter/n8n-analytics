@@ -28,6 +28,7 @@ import { Button } from '@/components/button'
 import { Input } from '@/components/input'
 import { Select } from '@/components/select'
 import { showToast } from '@/components/toast'
+import { formatExecutionId, createN8nExecutionUrl } from '@/lib/utils'
 
 const statusIcons = {
   'success': CheckCircleIcon,
@@ -156,14 +157,19 @@ function ExecutionsContent() {
     }).format(new Date(date))
   }
 
+
   const openN8nExecution = (execution: Execution) => {
     if (!n8nUrl) {
       console.error('n8n URL not available')
       return
     }
     
-    // Construct the execution URL: /workflow/{workflowId}/executions/{executionId}
-    const executionUrl = `${n8nUrl}/workflow/${execution.providerWorkflowId}/executions/${execution.providerExecutionId}`
+    // Create properly formatted execution URL
+    const executionUrl = createN8nExecutionUrl(
+      n8nUrl,
+      execution.providerWorkflowId,
+      execution.providerExecutionId
+    )
     
     // Open in new tab
     window.open(executionUrl, '_blank')
@@ -337,7 +343,7 @@ function ExecutionsContent() {
                       </Badge>
                     </TableCell>
                     <TableCell className="font-mono text-sm">
-                      {execution.providerExecutionId.substring(0, 8)}...
+                      {formatExecutionId(execution.providerExecutionId)}
                     </TableCell>
                     <TableCell>
                       <div className="flex flex-col">

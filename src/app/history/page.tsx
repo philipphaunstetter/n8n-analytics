@@ -22,6 +22,7 @@ import { Badge } from '@/components/badge'
 import { Button } from '@/components/button'
 import { Input } from '@/components/input'
 import { Select } from '@/components/select'
+import { createN8nExecutionUrl } from '@/lib/utils'
 
 const statusIcons = {
   'success': CheckCircleIcon,
@@ -50,6 +51,7 @@ function HistoryContent() {
   const [timeRange, setTimeRange] = useState<TimeRange>('7d')
   const [sortBy, setSortBy] = useState<'startedAt' | 'duration' | 'status'>('startedAt')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
+  const [n8nUrl, setN8nUrl] = useState<string>('')
 
   const fetchExecutions = useCallback(async () => {
     try {
@@ -74,6 +76,21 @@ function HistoryContent() {
   useEffect(() => {
     fetchExecutions()
   }, [fetchExecutions])
+
+  useEffect(() => {
+    // Fetch n8n URL on component mount
+    const fetchN8nUrl = async () => {
+      try {
+        const response = await apiClient.get<{ n8nUrl: string }>('/config/n8n-url')
+        setN8nUrl(response.n8nUrl)
+      } catch (err) {
+        console.error('Failed to fetch n8n URL:', err)
+        // Fallback to default
+        setN8nUrl('http://localhost:5678')
+      }
+    }
+    fetchN8nUrl()
+  }, [])
 
   const filteredAndSortedExecutions = executions
     .filter(execution => {
@@ -151,6 +168,23 @@ function HistoryContent() {
   }
 
   const stats = getStatusStats()
+
+  const openN8nExecution = (execution: Execution) => {
+    if (!n8nUrl) {
+      console.error('n8n URL not available')
+      return
+    }
+    
+    // Create properly formatted execution URL
+    const executionUrl = createN8nExecutionUrl(
+      n8nUrl,
+      execution.providerWorkflowId,
+      execution.providerExecutionId
+    )
+    
+    // Open in new tab
+    window.open(executionUrl, '_blank')
+  }
 
   if (error) {
     return (
@@ -430,8 +464,14 @@ function HistoryContent() {
                     </div>
                     
                     <div className="flex-shrink-0">
-                      <Button outline>
-                        View Details
+                      <Button 
+                        outline
+                        onClick={(e: React.MouseEvent) => {
+                          e.stopPropagation()
+                          openN8nExecution(execution)
+                        }}
+                      >
+                        View in n8n
                       </Button>
                     </div>
                   </div>

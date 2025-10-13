@@ -17,6 +17,7 @@ import {
   ServerIcon
 } from '@heroicons/react/24/outline'
 import { CheckIcon as CheckIconSolid } from '@heroicons/react/24/solid'
+import { normalizeUrl } from '@/lib/utils'
 
 interface SetupData {
   // Step 1: Admin Account
@@ -73,6 +74,11 @@ export default function SetupWizardPage() {
   })
 
   const handleInputChange = (field: keyof SetupData, value: string | boolean) => {
+    // Normalize n8n URL when it's entered
+    if (field === 'n8nUrl' && typeof value === 'string') {
+      value = normalizeUrl(value.trim())
+    }
+    
     setFormData(prev => ({
       ...prev,
       [field]: value
@@ -94,7 +100,7 @@ export default function SetupWizardPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          url: formData.n8nUrl,
+          url: normalizeUrl(formData.n8nUrl),
           apiKey: formData.n8nApiKey
         })
       })
@@ -175,7 +181,7 @@ export default function SetupWizardPage() {
             password: formData.adminPassword,
           },
           n8nConfig: {
-            url: formData.n8nUrl,
+            url: normalizeUrl(formData.n8nUrl),
             apiKey: formData.n8nApiKey,
           },
           configuration: {
