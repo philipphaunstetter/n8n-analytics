@@ -647,7 +647,7 @@ export class ExecutionSyncService {
         
         // Process missing workflows
         for (const workflowId of missingWorkflowIds) {
-          const n8nWorkflow = allWorkflows.find(w => w.id === workflowId)
+          const n8nWorkflow = allWorkflows.find((w: N8nWorkflow) => w.id === workflowId)
           
           if (n8nWorkflow) {
             // Insert workflow with real data
