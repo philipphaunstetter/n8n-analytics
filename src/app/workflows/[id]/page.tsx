@@ -273,7 +273,7 @@ function WorkflowDetailContent() {
           <h3 className="text-lg font-medium text-gray-900">Workflow Visualization</h3>
           <p className="text-sm text-gray-500 mt-1">Interactive preview of your n8n workflow</p>
         </div>
-        <div className="p-2" style={{
+        <div className="p-2 min-h-[850px]" style={{
           '--n8n-workflow-min-height': '800px',
           '--n8n-iframe-border-radius': '8px'
         } as React.CSSProperties}>

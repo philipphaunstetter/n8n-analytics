@@ -5,6 +5,13 @@ import { authenticateRequest } from '@/lib/api-auth'
 import { n8nApi, N8nExecution, N8nWorkflow } from '@/lib/n8n-api'
 
 // GET /api/executions - List executions across all providers
+// Supports query parameters:
+// - limit: Number of executions to fetch (default: 500, max recommended: 1000)
+// - cursor: Pagination cursor for fetching next page
+// - workflowId: Filter by specific workflow
+// - status: Filter by execution status (comma-separated)
+// - timeRange: Filter by time range (1h, 24h, 7d, 30d, 90d)
+// - search: Search in execution ID, workflow name, or error message
 export async function GET(request: NextRequest) {
   try {
     // Authenticate the request (handles both dev and Supabase auth)
@@ -16,6 +23,18 @@ export async function GET(request: NextRequest) {
 
     // Parse query parameters
     const searchParams = request.nextUrl.searchParams
+    let limit = parseInt(searchParams.get('limit') || '500') // Increased default from 100 to 500
+    const cursor = searchParams.get('cursor') || undefined
+    
+    // Validate and cap the limit to prevent performance issues
+    if (limit > 2000) {
+      console.warn(`Execution limit ${limit} exceeds maximum of 2000, capping to 2000`)
+      limit = 2000
+    }
+    if (limit < 1) {
+      limit = 500 // Reset to default if invalid
+    }
+    
     const filters: ExecutionFilters = {
       providerId: searchParams.get('providerId') || undefined,
       workflowId: searchParams.get('workflowId') || undefined,
@@ -38,14 +57,21 @@ export async function GET(request: NextRequest) {
     // Fetch executions from n8n API - always use real data
     let allExecutions: Execution[] = []
     let totalCount = 0
+    let nextCursor: string | null = null
 
     try {
-      console.log('Fetching real executions from n8n API...')
-      const n8nExecutions = await n8nApi.getExecutions({ limit: 100 })
+      console.log(`Fetching real executions from n8n API (limit: ${limit})...`)
+      const executionsResponse = await n8nApi.getExecutions({ 
+        limit, 
+        cursor,
+        ...(filters.workflowId && { workflowId: filters.workflowId })
+      })
       const n8nWorkflows = await n8nApi.getWorkflows()
       
+      nextCursor = executionsResponse.nextCursor
+      
       // Convert n8n executions to our internal format
-      allExecutions = convertN8nExecutions(n8nExecutions.data, n8nWorkflows)
+      allExecutions = convertN8nExecutions(executionsResponse.data, n8nWorkflows)
       totalCount = allExecutions.length
       
       console.log(`Fetched ${allExecutions.length} real executions from n8n`)
@@ -71,10 +97,11 @@ export async function GET(request: NextRequest) {
       data: {
         items: filteredExecutions,
         total: totalCount,
-        page: 1,
-        limit: filteredExecutions.length,
-        hasNextPage: false,
-        hasPreviousPage: false
+        limit: limit,
+        cursor: cursor,
+        nextCursor: nextCursor,
+        hasNextPage: !!nextCursor,
+        hasPreviousPage: !!cursor
       }
     })
   } catch (error) {

@@ -141,7 +141,7 @@ export function N8nDemoWorkflow({
   }
 
   return (
-    <div ref={containerRef} className={className}>
+    <div ref={containerRef} className={className} style={{ minHeight: height, height: height }}>
       {React.createElement('n8n-demo', {
         workflow: workflowJson,
         frame: frame ? 'true' : 'false',
