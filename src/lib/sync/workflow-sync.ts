@@ -5,6 +5,7 @@ import { n8nApi, N8nWorkflow } from '@/lib/n8n-api'
 export class WorkflowSyncService {
   private getSQLiteClient(): Database {
     const dbPath = ConfigManager.getDefaultDatabasePath()
+    console.log('🔍 Using database path:', dbPath)
     return new Database(dbPath)
   }
 
@@ -255,10 +256,9 @@ export class WorkflowSyncService {
             db.run(`
               UPDATE workflows SET
                 lifecycle_status = ?,
-                archived_at = ?,
-                archived_reason = ?
+                updated_at = ?
               WHERE id = ?
-            `, [newStatus, new Date().toISOString(), archivedReason, workflow.id], (err) => {
+            `, [newStatus, new Date().toISOString(), workflow.id], (err) => {
               processed++
               
               if (err) {
@@ -296,10 +296,9 @@ export class WorkflowSyncService {
       db.run(`
         UPDATE workflows SET
           lifecycle_status = 'archived',
-          archived_at = ?,
-          archived_reason = ?
+          updated_at = ?
         WHERE id = ?
-      `, [new Date().toISOString(), reason, workflowId], (err) => {
+      `, [new Date().toISOString(), workflowId], (err) => {
         db.close()
         if (err) {
           reject(err)
@@ -371,16 +370,15 @@ export class WorkflowSyncService {
         // Create default provider
         const providerId = `provider_${Date.now()}`
         db.run(`
-          INSERT INTO providers (id, user_id, name, base_url, api_key_encrypted, is_connected, status)
-          VALUES (?, ?, ?, ?, ?, ?, ?)
+          INSERT INTO providers (id, name, type, host_url, api_key_encrypted, is_active)
+          VALUES (?, ?, ?, ?, ?, ?)
         `, [
           providerId,
-          'admin',
           'Default n8n Instance',
+          'n8n',
           'http://localhost:5678',
           'default',
-          1,
-          'healthy'
+          1
         ], (err) => {
           if (err) {
             reject(err)

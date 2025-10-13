@@ -15,10 +15,13 @@ export async function POST(request: NextRequest) {
     })
   } catch (error) {
     console.error('Manual workflow sync failed:', error)
+    console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace')
+    
     return NextResponse.json(
       { 
         error: 'Workflow sync failed',
-        details: error instanceof Error ? error.message : 'Unknown error'
+        details: error instanceof Error ? error.message : 'Unknown error',
+        stack: process.env.NODE_ENV === 'development' ? (error instanceof Error ? error.stack : 'No stack trace') : undefined
       },
       { status: 500 }
     )
