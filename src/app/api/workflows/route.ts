@@ -72,7 +72,7 @@ export async function GET(request: NextRequest) {
       console.log(`✅ Found ${workflows.length} workflows from database`)
       
       // Convert to API format
-      const apiWorkflows: Workflow[] = workflows.map(dbWorkflow => {
+      let apiWorkflows: Workflow[] = workflows.map(dbWorkflow => {
         let workflowData: any = {}
         let tags: any[] = []
         try { workflowData = dbWorkflow.workflow_data ? JSON.parse(dbWorkflow.workflow_data) : {} } catch {}
