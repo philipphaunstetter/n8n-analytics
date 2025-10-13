@@ -35,7 +35,7 @@ export async function GET(request: NextRequest) {
     
     // Convert to API format and apply filtering
     let apiWorkflows = n8nWorkflows.map(workflow => ({
-      id: `n8n-${workflow.id}`, // Prefix to avoid ID conflicts
+      id: workflow.id, // Use workflow ID directly
       providerId: 'n8n-main',
       providerWorkflowId: workflow.id,
       name: workflow.name,

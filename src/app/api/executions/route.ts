@@ -294,9 +294,9 @@ function convertN8nExecutions(n8nExecutions: N8nExecution[], workflows: N8nWorkf
     }
     
     const execution: Execution = {
-      id: `n8n-${n8nExec.id}`, // Prefix to avoid ID conflicts
+      id: n8nExec.id, // Use execution ID directly
       providerId: 'n8n-main', // Static provider ID for n8n instance
-      workflowId: `n8n-${n8nExec.workflowId}`, // Prefix to avoid conflicts
+      workflowId: n8nExec.workflowId, // Use workflow ID directly
       providerExecutionId: n8nExec.id,
       providerWorkflowId: n8nExec.workflowId,
       status,
