@@ -29,6 +29,7 @@ interface Workflow {
   name: string
   description?: string
   isActive: boolean
+  isArchived?: boolean
   tags: string[]
   createdAt: Date
   updatedAt: Date
@@ -62,7 +63,7 @@ function WorkflowsContent() {
   const [backing, setBacking] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
-  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all')
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive' | 'archived'>('all')
   const router = useRouter()
 
   const fetchWorkflows = useCallback(async () => {
@@ -70,7 +71,14 @@ function WorkflowsContent() {
       setLoading(true)
       const params = new URLSearchParams()
       if (statusFilter !== 'all') {
-        params.append('isActive', statusFilter === 'active' ? 'true' : 'false')
+        if (statusFilter === 'active') {
+          params.append('isActive', 'true')
+        } else if (statusFilter === 'inactive') {
+          params.append('isActive', 'false')
+          params.append('isArchived', 'false')
+        } else if (statusFilter === 'archived') {
+          params.append('isArchived', 'true')
+        }
       }
       
       const response = await apiClient.get<{ data: { items: Workflow[] } }>(`/workflows?${params}`)
@@ -234,11 +242,12 @@ function WorkflowsContent() {
           </label>
           <Select 
             value={statusFilter} 
-            onChange={(e) => setStatusFilter(e.target.value as 'all' | 'active' | 'inactive')}
+            onChange={(e) => setStatusFilter(e.target.value as 'all' | 'active' | 'inactive' | 'archived')}
           >
             <option value="all">All workflows</option>
             <option value="active">Active</option>
             <option value="inactive">Inactive</option>
+            <option value="archived">Archived</option>
           </Select>
         </div>
 
@@ -257,7 +266,7 @@ function WorkflowsContent() {
             Showing {filteredWorkflows.length} of {workflows.length} workflows
           </span>
           <span>
-            {workflows.filter(w => w.isActive).length} active, {workflows.filter(w => !w.isActive).length} inactive
+            {workflows.filter(w => w.isActive).length} active, {workflows.filter(w => !w.isActive && !(w.isArchived ?? false)).length} inactive, {workflows.filter(w => w.isArchived ?? false).length} archived
           </span>
         </div>
       </div>
@@ -309,13 +318,20 @@ function WorkflowsContent() {
                   onClick={() => router.push(`/workflows/${workflow.id}`)}
                 >
                   <TableCell>
-                    <Badge color={workflow.isActive ? 'green' : 'zinc'} className="flex items-center space-x-1">
+                    <Badge 
+                      color={workflow.isActive ? 'green' : (workflow.isArchived ?? false) ? 'orange' : 'zinc'} 
+                      className="flex items-center space-x-1"
+                    >
                       {workflow.isActive ? (
                         <CheckCircleIcon className="h-3 w-3" />
+                      ) : (workflow.isArchived ?? false) ? (
+                        <ArchiveBoxIcon className="h-3 w-3" />
                       ) : (
                         <ClockIcon className="h-3 w-3" />
                       )}
-                      <span>{workflow.isActive ? 'Active' : 'Inactive'}</span>
+                      <span>
+                        {workflow.isActive ? 'Active' : (workflow.isArchived ?? false) ? 'Archived' : 'Inactive'}
+                      </span>
                     </Badge>
                   </TableCell>
                   <TableCell>

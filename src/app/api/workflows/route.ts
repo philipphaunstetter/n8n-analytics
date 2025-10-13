@@ -18,6 +18,7 @@ export async function GET(request: NextRequest) {
     // Get query parameters
     const { searchParams } = new URL(request.url)
     const isActiveFilter = searchParams.get('isActive')
+    const isArchivedFilter = searchParams.get('isArchived')
 
     // Fetch workflows from n8n API
     let n8nWorkflows: N8nWorkflow[] = []
@@ -33,6 +34,20 @@ export async function GET(request: NextRequest) {
       )
     }
     
+    // Helper function to determine if a workflow is archived
+    const isWorkflowArchived = (workflow: N8nWorkflow): boolean => {
+      if (workflow.active) {
+        return false // Active workflows are never archived
+      }
+      
+      const now = new Date()
+      const updatedAt = new Date(workflow.updatedAt)
+      const daysSinceUpdate = Math.floor((now.getTime() - updatedAt.getTime()) / (1000 * 60 * 60 * 24))
+      
+      // Consider inactive workflows archived if they haven't been updated in 90 days
+      return daysSinceUpdate > 90
+    }
+    
     // Convert to API format and apply filtering
     let apiWorkflows = n8nWorkflows.map(workflow => ({
       id: workflow.id, // Use workflow ID directly
@@ -41,6 +56,7 @@ export async function GET(request: NextRequest) {
       name: workflow.name,
       description: '', // n8n workflows don't have descriptions in the API response
       isActive: workflow.active,
+      isArchived: isWorkflowArchived(workflow),
       tags: workflow.tags || [],
       createdAt: new Date(workflow.createdAt),
       updatedAt: new Date(workflow.updatedAt),
@@ -62,6 +78,13 @@ export async function GET(request: NextRequest) {
       const isActiveValue = isActiveFilter.toLowerCase() === 'true'
       apiWorkflows = apiWorkflows.filter(workflow => workflow.isActive === isActiveValue)
       console.log(`🔍 Filtered to ${apiWorkflows.length} workflows with isActive=${isActiveValue}`)
+    }
+    
+    // Apply isArchived filter if specified
+    if (isArchivedFilter !== null) {
+      const isArchivedValue = isArchivedFilter.toLowerCase() === 'true'
+      apiWorkflows = apiWorkflows.filter(workflow => workflow.isArchived === isArchivedValue)
+      console.log(`🔍 Filtered to ${apiWorkflows.length} workflows with isArchived=${isArchivedValue}`)
     }
     
     return NextResponse.json({

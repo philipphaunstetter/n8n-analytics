@@ -22,6 +22,7 @@ export interface Workflow {
   name: string
   description?: string
   isActive: boolean
+  isArchived?: boolean // Computed field for workflows that are inactive and stale
   tags?: string[]
   createdAt: Date
   updatedAt: Date
@@ -236,6 +237,7 @@ export interface ExecutionFilters {
 export interface WorkflowFilters {
   providerId?: string
   isActive?: boolean
+  isArchived?: boolean
   tags?: string[]
   search?: string
 }
