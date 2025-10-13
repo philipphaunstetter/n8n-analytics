@@ -436,7 +436,7 @@ export class ExecutionSyncService {
       provider_execution_id: n8nExecution.id,
       provider_workflow_id: n8nExecution.workflowId,
       status: this.mapN8nStatus(n8nExecution.status),
-      mode: this.mapN8nMode(n8nExecution.mode),
+      mode: await this.getWorkflowMode(providerId, n8nExecution),
       started_at: n8nExecution.startedAt,
       stopped_at: n8nExecution.stoppedAt,
       duration: n8nExecution.stoppedAt 
@@ -739,10 +739,75 @@ export class ExecutionSyncService {
     }
   }
   
-  private mapN8nMode(n8nMode: string): string {
+  /**
+   * Get workflow mode with enhanced detection
+   */
+  private async getWorkflowMode(providerId: string, n8nExecution: N8nExecution): Promise<string> {
+    try {
+      // Try to get workflow details from database first
+      const db = getSQLiteClient()
+      const workflowData = await new Promise<{workflow_data: string} | null>((resolve, reject) => {
+        db.get(
+          'SELECT workflow_data FROM workflows WHERE provider_id = ? AND provider_workflow_id = ?',
+          [providerId, n8nExecution.workflowId],
+          (err, row: {workflow_data: string}) => {
+            if (err) reject(err)
+            else resolve(row || null)
+          }
+        )
+      })
+      
+      let workflowNodes: any[] = []
+      if (workflowData?.workflow_data) {
+        try {
+          const parsedData = JSON.parse(workflowData.workflow_data)
+          workflowNodes = parsedData.nodes || []
+        } catch (e) {
+          console.warn('Failed to parse workflow data for mode detection')
+        }
+      }
+      
+      return this.mapN8nMode(n8nExecution.mode, n8nExecution, workflowNodes)
+    } catch (error) {
+      console.warn(`Failed to get workflow mode for ${n8nExecution.workflowId}:`, error)
+      return this.mapN8nMode(n8nExecution.mode)
+    }
+  }
+  
+  private mapN8nMode(n8nMode: string, n8nExecution?: N8nExecution, workflowNodes?: any[]): string {
+    // Enhanced trigger mode detection using workflow nodes
+    if (workflowNodes && workflowNodes.length > 0) {
+      const triggerNode = workflowNodes.find(node => 
+        node.type?.includes('trigger') || 
+        node.type?.includes('webhook') ||
+        node.type?.includes('manual')
+      )
+      
+      if (triggerNode) {
+        // Detect scheduled triggers
+        if (triggerNode.type?.includes('schedule') || 
+            triggerNode.type?.includes('cron') ||
+            triggerNode.type?.includes('interval')) {
+          return 'cron'
+        }
+        
+        // Detect webhook triggers
+        if (triggerNode.type?.includes('webhook') ||
+            triggerNode.type?.includes('httpRequest')) {
+          return 'webhook'
+        }
+        
+        // Detect manual triggers
+        if (triggerNode.type?.includes('manual')) {
+          return 'manual'
+        }
+      }
+    }
+    
+    // Fall back to n8n's mode classification
     switch (n8nMode) {
       case 'manual': return 'manual'
-      case 'trigger': return 'trigger'
+      case 'trigger': return 'cron' // Default trigger to cron since most are scheduled
       case 'webhook': return 'webhook'
       case 'cron': return 'cron'
       default: return 'unknown'

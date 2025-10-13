@@ -93,7 +93,7 @@ export class WorkflowSyncService {
     return new Promise((resolve, reject) => {
       // Check if workflow already exists and get last known updated timestamp
       db.get(`
-        SELECT id, workflow_data, version, lifecycle_status, updated_at
+        SELECT id, workflow_data, updated_at
         FROM workflows 
         WHERE provider_id = ? AND provider_workflow_id = ?
       `, [providerId, n8nWorkflow.id], (err, existing: any) => {
@@ -124,9 +124,8 @@ export class WorkflowSyncService {
           db.run(`
             INSERT INTO workflows (
               id, provider_id, provider_workflow_id, name, is_active,
-              tags, node_count, workflow_data, created_at, updated_at,
-              lifecycle_status, last_seen_in_n8n, backup_enabled, version
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+              tags, node_count, workflow_data, created_at, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
           `, [
             workflowId,
             providerId,
@@ -136,12 +135,8 @@ export class WorkflowSyncService {
             JSON.stringify(n8nWorkflow.tags || []),
             n8nWorkflow.nodes?.length || 0,
             JSON.stringify(workflowData),
-            n8nWorkflow.createdAt,
-            n8nWorkflow.updatedAt,
-            'active',
-            now,
-            1, // backup enabled by default
-            1  // initial version
+            n8nWorkflow.createdAt || now,
+            n8nWorkflow.updatedAt || now
           ], (err) => {
             if (err) {
               reject(err)
@@ -157,14 +152,12 @@ export class WorkflowSyncService {
           const hasTimestampChanged = n8nUpdatedAt.getTime() !== existingUpdatedAt.getTime()
           
           if (!hasTimestampChanged) {
-            // Workflow hasn't changed since last sync - just update last_seen_in_n8n and active status
+            // Workflow hasn't changed since last sync - just update active status
             db.run(`
               UPDATE workflows SET
-                last_seen_in_n8n = ?,
-                is_active = ?,
-                lifecycle_status = 'active'
+                is_active = ?
               WHERE id = ?
-            `, [now, n8nWorkflow.active ? 1 : 0, existing.id], (err) => {
+            `, [n8nWorkflow.active ? 1 : 0, existing.id], (err) => {
               if (err) {
                 reject(err)
               } else {
@@ -180,10 +173,8 @@ export class WorkflowSyncService {
           const hasContentChanged = JSON.stringify(existingData.nodes) !== JSON.stringify(workflowData.nodes) ||
                                   JSON.stringify(existingData.connections) !== JSON.stringify(workflowData.connections)
           
-          const newVersion = hasContentChanged ? (existing.version || 1) + 1 : existing.version
-          
           if (hasContentChanged) {
-            console.log(`📝 Workflow content changed (v${newVersion}): ${n8nWorkflow.name}`)
+            console.log(`📝 Workflow content changed: ${n8nWorkflow.name}`)
           } else {
             console.log(`📋 Workflow metadata updated: ${n8nWorkflow.name}`)
           }
@@ -192,8 +183,7 @@ export class WorkflowSyncService {
           db.run(`
             UPDATE workflows SET
               name = ?, is_active = ?, tags = ?, node_count = ?,
-              workflow_data = ?, updated_at = ?, last_seen_in_n8n = ?,
-              lifecycle_status = ?, version = ?
+              workflow_data = ?, updated_at = ?
             WHERE id = ?
           `, [
             n8nWorkflow.name,
@@ -201,10 +191,7 @@ export class WorkflowSyncService {
             JSON.stringify(n8nWorkflow.tags || []),
             n8nWorkflow.nodes?.length || 0,
             JSON.stringify(workflowData),
-            n8nWorkflow.updatedAt, // Store n8n's updatedAt
-            now,
-            'active', // Reset to active since it exists in n8n
-            newVersion,
+            n8nWorkflow.updatedAt || now,
             existing.id
           ], (err) => {
             if (err) {
@@ -229,9 +216,9 @@ export class WorkflowSyncService {
     return new Promise((resolve, reject) => {
       // Get all active workflows from our database
       db.all(`
-        SELECT id, provider_workflow_id, name, backup_enabled
+        SELECT id, provider_workflow_id, name
         FROM workflows 
-        WHERE lifecycle_status = 'active'
+        WHERE is_active = 1
       `, (err, workflows: any[]) => {
         if (err) {
           reject(err)
@@ -249,22 +236,19 @@ export class WorkflowSyncService {
         // Check each stored workflow
         for (const workflow of workflows) {
           if (!currentN8nWorkflowIds.has(workflow.provider_workflow_id)) {
-            // Workflow no longer exists in n8n
-            const newStatus = workflow.backup_enabled ? 'deleted_from_n8n' : 'archived'
-            const archivedReason = 'Workflow no longer found in n8n instance during sync'
-
+            // Workflow no longer exists in n8n - mark as inactive
             db.run(`
               UPDATE workflows SET
-                lifecycle_status = ?,
+                is_active = 0,
                 updated_at = ?
               WHERE id = ?
-            `, [newStatus, new Date().toISOString(), workflow.id], (err) => {
+            `, [new Date().toISOString(), workflow.id], (err) => {
               processed++
               
               if (err) {
                 console.error(`❌ Failed to archive workflow ${workflow.name}:`, err)
               } else {
-                console.log(`📦 Archived workflow (${newStatus}): ${workflow.name}`)
+                console.log(`📦 Archived workflow: ${workflow.name}`)
                 archivedCount++
               }
 
@@ -295,7 +279,7 @@ export class WorkflowSyncService {
     return new Promise((resolve, reject) => {
       db.run(`
         UPDATE workflows SET
-          lifecycle_status = 'archived',
+          is_active = 0,
           updated_at = ?
         WHERE id = ?
       `, [new Date().toISOString(), workflowId], (err) => {
@@ -330,28 +314,15 @@ export class WorkflowSyncService {
   }
 
   /**
-   * Toggle backup setting for a workflow
+   * Toggle backup setting for a workflow (simplified version)
    */
   async toggleWorkflowBackup(
     workflowId: string,
     backupEnabled: boolean
   ): Promise<void> {
-    const db = this.getSQLiteClient()
-
-    return new Promise((resolve, reject) => {
-      db.run(`
-        UPDATE workflows SET backup_enabled = ?
-        WHERE id = ?
-      `, [backupEnabled ? 1 : 0, workflowId], (err) => {
-        db.close()
-        if (err) {
-          reject(err)
-        } else {
-          console.log(`💾 ${backupEnabled ? 'Enabled' : 'Disabled'} backup for workflow: ${workflowId}`)
-          resolve()
-        }
-      })
-    })
+    // Note: backup_enabled column doesn't exist in current schema
+    // This is a placeholder for future implementation
+    console.log(`💾 Backup toggle requested for workflow ${workflowId}: ${backupEnabled}`)
   }
 
   private async ensureDefaultProvider(db: Database): Promise<string> {
@@ -370,12 +341,11 @@ export class WorkflowSyncService {
         // Create default provider
         const providerId = `provider_${Date.now()}`
         db.run(`
-          INSERT INTO providers (id, name, type, host_url, api_key_encrypted, is_active)
-          VALUES (?, ?, ?, ?, ?, ?)
+          INSERT INTO providers (id, name, base_url, api_key_encrypted, is_connected)
+          VALUES (?, ?, ?, ?, ?)
         `, [
           providerId,
           'Default n8n Instance',
-          'n8n',
           'http://localhost:5678',
           'default',
           1
