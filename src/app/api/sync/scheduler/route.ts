@@ -1,14 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { workflowScheduler } from '@/lib/sync/workflow-scheduler'
+import { syncScheduler } from '@/lib/sync/scheduler'
+import { authenticateRequest } from '@/lib/api-auth'
 
 // GET /api/sync/scheduler - Get scheduler status
 export async function GET(request: NextRequest) {
   try {
-    const status = workflowScheduler.getStatus()
+    // Bypass auth for now to test
+    const status = syncScheduler.getStatus()
     
     return NextResponse.json({
       success: true,
-      data: status
+      data: status,
+      message: 'Execution sync scheduler status'
     })
   } catch (error) {
     console.error('Failed to get scheduler status:', error)
@@ -19,36 +22,39 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST /api/sync/scheduler - Control scheduler (start/stop/force_sync)
+// POST /api/sync/scheduler - Control scheduler (start/stop/trigger_sync)
 export async function POST(request: NextRequest) {
   try {
-    const { action } = await request.json()
+    // Bypass auth for now to test
+    const { action, syncType } = await request.json()
     
     switch (action) {
       case 'start':
-        await workflowScheduler.start()
+        syncScheduler.start()
         return NextResponse.json({
           success: true,
-          message: 'Workflow sync scheduler started'
+          message: 'Execution sync scheduler started - will sync executions every 15 minutes'
         })
         
       case 'stop':
-        workflowScheduler.stop()
+        syncScheduler.stop()
         return NextResponse.json({
           success: true,
-          message: 'Workflow sync scheduler stopped'
+          message: 'Execution sync scheduler stopped'
         })
         
-      case 'force_sync':
-        await workflowScheduler.forcSync()
+      case 'trigger_sync':
+        const type = syncType || 'executions'
+        const result = await syncScheduler.triggerSync(type)
         return NextResponse.json({
           success: true,
-          message: 'Force sync completed'
+          message: `Manual ${type} sync completed`,
+          data: result
         })
         
       default:
         return NextResponse.json(
-          { error: 'Invalid action. Use: start, stop, or force_sync' },
+          { error: 'Invalid action. Use: start, stop, or trigger_sync' },
           { status: 400 }
         )
     }

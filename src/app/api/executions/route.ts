@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { ExecutionFilters, ExecutionStatus, Execution } from '@/types'
+import { N8nExecution, N8nWorkflow } from '@/lib/n8n-api'
 import { authenticateRequest } from '@/lib/api-auth'
 import { Database } from 'sqlite3'
 import { ConfigManager } from '@/lib/config/config-manager'

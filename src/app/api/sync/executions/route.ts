@@ -1,15 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { executionSync } from '@/lib/sync/execution-sync'
 import { authenticateRequest } from '@/lib/api-auth'
+import { Database } from 'sqlite3'
+import { ConfigManager } from '@/lib/config/config-manager'
 
 // POST /api/sync/executions - Trigger execution sync specifically
 export async function POST(request: NextRequest) {
   try {
     // Authenticate the request
-    const { user, error: authError } = await authenticateRequest(request)
+    const { user } = await authenticateRequest(request)
     
     // Temporary bypass for testing - create fallback user
-    const actualUser = user || {
+    const _actualUser = user || {
       id: 'admin-001',
       email: 'admin@test.com',
       name: 'Admin User',
@@ -32,8 +34,6 @@ export async function POST(request: NextRequest) {
     let result
     if (providerId) {
       // Get the actual provider from database
-      const { Database } = require('sqlite3')
-      const { ConfigManager } = require('@/lib/config/config-manager')
       const dbPath = ConfigManager.getDefaultDatabasePath()
       const db = new Database(dbPath)
       
