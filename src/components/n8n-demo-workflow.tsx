@@ -2,6 +2,7 @@
 
 import React, { useEffect, useRef, useState } from 'react'
 import { ExclamationTriangleIcon } from '@heroicons/react/24/outline'
+import '@/styles/n8n-demo.css'
 
 interface N8nDemoWorkflowProps {
   workflow: any // n8n workflow JSON
@@ -101,8 +102,17 @@ export function N8nDemoWorkflow({
           document.head.appendChild(n8nScript)
         })
 
-        // Wait a bit more for the web component to be defined
-        await new Promise(resolve => setTimeout(resolve, 1000))
+        // Wait for the web component to be defined
+        await new Promise(resolve => {
+          const checkForComponent = () => {
+            if (window.customElements && window.customElements.get('n8n-demo')) {
+              resolve(void 0)
+            } else {
+              setTimeout(checkForComponent, 100)
+            }
+          }
+          checkForComponent()
+        })
         
         setIsLoaded(true)
       } catch (err) {
@@ -141,7 +151,16 @@ export function N8nDemoWorkflow({
   }
 
   return (
-    <div ref={containerRef} className={className} style={{ minHeight: height, height: height }}>
+    <div 
+      ref={containerRef} 
+      className={`${className} w-full`} 
+      style={{ 
+        minHeight: height, 
+        height: height,
+        display: 'flex',
+        flexDirection: 'column'
+      }}
+    >
       {React.createElement('n8n-demo', {
         workflow: workflowJson,
         frame: frame ? 'true' : 'false',
@@ -152,11 +171,15 @@ export function N8nDemoWorkflow({
         collapseformobile: collapseForMobile ? 'true' : 'false',
         style: { 
           width: '100%', 
-          height: height,
+          height: '100%',
           minHeight: height,
           display: 'block',
           border: 'none',
-          borderRadius: '8px'
+          borderRadius: '8px',
+          flex: '1 1 auto',
+          // Additional CSS to ensure proper sizing
+          boxSizing: 'border-box',
+          overflow: 'hidden'
         }
       })}
     </div>

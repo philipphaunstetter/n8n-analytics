@@ -268,29 +268,28 @@ function WorkflowDetailContent() {
       )}
 
       {/* Workflow Visualization */}
-      <div className="bg-white shadow rounded-lg">
-        <div className="px-6 py-4 border-b border-gray-200">
+      <div className="bg-white shadow rounded-lg flex flex-col">
+        <div className="px-6 py-4 border-b border-gray-200 flex-shrink-0">
           <h3 className="text-lg font-medium text-gray-900">Workflow Visualization</h3>
           <p className="text-sm text-gray-500 mt-1">Interactive preview of your n8n workflow</p>
         </div>
-        <div className="p-2 min-h-[850px]" style={{
-          '--n8n-workflow-min-height': '800px',
-          '--n8n-iframe-border-radius': '8px'
-        } as React.CSSProperties}>
+        <div className="flex-1 flex flex-col" style={{ minHeight: '70vh', height: '70vh' }}>
           {workflow.workflowJson ? (
             <N8nDemoWorkflow 
               workflow={workflow.workflowJson} 
-              height="800px"
-              className="w-full"
+              height="70vh"
+              className="flex-1"
               frame={true}
             />
           ) : (
-            <div className="text-center py-12">
-              <ExclamationTriangleIcon className="mx-auto h-12 w-12 text-gray-400" />
-              <h3 className="mt-2 text-sm font-semibold text-gray-900">No workflow data available</h3>
-              <p className="mt-1 text-sm text-gray-500">
-                The workflow JSON data is not available for visualization.
-              </p>
+            <div className="text-center py-12 flex-1 flex items-center justify-center">
+              <div>
+                <ExclamationTriangleIcon className="mx-auto h-12 w-12 text-gray-400" />
+                <h3 className="mt-2 text-sm font-semibold text-gray-900">No workflow data available</h3>
+                <p className="mt-1 text-sm text-gray-500">
+                  The workflow JSON data is not available for visualization.
+                </p>
+              </div>
             </div>
           )}
         </div>
