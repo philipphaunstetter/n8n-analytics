@@ -156,7 +156,7 @@ async function fetchN8nDashboardStats(timeRange: TimeRange): Promise<DashboardSt
       .slice(0, 5)
       .map(execution => ({
         executionId: execution.id,
-        workflowName: execution.metadata?.workflowName || 'Unknown Workflow',
+        workflowName: (execution.metadata?.workflowName as string) || 'Unknown Workflow',
         error: execution.error?.message || 'Execution failed',
         timestamp: execution.startedAt
       }))
@@ -174,7 +174,7 @@ async function fetchN8nDashboardStats(timeRange: TimeRange): Promise<DashboardSt
       if (!workflowStats.has(workflowId)) {
         workflowStats.set(workflowId, {
           workflowId,
-          name: execution.metadata?.workflowName || 'Unknown Workflow',
+          name: (execution.metadata?.workflowName as string) || 'Unknown Workflow',
           executions: 0,
           successes: 0
         })
