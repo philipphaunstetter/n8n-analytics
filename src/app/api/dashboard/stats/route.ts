@@ -10,38 +10,43 @@ async function fetchN8nDashboardStats(timeRange: TimeRange): Promise<DashboardSt
   try {
     // Calculate time range for filtering
     const now = new Date()
-    let startTime: Date
+    let startTime: Date | null = null
     
-    switch (timeRange) {
-      case '1h':
-        startTime = new Date(now.getTime() - 60 * 60 * 1000)
-        break
-      case '24h':
-        startTime = new Date(now.getTime() - 24 * 60 * 60 * 1000)
-        break
-      case '7d':
-        startTime = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
-        break
-      case '30d':
-        startTime = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
-        break
-      case '90d':
-        startTime = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000)
-        break
-      default:
-        startTime = new Date(now.getTime() - 24 * 60 * 60 * 1000)
+    // Only apply time filtering if not requesting all-time stats
+    if (timeRange !== 'custom') {
+      switch (timeRange) {
+        case '1h':
+          startTime = new Date(now.getTime() - 60 * 60 * 1000)
+          break
+        case '24h':
+          startTime = new Date(now.getTime() - 24 * 60 * 60 * 1000)
+          break
+        case '7d':
+          startTime = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
+          break
+        case '30d':
+          startTime = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
+          break
+        case '90d':
+          startTime = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000)
+          break
+        default:
+          // For 'all' or unknown, don't filter by time
+          startTime = null
+      }
     }
 
     // Fetch workflows and executions in parallel
     const [workflowsResponse, executionsResponse] = await Promise.all([
       n8nApi.getWorkflows(),
-      n8nApi.getExecutions({ limit: 100 }) // Fetch recent executions
+      n8nApi.getExecutions({ limit: 1000 }) // Fetch more executions to get better stats
     ])
 
-    // Filter executions by time range
-    const filteredExecutions = executionsResponse.data.filter(execution => 
-      new Date(execution.startedAt) >= startTime
-    )
+    // Filter executions by time range (if startTime is set)
+    const filteredExecutions = startTime ? 
+      executionsResponse.data.filter(execution => 
+        new Date(execution.startedAt) >= startTime
+      ) : executionsResponse.data // No time filtering for all-time stats
 
     // Calculate basic stats
     const totalExecutions = filteredExecutions.length

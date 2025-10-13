@@ -170,6 +170,71 @@ function applyExecutionFilters(executions: Execution[], filters: ExecutionFilter
 }
 
 /**
+ * Extract first node information for better mode display
+ */
+function getFirstNodeInfo(nodes: any[]): { type?: string; name?: string } | undefined {
+  if (!nodes || nodes.length === 0) return undefined;
+  
+  // Find trigger or webhook node (usually the first node)
+  const triggerNode = nodes.find(node => 
+    node.type && (
+      node.type.includes('trigger') ||
+      node.type.includes('webhook') ||
+      node.type.includes('cron') ||
+      node.type.includes('manual')
+    )
+  );
+  
+  const firstNode = triggerNode || nodes[0];
+  if (!firstNode) return undefined;
+  
+  // Extract the node type and create a friendly display name
+  const nodeType = firstNode.type || 'Unknown';
+  const displayName = getNodeDisplayName(nodeType);
+  
+  return {
+    type: nodeType,
+    name: displayName
+  };
+}
+
+/**
+ * Convert node type to display name
+ */
+function getNodeDisplayName(nodeType: string): string {
+  // Extract meaningful name from node type
+  // e.g., 'n8n-nodes-base.googleGmail' -> 'Google Gmail'
+  
+  if (nodeType.includes('googleGmail')) return 'Google Gmail';
+  if (nodeType.includes('googleSheets')) return 'Google Sheets';
+  if (nodeType.includes('googleDrive')) return 'Google Drive';
+  if (nodeType.includes('slack')) return 'Slack';
+  if (nodeType.includes('discord')) return 'Discord';
+  if (nodeType.includes('webhook')) return 'Webhook';
+  if (nodeType.includes('httpRequest')) return 'HTTP Request';
+  if (nodeType.includes('cron')) return 'Cron';
+  if (nodeType.includes('manual')) return 'Manual';
+  if (nodeType.includes('trigger')) return 'Trigger';
+  if (nodeType.includes('airtable')) return 'Airtable';
+  if (nodeType.includes('notion')) return 'Notion';
+  if (nodeType.includes('trello')) return 'Trello';
+  if (nodeType.includes('github')) return 'GitHub';
+  if (nodeType.includes('gitlab')) return 'GitLab';
+  
+  // Try to extract from the base name
+  const parts = nodeType.split('.');
+  const baseName = parts[parts.length - 1];
+  
+  // Convert camelCase to Title Case
+  const titleCase = baseName
+    .replace(/([A-Z])/g, ' $1')
+    .replace(/^./, str => str.toUpperCase())
+    .trim();
+  
+  return titleCase || 'Unknown';
+}
+
+/**
  * Convert n8n executions to our internal format
  */
 function convertN8nExecutions(n8nExecutions: N8nExecution[], workflows: N8nWorkflow[]): Execution[] {
@@ -250,7 +315,8 @@ function convertN8nExecutions(n8nExecutions: N8nExecution[], workflows: N8nWorkf
         n8nWorkflowId: n8nExec.workflowId,
         finished: n8nExec.finished,
         retryOf: n8nExec.retryOf,
-        retrySuccessId: n8nExec.retrySuccessId
+        retrySuccessId: n8nExec.retrySuccessId,
+        firstNode: getFirstNodeInfo(workflow?.nodes || [])
       }
     }
     

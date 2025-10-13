@@ -19,7 +19,7 @@ import {
 
 function DashboardContent() {
   const [stats, setStats] = useState<DashboardStats | null>(null)
-  const [timeRange, setTimeRange] = useState<TimeRange>('24h')
+  const [timeRange, setTimeRange] = useState<TimeRange>('30d') // Changed to 30d to show more realistic totals
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<'overview' | 'charts'>('overview')
@@ -93,12 +93,33 @@ function DashboardContent() {
     <div className="space-y-8">
       {/* Page Header */}
       <div className="mb-8">
-        <div className="flex items-center justify-between">
+        <div className="flex items-start justify-between mb-6">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
             <p className="mt-2 text-sm text-gray-600">
               Overview of your workflow automation across all platforms
             </p>
+          </div>
+        </div>
+        
+        <div className="flex items-center justify-between">
+          {/* Time Range Selector */}
+          <div className="flex items-center space-x-4">
+            <label htmlFor="timeRange" className="text-sm font-medium text-gray-700">
+              Time Range:
+            </label>
+            <select 
+              id="timeRange"
+              value={timeRange} 
+              onChange={(e) => setTimeRange(e.target.value as TimeRange)}
+              className="rounded-md border-gray-300 text-sm focus:border-indigo-500 focus:ring-indigo-500"
+            >
+              <option value="1h">Last hour</option>
+              <option value="24h">Last 24 hours</option>
+              <option value="7d">Last 7 days</option>
+              <option value="30d">Last 30 days</option>
+              <option value="90d">Last 90 days</option>
+            </select>
           </div>
           
           {/* Tab Navigation */}

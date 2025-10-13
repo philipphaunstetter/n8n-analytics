@@ -1,52 +1,57 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { Database } from 'sqlite3'
-import { ConfigManager } from '@/lib/config/config-manager'
+import { n8nApi, N8nWorkflow } from '@/lib/n8n-api'
+import { authenticateRequest } from '@/lib/api-auth'
+import { Workflow } from '@/types'
 
-// GET /api/workflows - List workflows from SQLite database
+// GET /api/workflows - List workflows from n8n API
 export async function GET(request: NextRequest) {
   try {
-    console.log('📋 GET /api/workflows - Fetching workflows from database')
+    console.log('📋 GET /api/workflows - Fetching workflows from n8n API')
     
-    const dbPath = ConfigManager.getDefaultDatabasePath()
-    const db = new Database(dbPath)
+    // Authenticate the request
+    const { user, error: authError } = await authenticateRequest(request)
     
-    // Get workflows from database with execution counts
-    const workflows = await new Promise<any[]>((resolve, reject) => {
-      db.all(`
-        SELECT 
-          w.*,
-          COUNT(e.id) as execution_count,
-          MAX(e.started_at) as last_execution_at
-        FROM workflows w
-        LEFT JOIN executions e ON e.workflow_id = w.id
-        GROUP BY w.id
-        ORDER BY w.name
-      `, (err, rows: any[]) => {
-        if (err) {
-          console.error('❌ Error fetching workflows:', err)
-          reject(err)
-        } else {
-          console.log(`✅ Found ${rows?.length || 0} workflows in database`)
-          resolve(rows || [])
-        }
-      })
-    })
+    if (authError || !user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    // Fetch workflows from n8n API
+    let n8nWorkflows: N8nWorkflow[] = []
+    
+    try {
+      n8nWorkflows = await n8nApi.getWorkflows()
+      console.log(`✅ Found ${n8nWorkflows.length} workflows from n8n API`)
+    } catch (error) {
+      console.error('❌ Failed to fetch n8n workflows:', error)
+      return NextResponse.json(
+        { error: 'Failed to connect to n8n API. Please check your n8n configuration.' },
+        { status: 503 }
+      )
+    }
     
     // Convert to API format
-    const apiWorkflows = workflows.map(workflow => ({
-      id: workflow.id,
+    const apiWorkflows = n8nWorkflows.map(workflow => ({
+      id: `n8n-${workflow.id}`, // Prefix to avoid ID conflicts
+      providerId: 'n8n-main',
+      providerWorkflowId: workflow.id,
       name: workflow.name,
-      active: Boolean(workflow.is_active),
-      tags: workflow.tags ? JSON.parse(workflow.tags) : [],
-      createdAt: workflow.created_at,
-      updatedAt: workflow.updated_at,
-      executionCount: parseInt(workflow.execution_count || '0'),
-      nodeCount: workflow.node_count || 0,
-      lifecycleStatus: workflow.lifecycle_status || 'active',
-      version: workflow.version || 1
-    }))
-    
-    db.close()
+      description: '', // n8n workflows don't have descriptions in the API response
+      isActive: workflow.active,
+      tags: workflow.tags || [],
+      createdAt: new Date(workflow.createdAt),
+      updatedAt: new Date(workflow.updatedAt),
+      lastExecutedAt: undefined, // Would need to be calculated from executions
+      totalExecutions: 0, // Would need to be calculated from executions  
+      successCount: 0,
+      failureCount: 0,
+      successRate: 0,
+      avgDuration: undefined,
+      metadata: {
+        nodeCount: workflow.nodes?.length || 0,
+        n8nWorkflowId: workflow.id,
+        connections: workflow.connections
+      }
+    } as Workflow))
     
     return NextResponse.json({
       success: true,

@@ -55,11 +55,27 @@ function ExecutionsContent() {
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState<ExecutionStatus | 'all'>('all')
   const [timeRange, setTimeRange] = useState<TimeRange>('24h')
+  const [n8nUrl, setN8nUrl] = useState<string>('')
   const router = useRouter()
 
   useEffect(() => {
     fetchExecutions()
   }, [statusFilter, timeRange])
+
+  useEffect(() => {
+    // Fetch n8n URL on component mount
+    const fetchN8nUrl = async () => {
+      try {
+        const response = await apiClient.get<{ n8nUrl: string }>('/config/n8n-url')
+        setN8nUrl(response.n8nUrl)
+      } catch (err) {
+        console.error('Failed to fetch n8n URL:', err)
+        // Fallback to default
+        setN8nUrl('http://localhost:5678')
+      }
+    }
+    fetchN8nUrl()
+  }, [])
 
   const fetchExecutions = async () => {
     try {
@@ -138,6 +154,19 @@ function ExecutionsContent() {
       minute: '2-digit',
       second: '2-digit'
     }).format(new Date(date))
+  }
+
+  const openN8nExecution = (execution: Execution) => {
+    if (!n8nUrl) {
+      console.error('n8n URL not available')
+      return
+    }
+    
+    // Construct the execution URL: /workflow/{workflowId}/executions/{executionId}
+    const executionUrl = `${n8nUrl}/workflow/${execution.providerWorkflowId}/executions/${execution.providerExecutionId}`
+    
+    // Open in new tab
+    window.open(executionUrl, '_blank')
   }
 
   if (error) {
@@ -299,7 +328,7 @@ function ExecutionsContent() {
                   <TableRow 
                     key={execution.id}
                     className="hover:bg-gray-50 cursor-pointer"
-                    onClick={() => router.push(`/executions/${execution.id}`)}
+                    onClick={() => openN8nExecution(execution)}
                   >
                     <TableCell>
                       <Badge color={statusColors[execution.status]} className="flex items-center space-x-1">
@@ -308,7 +337,7 @@ function ExecutionsContent() {
                       </Badge>
                     </TableCell>
                     <TableCell className="font-mono text-sm">
-                      {execution.id.substring(0, 8)}...
+                      {execution.providerExecutionId.substring(0, 8)}...
                     </TableCell>
                     <TableCell>
                       <div className="flex flex-col">
@@ -318,7 +347,7 @@ function ExecutionsContent() {
                            execution.workflowId}
                         </span>
                         <span className="text-xs text-gray-500 font-mono">
-                          {execution.workflowId}
+                          {execution.providerWorkflowId}
                         </span>
                         {execution.error && (
                           <span className="text-sm text-red-600 truncate max-w-xs">
@@ -334,8 +363,8 @@ function ExecutionsContent() {
                       {formatDuration(execution.duration)}
                     </TableCell>
                     <TableCell>
-                      <Badge color="zinc" className="capitalize">
-                        {execution.mode}
+                      <Badge color="blue" className="capitalize">
+                        {(execution.metadata as any)?.firstNode?.name || execution.mode}
                       </Badge>
                     </TableCell>
                     <TableCell>
@@ -344,7 +373,7 @@ function ExecutionsContent() {
                         className="text-sm px-2 py-1"
                         onClick={(e: React.MouseEvent) => {
                           e.stopPropagation()
-                          router.push(`/executions/${execution.id}`)
+                          openN8nExecution(execution)
                         }}
                       >
                         View
