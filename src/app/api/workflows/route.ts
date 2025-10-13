@@ -34,12 +34,8 @@ export async function GET(request: NextRequest) {
         queryParams.push(isActiveValue ? 1 : 0)
       }
       
-      if (isArchivedFilter !== null) {
-        const isArchivedValue = isArchivedFilter.toLowerCase() === 'true'
-        // In our database, archived = !is_active (is_active = 0)
-        whereConditions.push('is_active = ?')
-        queryParams.push(isArchivedValue ? 0 : 1)
-      }
+      // Note: Archived filtering is applied after mapping to avoid conflicts with isActive.
+      // We compute "archived" as inactive and not updated in 90 days.
       
       const whereClause = whereConditions.length > 0 
         ? `WHERE ${whereConditions.join(' AND ')}`
@@ -54,12 +50,12 @@ export async function GET(request: NextRequest) {
             SUM(CASE WHEN e.status = 'success' THEN 1 ELSE 0 END) as success_count,
             SUM(CASE WHEN e.status = 'error' THEN 1 ELSE 0 END) as failure_count,
             AVG(CASE WHEN e.duration IS NOT NULL THEN e.duration ELSE NULL END) as avg_duration,
-            MAX(e.finished_at) as last_executed_at,
+            MAX(COALESCE(e.stopped_at, e.started_at)) as last_executed_at,
             (
               SELECT e2.status 
               FROM executions e2 
               WHERE e2.workflow_id = w.id 
-              ORDER BY e2.finished_at DESC 
+              ORDER BY COALESCE(e2.stopped_at, e2.started_at) DESC 
               LIMIT 1
             ) as last_execution_status
           FROM workflows w
@@ -77,12 +73,19 @@ export async function GET(request: NextRequest) {
       
       // Convert to API format
       const apiWorkflows: Workflow[] = workflows.map(dbWorkflow => {
-        const workflowData = dbWorkflow.workflow_data ? JSON.parse(dbWorkflow.workflow_data) : {}
-        const tags = dbWorkflow.tags ? JSON.parse(dbWorkflow.tags) : []
+        let workflowData: any = {}
+        let tags: any[] = []
+        try { workflowData = dbWorkflow.workflow_data ? JSON.parse(dbWorkflow.workflow_data) : {} } catch {}
+        try { tags = dbWorkflow.tags ? JSON.parse(dbWorkflow.tags) : [] } catch {}
         
         const successRate = dbWorkflow.total_executions > 0 
           ? (dbWorkflow.success_count / dbWorkflow.total_executions) * 100
           : 0
+        
+        // Compute archived as: inactive and not updated in >90 days
+        const updatedAtDate = dbWorkflow.updated_at ? new Date(dbWorkflow.updated_at) : null
+        const daysSinceUpdate = updatedAtDate ? Math.floor((Date.now() - updatedAtDate.getTime()) / (1000 * 60 * 60 * 24)) : 0
+        const computedArchived = !Boolean(dbWorkflow.is_active) && daysSinceUpdate > 90
         
         return {
           id: dbWorkflow.provider_workflow_id, // Use n8n workflow ID as the main ID
@@ -91,8 +94,8 @@ export async function GET(request: NextRequest) {
           name: dbWorkflow.name,
           description: '', // n8n workflows don't have descriptions
           isActive: Boolean(dbWorkflow.is_active),
-          isArchived: !Boolean(dbWorkflow.is_active), // archived = !is_active
-          tags: tags,
+          isArchived: computedArchived,
+          tags,
           createdAt: new Date(dbWorkflow.created_at),
           updatedAt: new Date(dbWorkflow.updated_at),
           lastExecutedAt: dbWorkflow.last_executed_at ? new Date(dbWorkflow.last_executed_at) : undefined,
@@ -110,18 +113,19 @@ export async function GET(request: NextRequest) {
         }
       })
       
-      // Log filter results
+      // Apply archived filter post-mapping to avoid SQL conflicts with isActive
+      if (isArchivedFilter !== null) {
+        const isArchivedValue = isArchivedFilter.toLowerCase() === 'true'
+        const before = apiWorkflows.length
+        apiWorkflows = apiWorkflows.filter(w => w.isArchived === isArchivedValue)
+        console.log(`🔍 Archived post-filter: ${before} -> ${apiWorkflows.length} (isArchived=${isArchivedValue})`)
+      }
+
       if (isActiveFilter !== null) {
         const isActiveValue = isActiveFilter.toLowerCase() === 'true'
         console.log(`🔍 Filtered to ${apiWorkflows.length} workflows with isActive=${isActiveValue}`)
       }
-      
-      if (isArchivedFilter !== null) {
-        const isArchivedValue = isArchivedFilter.toLowerCase() === 'true'
-        console.log(`🔍 Filtered to ${apiWorkflows.length} workflows with isArchived=${isArchivedValue}`)
-      }
-      
-      
+
       return NextResponse.json({
         success: true,
         data: {
