@@ -222,6 +222,14 @@ export class ExecutionSyncService {
    * Sync executions for a provider
    */
   private async syncExecutions(provider: Provider, options: SyncOptions) {
+    // First ensure all workflows are synced to have proper names
+    console.log('📋 Pre-syncing workflows to ensure proper execution metadata...')
+    try {
+      await this.syncWorkflows(provider, { ...options, silent: true } as any)
+    } catch (error) {
+      console.warn('⚠️ Workflow pre-sync failed, continuing with execution sync:', error)
+    }
+    
     // Get n8n configuration from ConfigManager instead of provider table
     const configManager = getConfigManager()
     await configManager.initialize()
@@ -280,6 +288,10 @@ export class ExecutionSyncService {
       
     } while (cursor)
     
+    // Fix execution-workflow relationships
+    console.log('🔗 Fixing execution-workflow relationships...')
+    await this.fixExecutionWorkflowRelationships(provider.id)
+    
     return {
       type: 'executions',
       processed: totalProcessed,
@@ -291,7 +303,7 @@ export class ExecutionSyncService {
   /**
    * Sync workflows and their metadata
    */
-  private async syncWorkflows(provider: Provider, options: SyncOptions) {
+  private async syncWorkflows(provider: Provider, options: SyncOptions & { silent?: boolean }) {
     // Get n8n configuration from ConfigManager instead of provider table
     const configManager = getConfigManager()
     await configManager.initialize()
@@ -300,7 +312,9 @@ export class ExecutionSyncService {
     
     const n8nClient = this.createN8nClient(host, apiKey)
     
-    console.log(`📋 Fetching workflows for ${provider.name}`)
+    if (!options.silent) {
+      console.log(`📄 Fetching workflows for ${provider.name}`)
+    }
     
     const workflows = await n8nClient.getWorkflows()
     let inserted = 0
@@ -414,11 +428,11 @@ export class ExecutionSyncService {
   private async upsertExecution(providerId: string, n8nExecution: N8nExecution) {
     // Get workflow UUID from provider workflow ID
     const db = getSQLiteClient()
-    const workflow = await new Promise<{id: string} | null>((resolve, reject) => {
+    const workflow = await new Promise<{id: string, name: string} | null>((resolve, reject) => {
       db.get(
-        'SELECT id FROM workflows WHERE provider_id = ? AND provider_workflow_id = ?',
+        'SELECT id, name FROM workflows WHERE provider_id = ? AND provider_workflow_id = ?',
         [providerId, n8nExecution.workflowId],
-        (err, row: {id: string}) => {
+        (err, row: {id: string, name: string}) => {
           if (err) reject(err)
           else resolve(row || null)
         }
@@ -426,6 +440,8 @@ export class ExecutionSyncService {
     })
     
     if (!workflow) {
+      // This should not happen since ensureWorkflowsExist is called before
+      console.error(`⚠️ Workflow not found for execution ${n8nExecution.id}: ${n8nExecution.workflowId}`)
       throw new Error(`Workflow not found: ${n8nExecution.workflowId}`)
     }
     
@@ -446,6 +462,7 @@ export class ExecutionSyncService {
       retry_of: n8nExecution.retryOf,
       retry_success_id: n8nExecution.retrySuccessId,
       metadata: JSON.stringify({
+        workflowName: workflow.name,
         waitTill: (n8nExecution as any).waitTill,
         originalData: n8nExecution
       })
@@ -588,9 +605,13 @@ export class ExecutionSyncService {
   
   /**
    * Ensure workflows exist before processing executions
+   * Fetches actual workflow data from n8n if not present
    */
   private async ensureWorkflowsExist(providerId: string, workflowIds: string[]) {
     const db = getSQLiteClient()
+    const missingWorkflowIds: string[] = []
+    
+    // Check which workflows don't exist
     for (const workflowId of workflowIds) {
       const existing = await new Promise<{id: string} | null>((resolve, reject) => {
         db.get(
@@ -604,18 +625,66 @@ export class ExecutionSyncService {
       })
       
       if (!existing) {
-        // Create placeholder workflow
-        await new Promise<void>((resolve, reject) => {
-          const id = `wf_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-          db.run(`
-            INSERT INTO workflows (
-              id, provider_id, provider_workflow_id, name, is_active
-            ) VALUES (?, ?, ?, ?, ?)
-          `, [id, providerId, workflowId, `Workflow ${workflowId}`, 1], function(err) {
-            if (err) reject(err)
-            else resolve()
+        missingWorkflowIds.push(workflowId)
+      }
+    }
+    
+    // If we have missing workflows, fetch them from n8n
+    if (missingWorkflowIds.length > 0) {
+      console.log(`📥 Fetching ${missingWorkflowIds.length} missing workflows from n8n...`)
+      
+      // Get n8n configuration
+      const configManager = getConfigManager()
+      await configManager.initialize()
+      const host = await configManager.get('integrations.n8n.url') || 'http://localhost:5678'
+      const apiKey = await configManager.get('integrations.n8n.api_key') || ''
+      
+      const n8nClient = this.createN8nClient(host, apiKey)
+      
+      try {
+        // Get all workflows from n8n
+        const allWorkflows = await n8nClient.getWorkflows()
+        
+        // Process missing workflows
+        for (const workflowId of missingWorkflowIds) {
+          const n8nWorkflow = allWorkflows.find(w => w.id === workflowId)
+          
+          if (n8nWorkflow) {
+            // Insert workflow with real data
+            await this.upsertWorkflow(providerId, n8nWorkflow)
+            console.log(`✅ Added missing workflow: ${n8nWorkflow.name}`)
+          } else {
+            // If workflow not found in n8n (might be deleted), create placeholder
+            console.warn(`⚠️ Workflow ${workflowId} not found in n8n, creating placeholder`)
+            await new Promise<void>((resolve, reject) => {
+              const id = `wf_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+              db.run(`
+                INSERT INTO workflows (
+                  id, provider_id, provider_workflow_id, name, is_active
+                ) VALUES (?, ?, ?, ?, ?)
+              `, [id, providerId, workflowId, `[Deleted] Workflow ${workflowId}`, 0], function(err) {
+                if (err) reject(err)
+                else resolve()
+              })
+            })
+          }
+        }
+      } catch (error) {
+        console.error('❌ Failed to fetch missing workflows from n8n:', error)
+        // Fallback: create placeholders for all missing workflows
+        for (const workflowId of missingWorkflowIds) {
+          await new Promise<void>((resolve, reject) => {
+            const id = `wf_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+            db.run(`
+              INSERT INTO workflows (
+                id, provider_id, provider_workflow_id, name, is_active
+              ) VALUES (?, ?, ?, ?, ?)
+            `, [id, providerId, workflowId, `[Unknown] Workflow ${workflowId}`, 1], function(err) {
+              if (err) reject(err)
+              else resolve()
+            })
           })
-        })
+        }
       }
     }
   }
@@ -722,6 +791,46 @@ export class ExecutionSyncService {
           else resolve()
         }
       )
+    })
+  }
+  
+  /**
+   * Fix execution-workflow relationships based on provider_workflow_id
+   * This ensures executions are linked to the correct workflow records
+   */
+  private async fixExecutionWorkflowRelationships(providerId: string): Promise<void> {
+    const db = getSQLiteClient()
+    
+    return new Promise((resolve, reject) => {
+      // Update all executions to link to the correct workflow based on provider_workflow_id
+      // This SQL finds the correct workflow.id based on matching provider_workflow_id
+      db.run(`
+        UPDATE executions 
+        SET workflow_id = (
+          SELECT w.id 
+          FROM workflows w 
+          WHERE w.provider_id = executions.provider_id 
+          AND w.provider_workflow_id = executions.provider_workflow_id
+          LIMIT 1
+        )
+        WHERE provider_id = ?
+        AND EXISTS (
+          SELECT 1 FROM workflows w2
+          WHERE w2.provider_id = executions.provider_id
+          AND w2.provider_workflow_id = executions.provider_workflow_id
+        )
+      `, [providerId], function(err) {
+        if (err) {
+          console.error('❌ Failed to fix execution-workflow relationships:', err)
+          reject(err)
+        } else {
+          const fixedCount = this.changes
+          if (fixedCount > 0) {
+            console.log(`✅ Fixed ${fixedCount} execution-workflow relationships`)
+          }
+          resolve()
+        }
+      })
     })
   }
   
