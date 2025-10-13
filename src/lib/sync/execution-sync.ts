@@ -1,7 +1,7 @@
 import { n8nApi } from '@/lib/n8n-api'
 import type { N8nExecution, N8nWorkflow } from '@/lib/n8n-api'
 import { Database } from 'sqlite3'
-import { ConfigManager } from '@/lib/config/config-manager'
+import { ConfigManager, getConfigManager } from '@/lib/config/config-manager'
 import path from 'path'
 
 // SQLite database for execution storage
@@ -222,8 +222,13 @@ export class ExecutionSyncService {
    * Sync executions for a provider
    */
   private async syncExecutions(provider: Provider, options: SyncOptions) {
-    const apiKey = await this.decryptApiKey(provider.api_key_encrypted)
-    const n8nClient = this.createN8nClient(provider.base_url, apiKey)
+    // Get n8n configuration from ConfigManager instead of provider table
+    const configManager = getConfigManager()
+    await configManager.initialize()
+    const host = await configManager.get('integrations.n8n.url') || provider.base_url
+    const apiKey = await configManager.get('integrations.n8n.api_key') || provider.api_key_encrypted
+    
+    const n8nClient = this.createN8nClient(host, apiKey)
     
     let totalProcessed = 0
     let totalInserted = 0
@@ -287,8 +292,13 @@ export class ExecutionSyncService {
    * Sync workflows and their metadata
    */
   private async syncWorkflows(provider: Provider, options: SyncOptions) {
-    const apiKey = await this.decryptApiKey(provider.api_key_encrypted)
-    const n8nClient = this.createN8nClient(provider.base_url, apiKey)
+    // Get n8n configuration from ConfigManager instead of provider table
+    const configManager = getConfigManager()
+    await configManager.initialize()
+    const host = await configManager.get('integrations.n8n.url') || provider.base_url
+    const apiKey = await configManager.get('integrations.n8n.api_key') || provider.api_key_encrypted
+    
+    const n8nClient = this.createN8nClient(host, apiKey)
     
     console.log(`📋 Fetching workflows for ${provider.name}`)
     
@@ -318,8 +328,13 @@ export class ExecutionSyncService {
    * Sync full workflow definitions for backup
    */
   private async syncWorkflowBackups(provider: Provider, options: SyncOptions) {
-    const apiKey = await this.decryptApiKey(provider.api_key_encrypted)
-    const n8nClient = this.createN8nClient(provider.base_url, apiKey)
+    // Get n8n configuration from ConfigManager instead of provider table
+    const configManager = getConfigManager()
+    await configManager.initialize()
+    const host = await configManager.get('integrations.n8n.url') || provider.base_url
+    const apiKey = await configManager.get('integrations.n8n.api_key') || provider.api_key_encrypted
+    
+    const n8nClient = this.createN8nClient(host, apiKey)
     
     console.log(`💾 Creating workflow backups for ${provider.name}`)
     

@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { ProviderRegistry } from '@/lib/providers'
-import { Provider, ExecutionFilters, ExecutionStatus, Execution } from '@/types'
+import { ExecutionFilters, ExecutionStatus, Execution } from '@/types'
 import { authenticateRequest } from '@/lib/api-auth'
-import { n8nApi, N8nExecution, N8nWorkflow } from '@/lib/n8n-api'
+import { Database } from 'sqlite3'
+import { ConfigManager } from '@/lib/config/config-manager'
 
 // GET /api/executions - List executions across all providers
 // Supports query parameters:
@@ -54,43 +54,169 @@ export async function GET(request: NextRequest) {
       filters.timeRange = 'custom'
     }
 
-    // Fetch executions from n8n API - always use real data
+    // Fetch executions from local SQLite database for long-term storage
     let allExecutions: Execution[] = []
     let totalCount = 0
     let nextCursor: string | null = null
 
     try {
-      console.log(`Fetching real executions from n8n API (limit: ${limit})...`)
-      const executionsResponse = await n8nApi.getExecutions({ 
-        limit, 
-        cursor,
-        ...(filters.workflowId && { workflowId: filters.workflowId })
+      console.log(`Fetching executions from SQLite database (limit: ${limit})...`)
+      
+      const dbPath = ConfigManager.getDefaultDatabasePath()
+      const db = new Database(dbPath)
+      
+      // Build SQL query with filters
+      let sql = `
+        SELECT 
+          e.id,
+          e.provider_id,
+          e.workflow_id,
+          e.provider_execution_id,
+          e.provider_workflow_id,
+          e.status,
+          e.mode,
+          e.started_at,
+          e.stopped_at,
+          e.duration,
+          e.finished,
+          e.retry_of,
+          e.retry_success_id,
+          e.metadata,
+          w.name as workflow_name,
+          p.name as provider_name
+        FROM executions e
+        LEFT JOIN workflows w ON e.workflow_id = w.id
+        LEFT JOIN providers p ON e.provider_id = p.id
+        WHERE 1=1
+      `
+      
+      const params: any[] = []
+      
+      // Add filters
+      if (filters.workflowId) {
+        sql += ' AND w.provider_workflow_id = ?'
+        params.push(filters.workflowId)
+      }
+      
+      if (filters.status && filters.status.length > 0) {
+        const placeholders = filters.status.map(() => '?').join(',')
+        sql += ` AND e.status IN (${placeholders})`
+        params.push(...filters.status)
+      }
+      
+      // Add time range filter
+      if (filters.timeRange && filters.timeRange !== 'custom') {
+        const now = new Date()
+        let startDate: Date
+        switch (filters.timeRange) {
+          case '1h':
+            startDate = new Date(now.getTime() - 60 * 60 * 1000)
+            break
+          case '24h':
+            startDate = new Date(now.getTime() - 24 * 60 * 60 * 1000)
+            break
+          case '7d':
+            startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
+            break
+          case '30d':
+            startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
+            break
+          case '90d':
+            startDate = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000)
+            break
+          default:
+            startDate = new Date(now.getTime() - 24 * 60 * 60 * 1000)
+        }
+        sql += ' AND e.started_at >= ?'
+        params.push(startDate.toISOString())
+      }
+      
+      // Custom time range
+      if (filters.timeRange === 'custom' && filters.customTimeRange) {
+        sql += ' AND e.started_at >= ? AND e.started_at <= ?'
+        params.push(
+          filters.customTimeRange.start.toISOString(),
+          filters.customTimeRange.end.toISOString()
+        )
+      }
+      
+      // Add search filter
+      if (filters.search) {
+        sql += ` AND (
+          e.id LIKE ? OR 
+          e.provider_execution_id LIKE ? OR
+          w.name LIKE ?
+        )`
+        const searchTerm = `%${filters.search}%`
+        params.push(searchTerm, searchTerm, searchTerm)
+      }
+      
+      // Order by most recent first and add limit
+      sql += ' ORDER BY e.started_at DESC LIMIT ?'
+      params.push(limit)
+      
+      // Execute query
+      const rows = await new Promise<any[]>((resolve, reject) => {
+        db.all(sql, params, (err, rows) => {
+          if (err) {
+            console.error('Database query error:', err)
+            reject(err)
+          } else {
+            resolve(rows || [])
+          }
+        })
       })
-      const n8nWorkflows = await n8nApi.getWorkflows()
       
-      nextCursor = executionsResponse.nextCursor
+      db.close()
       
-      // Convert n8n executions to our internal format
-      allExecutions = convertN8nExecutions(executionsResponse.data, n8nWorkflows)
+      // Convert database results to internal Execution format
+      allExecutions = rows.map(row => {
+        const metadata = row.metadata ? JSON.parse(row.metadata) : {}
+        return {
+          id: row.id,
+          providerId: row.provider_id,
+          workflowId: row.workflow_id,
+          providerExecutionId: row.provider_execution_id,
+          providerWorkflowId: row.provider_workflow_id,
+          status: row.status as ExecutionStatus,
+          startedAt: new Date(row.started_at),
+          stoppedAt: row.stopped_at ? new Date(row.stopped_at) : undefined,
+          duration: row.duration,
+          mode: row.mode as any,
+          error: row.status === 'error' ? {
+            message: `Execution failed`,
+            timestamp: row.stopped_at ? new Date(row.stopped_at) : new Date(row.started_at)
+          } : undefined,
+          metadata: {
+            workflowName: row.workflow_name || 'Unknown Workflow',
+            providerName: row.provider_name || 'Unknown Provider',
+            finished: Boolean(row.finished),
+            retryOf: row.retry_of,
+            retrySuccessId: row.retry_success_id,
+            ...metadata
+          }
+        } as Execution
+      })
+      
       totalCount = allExecutions.length
       
-      console.log(`Fetched ${allExecutions.length} real executions from n8n`)
+      console.log(`Fetched ${allExecutions.length} executions from SQLite database`)
+      
+      // If no executions found, suggest running sync
+      if (allExecutions.length === 0) {
+        console.log('⚠️  No executions found in database. Consider running sync to fetch from n8n.')
+      }
+      
     } catch (error) {
-      console.error('Failed to fetch n8n executions:', error)
+      console.error('Failed to fetch executions from database:', error)
       return NextResponse.json(
-        { error: 'Failed to connect to n8n API. Please check your n8n configuration.' },
-        { status: 503 }
+        { error: 'Failed to fetch executions from database. Please run sync to populate data.' },
+        { status: 500 }
       )
     }
 
-    // Apply filters
-    const filteredExecutions = applyExecutionFilters(allExecutions, filters)
-    totalCount = filteredExecutions.length
-
-    // Sort executions by startedAt (most recent first)
-    filteredExecutions.sort((a, b) => {
-      return new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime()
-    })
+    // Executions are already filtered and sorted in the SQL query
+    const filteredExecutions = allExecutions
 
     return NextResponse.json({
       success: true,

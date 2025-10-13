@@ -88,5 +88,11 @@ else
     echo -e "  ${RED}# Set DOCKER_REGISTRY environment variable first${NC}"
 fi
 
+# Clean up dangling images after build
+echo ""
+echo -e "${BLUE}🧹 Cleaning up dangling images...${NC}"
+DELETED=$(docker image prune -f 2>/dev/null | grep "Total reclaimed space" || echo "No dangling images to clean")
+echo "  $DELETED"
+
 echo ""
 echo -e "${GREEN}🎉 Happy containerizing!${NC}"
