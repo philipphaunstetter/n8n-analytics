@@ -1,15 +1,13 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
 import { AppLayout } from '@/components/app-layout'
 import { WithN8NConnection } from '@/components/with-n8n-connection'
 import { apiClient } from '@/lib/api-client'
 import {
-  PlayIcon,
   CheckCircleIcon,
-  XCircleIcon,
   ClockIcon,
   ExclamationTriangleIcon,
   MagnifyingGlassIcon,
@@ -26,14 +24,26 @@ import { showToast } from '@/components/toast'
 
 interface Workflow {
   id: string
+  providerId: string
+  providerWorkflowId: string
   name: string
-  active: boolean
+  description?: string
+  isActive: boolean
   tags: string[]
   createdAt: Date
   updatedAt: Date
-  executionCount: number
+  lastExecutedAt?: Date
+  totalExecutions: number
+  successCount: number
+  failureCount: number
+  successRate: number
+  avgDuration?: number
+  metadata?: {
+    nodeCount: number
+    n8nWorkflowId: string
+    connections?: Record<string, unknown>
+  }
   lastExecutionStatus?: 'success' | 'error' | 'running' | 'waiting' | 'canceled'
-  lastExecutionAt?: Date
 }
 
 const statusColors = {
@@ -55,16 +65,12 @@ function WorkflowsContent() {
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all')
   const router = useRouter()
 
-  useEffect(() => {
-    fetchWorkflows()
-  }, [statusFilter])
-
-  const fetchWorkflows = async () => {
+  const fetchWorkflows = useCallback(async () => {
     try {
       setLoading(true)
       const params = new URLSearchParams()
       if (statusFilter !== 'all') {
-        params.append('active', statusFilter === 'active' ? 'true' : 'false')
+        params.append('isActive', statusFilter === 'active' ? 'true' : 'false')
       }
       
       const response = await apiClient.get<{ data: { items: Workflow[] } }>(`/workflows?${params}`)
@@ -76,7 +82,11 @@ function WorkflowsContent() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [statusFilter])
+
+  useEffect(() => {
+    fetchWorkflows()
+  }, [fetchWorkflows])
 
   const syncWorkflows = async () => {
     try {
@@ -247,7 +257,7 @@ function WorkflowsContent() {
             Showing {filteredWorkflows.length} of {workflows.length} workflows
           </span>
           <span>
-            {workflows.filter(w => w.active).length} active, {workflows.filter(w => !w.active).length} inactive
+            {workflows.filter(w => w.isActive).length} active, {workflows.filter(w => !w.isActive).length} inactive
           </span>
         </div>
       </div>
@@ -299,13 +309,13 @@ function WorkflowsContent() {
                   onClick={() => router.push(`/workflows/${workflow.id}`)}
                 >
                   <TableCell>
-                    <Badge color={workflow.active ? 'green' : 'zinc'} className="flex items-center space-x-1">
-                      {workflow.active ? (
+                    <Badge color={workflow.isActive ? 'green' : 'zinc'} className="flex items-center space-x-1">
+                      {workflow.isActive ? (
                         <CheckCircleIcon className="h-3 w-3" />
                       ) : (
                         <ClockIcon className="h-3 w-3" />
                       )}
-                      <span>{workflow.active ? 'Active' : 'Inactive'}</span>
+                      <span>{workflow.isActive ? 'Active' : 'Inactive'}</span>
                     </Badge>
                   </TableCell>
                   <TableCell>
@@ -337,10 +347,10 @@ function WorkflowsContent() {
                     </div>
                   </TableCell>
                   <TableCell>
-                    {workflow.lastExecutionAt ? (
+                    {workflow.lastExecutedAt ? (
                       <div className="flex flex-col">
                         <span className="text-sm">
-                          {formatDate(workflow.lastExecutionAt)}
+                          {formatDate(workflow.lastExecutedAt)}
                         </span>
                         {workflow.lastExecutionStatus && (
                           <Badge 
@@ -356,7 +366,7 @@ function WorkflowsContent() {
                     )}
                   </TableCell>
                   <TableCell>
-                    <span className="font-medium">{workflow.executionCount}</span>
+                    <span className="font-medium">{workflow.totalExecutions}</span>
                   </TableCell>
                   <TableCell>
                     {formatDate(workflow.updatedAt)}

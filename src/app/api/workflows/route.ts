@@ -15,6 +15,10 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    // Get query parameters
+    const { searchParams } = new URL(request.url)
+    const isActiveFilter = searchParams.get('isActive')
+
     // Fetch workflows from n8n API
     let n8nWorkflows: N8nWorkflow[] = []
     
@@ -29,8 +33,8 @@ export async function GET(request: NextRequest) {
       )
     }
     
-    // Convert to API format
-    const apiWorkflows = n8nWorkflows.map(workflow => ({
+    // Convert to API format and apply filtering
+    let apiWorkflows = n8nWorkflows.map(workflow => ({
       id: `n8n-${workflow.id}`, // Prefix to avoid ID conflicts
       providerId: 'n8n-main',
       providerWorkflowId: workflow.id,
@@ -52,6 +56,13 @@ export async function GET(request: NextRequest) {
         connections: workflow.connections
       }
     } as Workflow))
+    
+    // Apply isActive filter if specified
+    if (isActiveFilter !== null) {
+      const isActiveValue = isActiveFilter.toLowerCase() === 'true'
+      apiWorkflows = apiWorkflows.filter(workflow => workflow.isActive === isActiveValue)
+      console.log(`🔍 Filtered to ${apiWorkflows.length} workflows with isActive=${isActiveValue}`)
+    }
     
     return NextResponse.json({
       success: true,
