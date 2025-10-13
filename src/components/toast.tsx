@@ -68,18 +68,18 @@ export function Toast({ id, type, title, message, duration = 5000, onClose }: To
       leaveFrom="opacity-100"
       leaveTo="opacity-0"
     >
-      <div className={`max-w-sm w-full border rounded-lg shadow-lg ${toastStyles[type]}`}>
+      <div className={`w-full min-w-[320px] max-w-md sm:max-w-lg md:max-w-xl border rounded-lg shadow-lg ${toastStyles[type]}`}>
         <div className="p-4">
           <div className="flex items-start">
             <div className="flex-shrink-0">
               <Icon className={`h-6 w-6 ${iconStyles[type]}`} />
             </div>
             <div className="ml-3 w-0 flex-1 pt-0.5">
-              <p className={`text-sm font-medium ${textStyles[type]}`}>
+              <p className={`text-sm font-medium ${textStyles[type]} leading-5`}>
                 {title}
               </p>
               {message && (
-                <p className={`mt-1 text-sm ${textStyles[type]} opacity-75`}>
+                <p className={`mt-1 text-sm ${textStyles[type]} opacity-75 leading-5 whitespace-normal break-words`}>
                   {message}
                 </p>
               )}
@@ -133,7 +133,7 @@ export function ToastContainer() {
 
   return (
     <div className="fixed inset-0 flex items-end justify-center px-4 py-6 pointer-events-none sm:p-6 sm:items-start sm:justify-end z-50">
-      <div className="w-full flex flex-col items-center space-y-4 sm:items-end">
+      <div className="w-full flex flex-col items-center space-y-3 sm:items-end sm:space-y-4">
         {toasts.map(toast => (
           <div key={toast.id} className="pointer-events-auto">
             <Toast {...toast} onClose={removeToast} />
