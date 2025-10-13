@@ -2,8 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { ExecutionFilters, ExecutionStatus, Execution } from '@/types'
 import { N8nExecution, N8nWorkflow } from '@/lib/n8n-api'
 import { authenticateRequest } from '@/lib/api-auth'
-import { Database } from 'sqlite3'
-import { ConfigManager } from '@/lib/config/config-manager'
+import { getDb, isMissingTableError } from '@/lib/db'
 
 // GET /api/executions - List executions across all providers
 // Supports query parameters:
@@ -63,8 +62,7 @@ export async function GET(request: NextRequest) {
     try {
       console.log(`Fetching executions from SQLite database (limit: ${limit})...`)
       
-      const dbPath = ConfigManager.getDefaultDatabasePath()
-      const db = new Database(dbPath)
+      const db = getDb()
       
       // Build SQL query with filters
       let sql = `
@@ -168,11 +166,16 @@ export async function GET(request: NextRequest) {
         })
       })
       
-      db.close()
       
       // Convert database results to internal Execution format
       allExecutions = rows.map(row => {
-        const metadata = row.metadata ? JSON.parse(row.metadata) : {}
+        let parsedMeta: any = {}
+        try {
+          parsedMeta = row.metadata ? JSON.parse(row.metadata) : {}
+        } catch {
+          parsedMeta = {}
+        }
+        const metadata = parsedMeta
         return {
           id: row.id,
           providerId: row.provider_id,
@@ -210,8 +213,24 @@ export async function GET(request: NextRequest) {
       
     } catch (error) {
       console.error('Failed to fetch executions from database:', error)
+      // If schema isn't initialized yet, return an empty result set gracefully
+      if (isMissingTableError(error)) {
+        return NextResponse.json({
+          success: true,
+          data: {
+            items: [],
+            total: 0,
+            limit: limit,
+            cursor: cursor,
+            nextCursor: null,
+            hasNextPage: false,
+            hasPreviousPage: false
+          },
+          warning: 'Database schema not initialized yet. Run initial sync to populate data.'
+        })
+      }
       return NextResponse.json(
-        { error: 'Failed to fetch executions from database. Please run sync to populate data.' },
+        { error: 'Failed to fetch executions from database.' },
         { status: 500 }
       )
     }

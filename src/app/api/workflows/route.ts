@@ -2,8 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { n8nApi, N8nWorkflow } from '@/lib/n8n-api'
 import { authenticateRequest } from '@/lib/api-auth'
 import { Workflow } from '@/types'
-import { Database } from 'sqlite3'
-import { ConfigManager } from '@/lib/config/config-manager'
+import { getDb, isMissingTableError } from '@/lib/db'
 
 // GET /api/workflows - List workflows from database
 export async function GET(request: NextRequest) {
@@ -22,8 +21,7 @@ export async function GET(request: NextRequest) {
     const isActiveFilter = searchParams.get('isActive')
     const isArchivedFilter = searchParams.get('isArchived')
 
-    const dbPath = ConfigManager.getDefaultDatabasePath()
-    const db = new Database(dbPath)
+    const db = getDb()
     
     try {
       // Build SQL query with filters
@@ -123,7 +121,6 @@ export async function GET(request: NextRequest) {
         console.log(`🔍 Filtered to ${apiWorkflows.length} workflows with isArchived=${isArchivedValue}`)
       }
       
-      db.close()
       
       return NextResponse.json({
         success: true,
@@ -138,7 +135,21 @@ export async function GET(request: NextRequest) {
       })
     } catch (dbError) {
       console.error('❌ Database error:', dbError)
-      db.close()
+      // If schema is missing on first boot, respond with empty list instead of 500
+      if (isMissingTableError(dbError)) {
+        return NextResponse.json({
+          success: true,
+          data: {
+            items: [],
+            total: 0,
+            page: 1,
+            limit: 0,
+            hasNextPage: false,
+            hasPreviousPage: false
+          },
+          warning: 'Database schema not initialized yet. Run initial sync to populate data.'
+        })
+      }
       return NextResponse.json(
         { error: 'Failed to fetch workflows from database' },
         { status: 500 }
