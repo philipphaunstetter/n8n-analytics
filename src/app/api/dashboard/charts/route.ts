@@ -1,7 +1,81 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { authenticateRequest } from '@/lib/api-auth'
-import { TimeRange } from '@/types'
-import { n8nApi } from '@/lib/n8n-api'
+import { TimeRange, Execution } from '@/types'
+import { n8nApi, N8nExecution, N8nWorkflow } from '@/lib/n8n-api'
+import { ExecutionStatus } from '@/types'
+
+// Convert n8n executions to internal format (same as other APIs)
+function convertN8nExecutions(n8nExecutions: N8nExecution[], workflows: N8nWorkflow[]): Execution[] {
+  const workflowMap = new Map(workflows.map(w => [w.id, w]))
+  
+  return n8nExecutions.map(n8nExec => {
+    const workflow = workflowMap.get(n8nExec.workflowId)
+    const startedAt = new Date(n8nExec.startedAt)
+    const stoppedAt = n8nExec.stoppedAt ? new Date(n8nExec.stoppedAt) : undefined
+    const duration = stoppedAt ? stoppedAt.getTime() - startedAt.getTime() : undefined
+    
+    let status: ExecutionStatus = 'unknown'
+    switch (n8nExec.status) {
+      case 'success': status = 'success'; break
+      case 'failed':
+      case 'error':
+      case 'crashed': status = 'error'; break
+      case 'running': status = 'running'; break
+      case 'waiting': status = 'waiting'; break
+      case 'canceled': status = 'canceled'; break
+      case 'new': status = 'waiting'; break
+      default: status = 'unknown'
+    }
+    
+    return {
+      id: n8nExec.id,
+      providerId: 'n8n-main',
+      workflowId: n8nExec.workflowId,
+      providerExecutionId: n8nExec.id,
+      providerWorkflowId: n8nExec.workflowId,
+      status,
+      startedAt,
+      stoppedAt,
+      duration,
+      mode: 'unknown',
+      metadata: {
+        workflowName: workflow?.name || 'Unknown Workflow',
+        n8nWorkflowId: n8nExec.workflowId,
+        finished: n8nExec.finished
+      }
+    }
+  })
+}
+
+// Apply time range filters (same as other APIs)
+function applyTimeRangeFilter(executions: Execution[], timeRange: TimeRange): Execution[] {
+  if (timeRange === 'custom') return executions
+  
+  const now = new Date()
+  let startDate: Date
+  
+  switch (timeRange) {
+    case '1h':
+      startDate = new Date(now.getTime() - 60 * 60 * 1000)
+      break
+    case '24h':
+      startDate = new Date(now.getTime() - 24 * 60 * 60 * 1000)
+      break
+    case '7d':
+      startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
+      break
+    case '30d':
+      startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
+      break
+    case '90d':
+      startDate = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000)
+      break
+    default:
+      startDate = new Date(now.getTime() - 24 * 60 * 60 * 1000)
+  }
+  
+  return executions.filter(exec => exec.startedAt >= startDate)
+}
 
 export interface ChartDataPoint {
   date: string
@@ -18,57 +92,43 @@ export interface ChartDataPoint {
  */
 async function generateChartData(timeRange: TimeRange): Promise<ChartDataPoint[]> {
   try {
-    // Calculate time range and granularity
-    const now = new Date()
-    let startTime: Date
-    let granularity: 'hour' | 'day' | 'week'
+    // Fetch executions using the same approach as other APIs
+    const [n8nExecutions, n8nWorkflows] = await Promise.all([
+      n8nApi.getExecutions(), // No limit, let filtering handle it
+      n8nApi.getWorkflows()
+    ])
     
+    // Convert to internal format (same as dashboard stats API)
+    const allExecutions = convertN8nExecutions(n8nExecutions.data, n8nWorkflows)
+    
+    // Apply time range filtering (same as dashboard stats API)
+    const filteredExecutions = applyTimeRangeFilter(allExecutions, timeRange)
+    
+    // Determine granularity based on time range
+    let granularity: 'hour' | 'day' | 'week'
     switch (timeRange) {
       case '1h':
-        startTime = new Date(now.getTime() - 60 * 60 * 1000)
-        granularity = 'hour' // Show by 5-minute intervals for 1 hour
-        break
       case '24h':
-        startTime = new Date(now.getTime() - 24 * 60 * 60 * 1000)
         granularity = 'hour'
         break
       case '7d':
-        startTime = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
-        granularity = 'day'
-        break
       case '30d':
-        startTime = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
         granularity = 'day'
         break
       case '90d':
-        startTime = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000)
-        granularity = 'week'
-        break
       default:
-        startTime = new Date(now.getTime() - 24 * 60 * 60 * 1000)
-        granularity = 'hour'
+        granularity = 'week'
     }
-
-    // Fetch executions from n8n API
-    const executionsResponse = await n8nApi.getExecutions({ 
-      limit: 1000, // Fetch more data for better chart granularity
-      // Note: n8n API doesn't have built-in date filtering, so we'll filter client-side
-    })
-
-    // Filter executions by time range
-    const filteredExecutions = executionsResponse.data.filter(execution => 
-      new Date(execution.startedAt) >= startTime
-    )
 
     // Create time buckets based on granularity
     const timeBuckets = new Map<string, {
       date: string
       timestamp: number
-      executions: typeof filteredExecutions
+      executions: Execution[]
     }>()
 
     for (const execution of filteredExecutions) {
-      const executionDate = new Date(execution.startedAt)
+      const executionDate = execution.startedAt // Already a Date object
       let bucketKey: string
       let bucketDate: Date
 
@@ -105,25 +165,22 @@ async function generateChartData(timeRange: TimeRange): Promise<ChartDataPoint[]
     // Generate chart data points
     const chartData: ChartDataPoint[] = []
     
-    // Fill in missing time periods with zero values
+    // Sort buckets chronologically
     const sortedBuckets = Array.from(timeBuckets.entries())
       .sort(([a], [b]) => a.localeCompare(b))
 
     for (const [bucketKey, bucket] of sortedBuckets) {
       const totalExecutions = bucket.executions.length
       const successfulExecutions = bucket.executions.filter(e => e.status === 'success').length
-      const failedExecutions = bucket.executions.filter(e => ['failed', 'error', 'crashed'].includes(e.status)).length
+      const failedExecutions = bucket.executions.filter(e => e.status === 'error').length
       const successRate = totalExecutions > 0 ? Math.round((successfulExecutions / totalExecutions) * 100) : 0
 
-      // Calculate average response time
-      const completedExecutions = bucket.executions.filter(e => e.stoppedAt && e.startedAt)
+      // Calculate average response time using duration from internal format
+      const completedExecutions = bucket.executions.filter(e => e.duration !== undefined)
       let avgResponseTime: number | null = null
 
       if (completedExecutions.length > 0) {
-        const totalDuration = completedExecutions.reduce((sum, e) => {
-          const duration = new Date(e.stoppedAt!).getTime() - new Date(e.startedAt).getTime()
-          return sum + duration
-        }, 0)
+        const totalDuration = completedExecutions.reduce((sum, e) => sum + (e.duration || 0), 0)
         avgResponseTime = Math.round(totalDuration / completedExecutions.length)
       }
 
@@ -136,38 +193,6 @@ async function generateChartData(timeRange: TimeRange): Promise<ChartDataPoint[]
         successRate,
         avgResponseTime
       })
-    }
-
-    // Fill gaps in timeline for smoother charts
-    if (chartData.length > 1) {
-      const filledData: ChartDataPoint[] = []
-      const interval = granularity === 'hour' ? 60 * 60 * 1000 : 
-                     granularity === 'day' ? 24 * 60 * 60 * 1000 :
-                     7 * 24 * 60 * 60 * 1000
-
-      let currentTime = chartData[0].timestamp
-      const endTime = chartData[chartData.length - 1].timestamp
-
-      while (currentTime <= endTime) {
-        const existingPoint = chartData.find(d => d.timestamp === currentTime)
-        if (existingPoint) {
-          filledData.push(existingPoint)
-        } else {
-          // Add zero-value point for missing time periods
-          filledData.push({
-            date: new Date(currentTime).toISOString().split('T')[0],
-            timestamp: currentTime,
-            totalExecutions: 0,
-            successfulExecutions: 0,
-            failedExecutions: 0,
-            successRate: 0,
-            avgResponseTime: null
-          })
-        }
-        currentTime += interval
-      }
-
-      return filledData
     }
 
     return chartData
