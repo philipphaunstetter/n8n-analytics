@@ -16,8 +16,7 @@ import {
   TagIcon,
   ChartBarIcon,
   ExclamationTriangleIcon,
-  PlayIcon,
-  PauseIcon
+  ArrowDownTrayIcon
 } from '@heroicons/react/24/outline'
 import { Badge } from '@/components/badge'
 import { Button } from '@/components/button'
@@ -84,6 +83,24 @@ function WorkflowDetailContent() {
       hour: '2-digit',
       minute: '2-digit'
     }).format(new Date(date))
+  }
+
+  const handleDownloadWorkflow = () => {
+    if (!workflow?.workflowJson) {
+      alert('No workflow data available to download')
+      return
+    }
+    
+    // Create downloadable JSON file
+    const dataStr = JSON.stringify(workflow.workflowJson, null, 2)
+    const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr)
+    
+    const exportFileDefaultName = `${workflow.name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_workflow.json`
+    
+    const linkElement = document.createElement('a')
+    linkElement.setAttribute('href', dataUri)
+    linkElement.setAttribute('download', exportFileDefaultName)
+    linkElement.click()
   }
 
   const formatDuration = (ms?: number) => {
@@ -165,18 +182,14 @@ function WorkflowDetailContent() {
           </div>
         </div>
         <div className="flex space-x-2">
-          <Button outline>
-            {workflow.isActive ? (
-              <>
-                <PauseIcon className="h-4 w-4 mr-2" />
-                Deactivate
-              </>
-            ) : (
-              <>
-                <PlayIcon className="h-4 w-4 mr-2" />
-                Activate
-              </>
-            )}
+          <Button 
+            outline 
+            onClick={handleDownloadWorkflow}
+            disabled={!workflow.workflowJson}
+            title={workflow.workflowJson ? 'Download workflow JSON' : 'No workflow data available'}
+          >
+            <ArrowDownTrayIcon className="h-4 w-4 mr-2" />
+            Download
           </Button>
         </div>
       </div>
