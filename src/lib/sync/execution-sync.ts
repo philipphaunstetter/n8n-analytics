@@ -302,7 +302,7 @@ export class ExecutionSyncService {
   }
   
   /**
-   * Sync workflows and their metadata
+   * Sync workflows and their metadata with full workflow data
    */
   private async syncWorkflows(provider: Provider, options: SyncOptions & { silent?: boolean }) {
     // Get n8n configuration from ConfigManager instead of provider table
@@ -317,25 +317,45 @@ export class ExecutionSyncService {
       console.log(`📄 Fetching workflows for ${provider.name}`)
     }
     
+    // Get basic workflow list first
     const workflows = await n8nClient.getWorkflows()
     let inserted = 0
     let updated = 0
+    let skipped = 0
     
     for (const n8nWorkflow of workflows) {
       try {
-        const result = await this.upsertWorkflow(provider.id, n8nWorkflow)
+        // Check if we need to fetch full workflow data
+        const needsFullData = await this.shouldFetchFullWorkflowData(provider.id, n8nWorkflow)
+        
+        let fullWorkflowData = n8nWorkflow
+        if (needsFullData) {
+          if (!options.silent) {
+            console.log(`📥 Fetching full workflow data for: ${n8nWorkflow.name}`)
+          }
+          // Fetch full workflow definition with nodes and connections
+          fullWorkflowData = await n8nClient.getWorkflow(n8nWorkflow.id)
+        }
+        
+        const result = await this.upsertWorkflow(provider.id, fullWorkflowData)
         if (result.inserted) inserted++
         if (result.updated) updated++
+        if (!result.inserted && !result.updated) skipped++
       } catch (error) {
         console.error(`❌ Failed to sync workflow ${n8nWorkflow.name}:`, error)
       }
+    }
+    
+    if (!options.silent && skipped > 0) {
+      console.log(`⏭️ Skipped ${skipped} unchanged workflows`)
     }
     
     return {
       type: 'workflows',
       processed: workflows.length,
       inserted,
-      updated
+      updated,
+      skipped
     }
   }
   
@@ -522,10 +542,66 @@ export class ExecutionSyncService {
   }
   
   /**
+   * Determine if we need to fetch full workflow data based on change detection
+   */
+  private async shouldFetchFullWorkflowData(providerId: string, n8nWorkflow: N8nWorkflow): Promise<boolean> {
+    const db = getSQLiteClient()
+    
+    return new Promise((resolve, reject) => {
+      // Check if workflow exists and get last known updated timestamp
+      db.get(`
+        SELECT id, updated_at, workflow_data
+        FROM workflows 
+        WHERE provider_id = ? AND provider_workflow_id = ?
+      `, [providerId, n8nWorkflow.id], (err, existing: any) => {
+        if (err) {
+          reject(err)
+          return
+        }
+        
+        if (!existing) {
+          // New workflow - always fetch full data
+          resolve(true)
+          return
+        }
+        
+        // Check if n8n's updatedAt is different from our stored version
+        const n8nUpdatedAt = new Date(n8nWorkflow.updatedAt)
+        const existingUpdatedAt = new Date(existing.updated_at)
+        const hasTimestampChanged = n8nUpdatedAt.getTime() !== existingUpdatedAt.getTime()
+        
+        if (!hasTimestampChanged) {
+          // No timestamp change - workflow likely unchanged, skip full fetch
+          resolve(false)
+          return
+        }
+        
+        // Timestamp changed - likely has updates, fetch full data
+        console.log(`📝 Workflow updated: ${n8nWorkflow.name} (${existingUpdatedAt.toISOString()} -> ${n8nUpdatedAt.toISOString()})`)
+        resolve(true)
+      })
+    })
+  }
+  
+  /**
    * Upsert workflow into database
    */
   private async upsertWorkflow(providerId: string, n8nWorkflow: N8nWorkflow) {
     const db = getSQLiteClient()
+    
+    // Create full workflow JSON data for backup
+    const workflowJsonData = {
+      ...n8nWorkflow,
+      id: n8nWorkflow.id,
+      name: n8nWorkflow.name,
+      active: n8nWorkflow.active,
+      createdAt: n8nWorkflow.createdAt,
+      updatedAt: n8nWorkflow.updatedAt,
+      nodes: n8nWorkflow.nodes || [],
+      connections: n8nWorkflow.connections || {},
+      tags: n8nWorkflow.tags || []
+    }
+    
     const workflowData = {
       id: `wf_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       provider_id: providerId,
@@ -534,15 +610,16 @@ export class ExecutionSyncService {
       is_active: n8nWorkflow.active ? 1 : 0,
       is_archived: n8nWorkflow.isArchived ? 1 : 0,
       tags: JSON.stringify(n8nWorkflow.tags || []),
-      node_count: n8nWorkflow.nodes?.length || 0
+      node_count: n8nWorkflow.nodes?.length || 0,
+      workflow_data: JSON.stringify(workflowJsonData)
     }
     
-    // Check if workflow exists
-    const existing = await new Promise<{id: string} | null>((resolve, reject) => {
+    // Check if workflow exists and get existing data for change detection
+    const existing = await new Promise<{id: string, updated_at: string, workflow_data: string} | null>((resolve, reject) => {
       db.get(
-        'SELECT id FROM workflows WHERE provider_id = ? AND provider_workflow_id = ?',
+        'SELECT id, updated_at, workflow_data FROM workflows WHERE provider_id = ? AND provider_workflow_id = ?',
         [providerId, n8nWorkflow.id],
-        (err, row: {id: string}) => {
+        (err, row: {id: string, updated_at: string, workflow_data: string}) => {
           if (err) reject(err)
           else resolve(row || null)
         }
@@ -551,27 +628,39 @@ export class ExecutionSyncService {
     
     return new Promise<{updated: boolean, inserted: boolean}>((resolve, reject) => {
       if (existing) {
-        // Update existing
+        // Check if anything actually changed
+        const n8nUpdatedAt = new Date(n8nWorkflow.updatedAt || new Date())
+        const existingUpdatedAt = new Date(existing.updated_at)
+        const hasTimestampChanged = n8nUpdatedAt.getTime() !== existingUpdatedAt.getTime()
+        
+        if (!hasTimestampChanged) {
+          // No changes detected, skip update
+          resolve({ updated: false, inserted: false })
+          return
+        }
+        
+        // Update existing workflow with new data
         db.run(`
           UPDATE workflows SET
-            name = ?, is_active = ?, is_archived = ?, tags = ?, node_count = ?, updated_at = CURRENT_TIMESTAMP
+            name = ?, is_active = ?, is_archived = ?, tags = ?, node_count = ?, workflow_data = ?, updated_at = ?
           WHERE id = ?
         `, [
           workflowData.name, workflowData.is_active, workflowData.is_archived, workflowData.tags,
-          workflowData.node_count, existing.id
+          workflowData.node_count, workflowData.workflow_data, n8nWorkflow.updatedAt || new Date().toISOString(), existing.id
         ], function(err) {
           if (err) reject(err)
           else resolve({ updated: true, inserted: false })
         })
       } else {
-        // Insert new
+        // Insert new workflow
         db.run(`
           INSERT INTO workflows (
-            id, provider_id, provider_workflow_id, name, is_active, is_archived, tags, node_count
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            id, provider_id, provider_workflow_id, name, is_active, is_archived, tags, node_count, workflow_data, created_at, updated_at
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `, [
           workflowData.id, workflowData.provider_id, workflowData.provider_workflow_id,
-          workflowData.name, workflowData.is_active, workflowData.is_archived, workflowData.tags, workflowData.node_count
+          workflowData.name, workflowData.is_active, workflowData.is_archived, workflowData.tags, workflowData.node_count, workflowData.workflow_data,
+          n8nWorkflow.createdAt || new Date().toISOString(), n8nWorkflow.updatedAt || new Date().toISOString()
         ], function(err) {
           if (err) reject(err)
           else resolve({ inserted: true, updated: false })

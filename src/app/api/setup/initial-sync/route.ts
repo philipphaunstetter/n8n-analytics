@@ -1,28 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { workflowSync } from '@/lib/sync/workflow-sync'
 import { executionSync } from '@/lib/sync/execution-sync'
 
 export async function POST(request: NextRequest) {
   try {
     console.log('Starting initial sync after setup...')
     
-    // Sync workflows first (they're usually fewer and faster)
-    console.log('Syncing workflows...')
-    const workflowResult = await workflowSync.syncWorkflows()
-    console.log('Workflow sync result:', workflowResult)
-    
-    // Then sync executions (more data, might take longer)
-    console.log('Syncing executions...')
-    const executionResult = await executionSync.syncAllProviders({ syncType: 'executions' })
-    console.log('Execution sync result:', executionResult)
+    // Perform unified sync (workflows + executions) using enhanced execution sync service
+    console.log('Starting unified initial sync...')
+    const syncResult = await executionSync.syncAllProviders({ syncType: 'full' })
+    console.log('Initial sync result:', syncResult)
     
     return NextResponse.json({
       success: true,
       message: 'Initial sync completed successfully',
-      results: {
-        workflows: workflowResult,
-        executions: executionResult
-      }
+      results: syncResult
     })
     
   } catch (error) {
