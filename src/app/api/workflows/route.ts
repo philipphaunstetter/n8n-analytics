@@ -82,10 +82,8 @@ export async function GET(request: NextRequest) {
           ? (dbWorkflow.success_count / dbWorkflow.total_executions) * 100
           : 0
         
-        // Compute archived as: inactive and not updated in >90 days
-        const updatedAtDate = dbWorkflow.updated_at ? new Date(dbWorkflow.updated_at) : null
-        const daysSinceUpdate = updatedAtDate ? Math.floor((Date.now() - updatedAtDate.getTime()) / (1000 * 60 * 60 * 24)) : 0
-        const computedArchived = !Boolean(dbWorkflow.is_active) && daysSinceUpdate > 90
+        // Use database is_archived field (populated from n8n sync)
+        const isArchived = Boolean(dbWorkflow.is_archived)
         
         return {
           id: dbWorkflow.provider_workflow_id, // Use n8n workflow ID as the main ID
@@ -94,7 +92,7 @@ export async function GET(request: NextRequest) {
           name: dbWorkflow.name,
           description: '', // n8n workflows don't have descriptions
           isActive: Boolean(dbWorkflow.is_active),
-          isArchived: computedArchived,
+          isArchived: isArchived,
           tags,
           createdAt: new Date(dbWorkflow.created_at),
           updatedAt: new Date(dbWorkflow.updated_at),

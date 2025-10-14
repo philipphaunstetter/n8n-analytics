@@ -47,15 +47,6 @@ interface Workflow {
   lastExecutionStatus?: 'success' | 'error' | 'running' | 'waiting' | 'canceled'
 }
 
-const statusColors = {
-  'success': 'green',
-  'error': 'red', 
-  'running': 'blue',
-  'waiting': 'yellow',
-  'canceled': 'zinc',
-  'unknown': 'zinc'
-} as const
-
 function WorkflowsContent() {
   const [workflows, setWorkflows] = useState<Workflow[]>([])
   const [loading, setLoading] = useState(true)
@@ -336,10 +327,13 @@ function WorkflowsContent() {
                   </TableCell>
                   <TableCell>
                     <div className="flex flex-col">
-                      <span className="font-medium text-gray-900">
+                      <span 
+                        className="font-medium text-gray-900 truncate max-w-xs" 
+                        title={workflow.name}
+                      >
                         {workflow.name}
                       </span>
-                      <span className="text-xs text-gray-500 font-mono">
+                      <span className="text-xs text-gray-500 font-mono truncate max-w-xs" title={workflow.id}>
                         {workflow.id}
                       </span>
                     </div>
@@ -364,19 +358,9 @@ function WorkflowsContent() {
                   </TableCell>
                   <TableCell>
                     {workflow.lastExecutedAt ? (
-                      <div className="flex flex-col">
-                        <span className="text-sm">
-                          {formatDate(workflow.lastExecutedAt)}
-                        </span>
-                        {workflow.lastExecutionStatus && (
-                          <Badge 
-                            color={statusColors[workflow.lastExecutionStatus]} 
-                            className="text-xs w-fit"
-                          >
-                            {workflow.lastExecutionStatus}
-                          </Badge>
-                        )}
-                      </div>
+                      <span className="text-sm">
+                        {formatDate(workflow.lastExecutedAt)}
+                      </span>
                     ) : (
                       <span className="text-gray-400">Never</span>
                     )}
