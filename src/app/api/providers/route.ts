@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { ProviderRegistry } from '@/lib/providers'
-import { Provider } from '@/types'
 import { authenticateRequest } from '@/lib/api-auth'
+import { getProviderService } from '@/lib/services/provider-service'
 
-// GET /api/providers - List user's providers
+// GET /api/providers - List all providers
 export async function GET(request: NextRequest) {
   try {
     const { user, error: authError } = await authenticateRequest(request)
@@ -12,24 +11,26 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // TODO: Fetch user's providers from database
-    // For now, return empty array since we don't have database setup yet
-    const providers: Provider[] = []
+    const providerService = getProviderService()
+    const providers = await providerService.listProviders(user.id)
 
     return NextResponse.json({
       success: true,
       data: providers
     })
   } catch (error) {
-    console.error('Failed to fetch providers:', error)
+    console.error('Failed to list providers:', error)
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { 
+        success: false,
+        error: 'Failed to list providers' 
+      },
       { status: 500 }
     )
   }
 }
 
-// POST /api/providers - Create new provider connection
+// POST /api/providers - Create a new provider
 export async function POST(request: NextRequest) {
   try {
     const { user, error: authError } = await authenticateRequest(request)
@@ -39,72 +40,85 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { name, type, baseUrl, apiKey } = body
+    const { name, baseUrl, apiKey, metadata } = body
 
-    // Validate input
-    if (!name || !type || !baseUrl || !apiKey) {
+    // Validation
+    if (!name || typeof name !== 'string' || name.trim().length === 0) {
       return NextResponse.json(
-        { error: 'Missing required fields: name, type, baseUrl, apiKey' },
+        { 
+          success: false,
+          error: 'Provider name is required' 
+        },
         { status: 400 }
       )
     }
 
-    // Check if provider type is supported
-    const supportedTypes = ProviderRegistry.getSupportedTypes()
-    if (!supportedTypes.includes(type)) {
+    if (!baseUrl || typeof baseUrl !== 'string' || !baseUrl.startsWith('http')) {
       return NextResponse.json(
-        { error: `Unsupported provider type: ${type}. Supported types: ${supportedTypes.join(', ')}` },
+        { 
+          success: false,
+          error: 'Valid base URL is required (must start with http:// or https://)' 
+        },
         { status: 400 }
       )
     }
 
-    // Create provider object for testing
-    const provider: Provider = {
-      id: `temp_${Date.now()}`, // Temporary ID for testing
-      name,
-      type,
-      baseUrl,
-      apiKey,
-      isConnected: false,
-      lastChecked: new Date(),
-      status: 'unknown',
-      userId: user.id
+    if (!apiKey || typeof apiKey !== 'string' || apiKey.trim().length === 0) {
+      return NextResponse.json(
+        { 
+          success: false,
+          error: 'API key is required' 
+        },
+        { status: 400 }
+      )
     }
 
-    // Test connection
-    try {
-      const adapter = ProviderRegistry.create(provider)
-      const connectionTest = await adapter.testConnection()
+    const providerService = getProviderService()
 
-      if (connectionTest.success) {
-        provider.isConnected = true
-        provider.status = connectionTest.data?.status || 'healthy'
-        provider.version = connectionTest.data?.version
-        provider.metadata = connectionTest.data?.metadata
-      } else {
-        provider.status = 'error'
-        provider.metadata = { error: connectionTest.error }
-      }
-    } catch (error) {
-      provider.status = 'error'
-      provider.metadata = { error: String(error) }
+    // Test connection before creating
+    const connectionTest = await providerService.testConnection(baseUrl, apiKey)
+    if (!connectionTest.success) {
+      return NextResponse.json(
+        { 
+          success: false,
+          error: `Connection test failed: ${connectionTest.error}` 
+        },
+        { status: 400 }
+      )
     }
 
-    // TODO: Save provider to database
-    // For now, just return the provider with test results
-    
-    // Remove API key from response for security
-    const responseProvider = { ...provider }
-    delete responseProvider.apiKey
+    // Create provider
+    const provider = await providerService.createProvider(user.id, {
+      name: name.trim(),
+      baseUrl: baseUrl.trim(),
+      apiKey: apiKey.trim(),
+      metadata: metadata || {}
+    })
+
+    // Update connection status
+    await providerService.updateConnectionStatus(
+      provider.id,
+      user.id,
+      true,
+      'healthy',
+      connectionTest.version
+    )
+
+    // Fetch updated provider to return
+    const updatedProvider = await providerService.getProvider(provider.id, user.id)
 
     return NextResponse.json({
       success: true,
-      data: responseProvider
+      data: updatedProvider,
+      message: 'Provider created successfully'
     })
   } catch (error) {
     console.error('Failed to create provider:', error)
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { 
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to create provider' 
+      },
       { status: 500 }
     )
   }

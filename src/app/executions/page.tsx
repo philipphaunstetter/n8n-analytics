@@ -9,7 +9,8 @@ import { apiClient } from '@/lib/api-client'
 import { 
   ExecutionStatus,
   TimeRange,
-  Execution 
+  Execution,
+  Provider
 } from '@/types'
 import {
   PlayIcon,
@@ -50,33 +51,33 @@ const statusColors = {
 
 function ExecutionsContent() {
   const [executions, setExecutions] = useState<Execution[]>([])
+  const [providers, setProviders] = useState<Provider[]>([])
   const [loading, setLoading] = useState(true)
   const [syncing, setSyncing] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState<ExecutionStatus | 'all'>('all')
+  const [providerFilter, setProviderFilter] = useState<string>('all')
   const [timeRange, setTimeRange] = useState<TimeRange>('24h')
   const [n8nUrl, setN8nUrl] = useState<string>('')
   const router = useRouter()
 
   useEffect(() => {
-    fetchExecutions()
-  }, [statusFilter, timeRange])
+    fetchProviders()
+  }, [])
 
   useEffect(() => {
-    // Fetch n8n URL on component mount
-    const fetchN8nUrl = async () => {
-      try {
-        const response = await apiClient.get<{ n8nUrl: string }>('/config/n8n-url')
-        setN8nUrl(response.n8nUrl)
-      } catch (err) {
-        console.error('Failed to fetch n8n URL:', err)
-        // Fallback to default
-        setN8nUrl('http://localhost:5678')
-      }
+    fetchExecutions()
+  }, [statusFilter, timeRange, providerFilter])
+
+  const fetchProviders = async () => {
+    try {
+      const response = await apiClient.get<{ data: Provider[] }>('/providers')
+      setProviders(response.data)
+    } catch (error) {
+      console.error('Failed to fetch providers:', error)
     }
-    fetchN8nUrl()
-  }, [])
+  }
 
   const fetchExecutions = async () => {
     try {
@@ -84,6 +85,9 @@ function ExecutionsContent() {
       const params = new URLSearchParams()
       if (statusFilter !== 'all') {
         params.append('status', statusFilter)
+      }
+      if (providerFilter !== 'all') {
+        params.append('providerId', providerFilter)
       }
       params.append('timeRange', timeRange)
       
@@ -159,14 +163,16 @@ function ExecutionsContent() {
 
 
   const openN8nExecution = (execution: Execution) => {
-    if (!n8nUrl) {
-      console.error('n8n URL not available')
+    // Find provider for this execution
+    const provider = providers.find(p => p.id === execution.providerId)
+    if (!provider) {
+      console.error('Provider not found for execution')
       return
     }
     
     // Create properly formatted execution URL
     const executionUrl = createN8nExecutionUrl(
-      n8nUrl,
+      provider.baseUrl,
       execution.providerWorkflowId,
       execution.providerExecutionId
     )
@@ -215,7 +221,24 @@ function ExecutionsContent() {
       </div>
 
       {/* Filters */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-5">
+        <div>
+          <label htmlFor="provider" className="block text-sm font-medium text-gray-700 mb-1">
+            n8n Instance
+          </label>
+          <Select 
+            value={providerFilter} 
+            onChange={(e) => setProviderFilter(e.target.value)}
+          >
+            <option value="all">All instances</option>
+            {providers.map(provider => (
+              <option key={provider.id} value={provider.id}>
+                {provider.name}
+              </option>
+            ))}
+          </Select>
+        </div>
+
         <div>
           <label htmlFor="search" className="block text-sm font-medium text-gray-700 mb-1">
             Search
@@ -268,7 +291,7 @@ function ExecutionsContent() {
         <div className="flex items-end">
           <Button outline className="flex items-center space-x-2">
             <FunnelIcon className="h-4 w-4" />
-            <span>More Filters</span>
+            <span>More</span>
           </Button>
         </div>
       </div>
@@ -295,6 +318,7 @@ function ExecutionsContent() {
             <TableRow>
               <TableHeader>Status</TableHeader>
               <TableHeader>Execution ID</TableHeader>
+              <TableHeader>Instance</TableHeader>
               <TableHeader>Workflow</TableHeader>
               <TableHeader>Started</TableHeader>
               <TableHeader>Duration</TableHeader>
@@ -307,7 +331,7 @@ function ExecutionsContent() {
               // Loading rows
               Array.from({ length: 5 }).map((_, i) => (
                 <TableRow key={i}>
-                  <TableCell colSpan={7}>
+                  <TableCell colSpan={8}>
                     <div className="animate-pulse flex space-x-4 py-4">
                       <div className="rounded-full bg-gray-300 h-6 w-6"></div>
                       <div className="flex-1 space-y-2">
@@ -320,7 +344,7 @@ function ExecutionsContent() {
               ))
             ) : filteredExecutions.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center py-8 text-gray-500">
+                <TableCell colSpan={8} className="text-center py-8 text-gray-500">
                   {executions.length === 0 
                     ? 'No executions found for this time range'
                     : 'No executions match your search criteria'
@@ -330,6 +354,7 @@ function ExecutionsContent() {
             ) : (
               filteredExecutions.map((execution) => {
                 const StatusIcon = statusIcons[execution.status]
+                const provider = providers.find(p => p.id === execution.providerId)
                 return (
                   <TableRow 
                     key={execution.id}
@@ -344,6 +369,15 @@ function ExecutionsContent() {
                     </TableCell>
                     <TableCell className="font-mono text-sm">
                       {formatExecutionId(execution.providerExecutionId)}
+                    </TableCell>
+                    <TableCell>
+                      {provider ? (
+                        <Badge color="zinc" className="text-xs">
+                          {provider.name}
+                        </Badge>
+                      ) : (
+                        <span className="text-xs text-gray-400">Unknown</span>
+                      )}
                     </TableCell>
                     <TableCell>
                       <div className="flex flex-col">

@@ -24,6 +24,7 @@ import {
   ProfileIcon,
   ToolsIcon
 } from './icons'
+import { ServerIcon } from '@heroicons/react/24/outline'
 import { Navbar, NavbarItem, NavbarSection, NavbarSpacer } from './navbar'
 import { Dropdown, DropdownButton, DropdownItem, DropdownMenu } from './dropdown'
 import { Avatar } from './avatar'
@@ -33,6 +34,7 @@ const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: DashboardIcon, current: true },
   { name: 'Executions', href: '/executions', icon: ExecutionsIcon, current: false },
   { name: 'Workflows', href: '/workflows', icon: WorkflowsIcon, current: false },
+  { name: 'n8n Instances', href: '/providers', icon: ServerIcon, current: false },
   { name: 'Analytics', href: '/analytics', icon: AnalyticsIcon, current: false },
   { name: 'Monitors', href: '/monitors', icon: MonitorsIcon, current: false },
   { name: 'History', href: '/history', icon: HistoryIcon, current: false },

@@ -10,7 +10,90 @@ export class WorkflowSyncService {
   }
 
   /**
-   * Sync workflows from n8n with backup and archiving logic
+   * Sync workflows for a specific provider
+   */
+  async syncProvider(provider: { id: string; name: string; baseUrl: string; apiKey: string }): Promise<{
+    synced: number
+    created: number
+    updated: number
+    archived: number
+    skipped: number
+    errors: string[]
+  }> {
+    const db = this.getSQLiteClient()
+    const errors: string[] = []
+    let synced = 0
+    let created = 0
+    let updated = 0
+    let archived = 0
+
+    console.log(`🔄 Starting workflow sync for provider: ${provider.name}...`)
+
+    try {
+      // Fetch workflows from this specific n8n instance
+      const n8nApiUrl = `${provider.baseUrl.replace(/\/$/, '')}/api/v1/workflows`
+      const response = await fetch(n8nApiUrl, {
+        headers: {
+          'Accept': 'application/json',
+          'X-N8N-API-KEY': provider.apiKey
+        }
+      })
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch workflows from ${provider.name}: ${response.statusText}`)
+      }
+
+      const data = await response.json()
+      const n8nWorkflows = data.data || []
+      const n8nWorkflowIds = new Set(n8nWorkflows.map((w: any) => w.id))
+      
+      console.log(`📡 Found ${n8nWorkflows.length} workflows in ${provider.name}`)
+
+      // Process each workflow
+      let skipped = 0
+      for (const n8nWorkflow of n8nWorkflows) {
+        try {
+          const result = await this.syncWorkflow(db, provider.id, n8nWorkflow)
+          synced++
+          if (result.created) created++
+          if (result.updated) updated++
+          if (result.skipped) skipped++
+        } catch (error) {
+          const message = `Failed to sync workflow ${n8nWorkflow.name}: ${error}`
+          console.error('❌', message)
+          errors.push(message)
+        }
+      }
+      
+      if (skipped > 0) {
+        console.log(`⏭️ Skipped ${skipped} unchanged workflows (smart sync)`)
+      }
+
+      // Mark workflows as archived if they're no longer in this n8n instance
+      const archivedCount = await this.archiveDeletedWorkflowsForProvider(db, provider.id, n8nWorkflowIds)
+      archived = archivedCount
+
+      db.close()
+
+      console.log(`✅ Workflow sync completed for ${provider.name}: ${synced} synced, ${created} created, ${updated} updated, ${archived} archived`)
+
+      return {
+        synced,
+        created,
+        updated,
+        archived,
+        errors,
+        skipped: skipped || 0
+      }
+    } catch (error) {
+      console.error(`❌ Workflow sync failed for ${provider.name}:`, error)
+      db.close()
+      throw error
+    }
+  }
+
+  /**
+   * Sync workflows from n8n with backup and archiving logic (legacy method using default n8n API)
    */
   async syncWorkflows(): Promise<{
     synced: number
@@ -207,7 +290,69 @@ export class WorkflowSyncService {
   }
 
   /**
-   * Mark workflows as deleted from n8n if they're no longer found
+   * Mark workflows as archived for a specific provider if they're no longer found
+   */
+  private async archiveDeletedWorkflowsForProvider(
+    db: Database,
+    providerId: string,
+    currentN8nWorkflowIds: Set<string>
+  ): Promise<number> {
+    return new Promise((resolve, reject) => {
+      // Get all active workflows for this provider
+      db.all(`
+        SELECT id, provider_workflow_id, name
+        FROM workflows 
+        WHERE is_active = 1 AND provider_id = ?
+      `, [providerId], (err, workflows: any[]) => {
+        if (err) {
+          reject(err)
+          return
+        }
+
+        let archivedCount = 0
+        let processed = 0
+
+        if (workflows.length === 0) {
+          resolve(0)
+          return
+        }
+
+        // Check each stored workflow
+        for (const workflow of workflows) {
+          if (!currentN8nWorkflowIds.has(workflow.provider_workflow_id)) {
+            // Workflow no longer exists in this n8n instance - mark as inactive
+            db.run(`
+              UPDATE workflows SET
+                is_active = 0,
+                updated_at = ?
+              WHERE id = ?
+            `, [new Date().toISOString(), workflow.id], (err) => {
+              processed++
+              
+              if (err) {
+                console.error(`❌ Failed to archive workflow ${workflow.name}:`, err)
+              } else {
+                console.log(`📦 Archived workflow: ${workflow.name}`)
+                archivedCount++
+              }
+
+              if (processed === workflows.length) {
+                resolve(archivedCount)
+              }
+            })
+          } else {
+            processed++
+            if (processed === workflows.length) {
+              resolve(archivedCount)
+            }
+          }
+        }
+      })
+    })
+  }
+
+  /**
+   * Mark workflows as deleted from n8n if they're no longer found (legacy method)
    */
   private async archiveDeletedWorkflows(
     db: Database,

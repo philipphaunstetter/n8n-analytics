@@ -15,6 +15,7 @@ import {
   ArrowPathIcon,
   ArchiveBoxIcon
 } from '@heroicons/react/24/outline'
+import { Provider } from '@/types'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/table'
 import { Badge } from '@/components/badge'
 import { Button } from '@/components/button'
@@ -49,13 +50,28 @@ interface Workflow {
 
 function WorkflowsContent() {
   const [workflows, setWorkflows] = useState<Workflow[]>([])
+  const [providers, setProviders] = useState<Provider[]>([])
   const [loading, setLoading] = useState(true)
   const [syncing, setSyncing] = useState(false)
   const [backing, setBacking] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive' | 'archived'>('all')
+  const [providerFilter, setProviderFilter] = useState<string>('all')
   const router = useRouter()
+
+  useEffect(() => {
+    fetchProviders()
+  }, [])
+
+  const fetchProviders = async () => {
+    try {
+      const response = await apiClient.get<{ data: Provider[] }>('/providers')
+      setProviders(response.data)
+    } catch (error) {
+      console.error('Failed to fetch providers:', error)
+    }
+  }
 
   const fetchWorkflows = useCallback(async () => {
     try {
@@ -71,6 +87,9 @@ function WorkflowsContent() {
           params.append('isArchived', 'true')
         }
       }
+      if (providerFilter !== 'all') {
+        params.append('providerId', providerFilter)
+      }
       
       const response = await apiClient.get<{ data: { items: Workflow[] } }>(`/workflows?${params}`)
       setWorkflows(response.data.items)
@@ -81,7 +100,7 @@ function WorkflowsContent() {
     } finally {
       setLoading(false)
     }
-  }, [statusFilter])
+  }, [statusFilter, providerFilter])
 
   useEffect(() => {
     fetchWorkflows()
@@ -211,6 +230,23 @@ function WorkflowsContent() {
       {/* Filters */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-4">
         <div>
+          <label htmlFor="provider" className="block text-sm font-medium text-gray-700 mb-1">
+            n8n Instance
+          </label>
+          <Select 
+            value={providerFilter} 
+            onChange={(e) => setProviderFilter(e.target.value)}
+          >
+            <option value="all">All instances</option>
+            {providers.map(provider => (
+              <option key={provider.id} value={provider.id}>
+                {provider.name}
+              </option>
+            ))}
+          </Select>
+        </div>
+
+        <div>
           <label htmlFor="search" className="block text-sm font-medium text-gray-700 mb-1">
             Search
           </label>
@@ -245,7 +281,7 @@ function WorkflowsContent() {
         <div className="flex items-end">
           <Button outline className="flex items-center space-x-2">
             <FunnelIcon className="h-4 w-4" />
-            <span>More Filters</span>
+            <span>More</span>
           </Button>
         </div>
       </div>
@@ -268,6 +304,7 @@ function WorkflowsContent() {
           <TableHead>
             <TableRow>
               <TableHeader>Status</TableHeader>
+              <TableHeader>Instance</TableHeader>
               <TableHeader>Name</TableHeader>
               <TableHeader>Tags</TableHeader>
               <TableHeader>Last Execution</TableHeader>
@@ -281,7 +318,7 @@ function WorkflowsContent() {
               // Loading rows
               Array.from({ length: 5 }).map((_, i) => (
                 <TableRow key={i}>
-                  <TableCell colSpan={7}>
+                  <TableCell colSpan={8}>
                     <div className="animate-pulse flex space-x-4 py-4">
                       <div className="rounded-full bg-gray-300 h-6 w-6"></div>
                       <div className="flex-1 space-y-2">
@@ -294,7 +331,7 @@ function WorkflowsContent() {
               ))
             ) : filteredWorkflows.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center py-8 text-gray-500">
+                <TableCell colSpan={8} className="text-center py-8 text-gray-500">
                   {workflows.length === 0 
                     ? 'No workflows found'
                     : 'No workflows match your search criteria'
@@ -302,30 +339,41 @@ function WorkflowsContent() {
                 </TableCell>
               </TableRow>
             ) : (
-              filteredWorkflows.map((workflow) => (
-                <TableRow 
-                  key={workflow.id}
-                  className="hover:bg-gray-50 cursor-pointer"
-                  onClick={() => router.push(`/workflows/${workflow.id}`)}
-                >
-                  <TableCell>
-                    <Badge 
-                      color={workflow.isActive ? 'green' : (workflow.isArchived ?? false) ? 'orange' : 'zinc'} 
-                      className="flex items-center space-x-1"
-                    >
-                      {workflow.isActive ? (
-                        <CheckCircleIcon className="h-3 w-3" />
-                      ) : (workflow.isArchived ?? false) ? (
-                        <ArchiveBoxIcon className="h-3 w-3" />
+              filteredWorkflows.map((workflow) => {
+                const provider = providers.find(p => p.id === workflow.providerId)
+                return (
+                  <TableRow 
+                    key={workflow.id}
+                    className="hover:bg-gray-50 cursor-pointer"
+                    onClick={() => router.push(`/workflows/${workflow.id}`)}
+                  >
+                    <TableCell>
+                      <Badge 
+                        color={workflow.isActive ? 'green' : (workflow.isArchived ?? false) ? 'orange' : 'zinc'} 
+                        className="flex items-center space-x-1"
+                      >
+                        {workflow.isActive ? (
+                          <CheckCircleIcon className="h-3 w-3" />
+                        ) : (workflow.isArchived ?? false) ? (
+                          <ArchiveBoxIcon className="h-3 w-3" />
+                        ) : (
+                          <ClockIcon className="h-3 w-3" />
+                        )}
+                        <span>
+                          {workflow.isActive ? 'Active' : (workflow.isArchived ?? false) ? 'Archived' : 'Inactive'}
+                        </span>
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      {provider ? (
+                        <Badge color="zinc" className="text-xs">
+                          {provider.name}
+                        </Badge>
                       ) : (
-                        <ClockIcon className="h-3 w-3" />
+                        <span className="text-xs text-gray-400">Unknown</span>
                       )}
-                      <span>
-                        {workflow.isActive ? 'Active' : (workflow.isArchived ?? false) ? 'Archived' : 'Inactive'}
-                      </span>
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
+                    </TableCell>
+                    <TableCell>
                     <div className="flex flex-col">
                       <span 
                         className="font-medium text-gray-900 truncate max-w-xs" 
@@ -384,7 +432,8 @@ function WorkflowsContent() {
                     </Button>
                   </TableCell>
                 </TableRow>
-              ))
+                )
+              })
             )}
           </TableBody>
         </Table>

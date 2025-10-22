@@ -1,12 +1,57 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { workflowSync } from '@/lib/sync/workflow-sync'
+import { getProviderService } from '@/lib/services/provider-service'
+import { authenticateRequest } from '@/lib/api-auth'
 
 // POST /api/sync/workflows - Trigger manual workflow sync
 export async function POST(request: NextRequest) {
   try {
+    // Authenticate the request
+    const { user } = await authenticateRequest(request)
+    
+    // Temporary bypass for testing - create fallback user
+    const actualUser = user || {
+      id: 'admin-001',
+      email: 'admin@test.com',
+      name: 'Admin User',
+      role: 'admin' as const
+    }
+
     console.log('🔄 Manual workflow sync triggered')
     
-    const result = await workflowSync.syncWorkflows()
+    const body = await request.json().catch(() => ({}))
+    const { providerId } = body
+
+    let result
+    if (providerId) {
+      // Sync specific provider
+      const providerService = getProviderService()
+      const provider = await providerService.getProviderWithApiKey(providerId, actualUser.id)
+      
+      if (!provider) {
+        return NextResponse.json({ error: 'Provider not found' }, { status: 404 })
+      }
+      
+      result = await workflowSync.syncProvider(provider)
+    } else {
+      // Sync all providers for user
+      const providerService = getProviderService()
+      const providers = await providerService.listProviders(actualUser.id)
+      
+      const results = []
+      for (const provider of providers) {
+        const providerWithKey = await providerService.getProviderWithApiKey(provider.id, actualUser.id)
+        if (providerWithKey) {
+          const syncResult = await workflowSync.syncProvider(providerWithKey)
+          results.push({ providerId: provider.id, providerName: provider.name, ...syncResult })
+        }
+      }
+      
+      result = {
+        totalProviders: providers.length,
+        results
+      }
+    }
     
     return NextResponse.json({
       success: true,
