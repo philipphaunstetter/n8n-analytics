@@ -1,6 +1,11 @@
 import { Database } from 'sqlite3'
 import { ConfigManager } from '@/lib/config/config-manager'
 import { n8nApi, N8nWorkflow } from '@/lib/n8n-api'
+import crypto from 'crypto'
+
+// Encryption settings (must match provider-service.ts)
+const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || 'elova-default-encryption-key-change-me'
+const ALGORITHM = 'aes-256-gcm'
 
 interface Provider {
   id: string
@@ -19,6 +24,30 @@ export class WorkflowSyncService {
     const dbPath = ConfigManager.getDefaultDatabasePath()
     console.log('🔍 Using database path:', dbPath)
     return new Database(dbPath)
+  }
+
+  /**
+   * Decrypt API key from storage
+   */
+  private decryptApiKey(encryptedData: string): string {
+    try {
+      const [ivHex, authTagHex, encrypted] = encryptedData.split(':')
+      
+      const key = crypto.scryptSync(ENCRYPTION_KEY, 'salt', 32)
+      const iv = Buffer.from(ivHex, 'hex')
+      const authTag = Buffer.from(authTagHex, 'hex')
+      
+      const decipher = crypto.createDecipheriv(ALGORITHM, key, iv)
+      decipher.setAuthTag(authTag)
+      
+      let decrypted = decipher.update(encrypted, 'hex', 'utf8')
+      decrypted += decipher.final('utf8')
+      
+      return decrypted
+    } catch (error) {
+      console.error('Decryption error:', error)
+      throw new Error('Failed to decrypt API key')
+    }
   }
 
   /**
@@ -58,12 +87,20 @@ export class WorkflowSyncService {
       
       // Process all providers concurrently (with error isolation)
       const results = await Promise.allSettled(
-        providers.map(provider => this.syncProvider({
-          id: provider.id,
-          name: provider.name,
-          baseUrl: provider.base_url,
-          apiKey: provider.api_key_encrypted
-        }))
+        providers.map(provider => {
+          try {
+            const decryptedApiKey = this.decryptApiKey(provider.api_key_encrypted)
+            return this.syncProvider({
+              id: provider.id,
+              name: provider.name,
+              baseUrl: provider.base_url,
+              apiKey: decryptedApiKey
+            })
+          } catch (error) {
+            console.error(`Failed to decrypt API key for provider ${provider.name}:`, error)
+            return Promise.reject(new Error(`Failed to decrypt API key for ${provider.name}`))
+          }
+        })
       )
       
       // Log results

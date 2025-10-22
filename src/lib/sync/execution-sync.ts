@@ -3,6 +3,11 @@ import type { N8nExecution, N8nWorkflow } from '@/lib/n8n-api'
 import { Database } from 'sqlite3'
 import { ConfigManager, getConfigManager } from '@/lib/config/config-manager'
 import path from 'path'
+import crypto from 'crypto'
+
+// Encryption settings (must match provider-service.ts)
+const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || 'elova-default-encryption-key-change-me'
+const ALGORITHM = 'aes-256-gcm'
 
 // SQLite database for execution storage
 let db: Database | null = null
@@ -114,6 +119,30 @@ export class ExecutionSyncService {
   private readonly MAX_RETRIES = 3
   
   /**
+   * Decrypt API key from storage
+   */
+  private decryptApiKey(encryptedData: string): string {
+    try {
+      const [ivHex, authTagHex, encrypted] = encryptedData.split(':')
+      
+      const key = crypto.scryptSync(ENCRYPTION_KEY, 'salt', 32)
+      const iv = Buffer.from(ivHex, 'hex')
+      const authTag = Buffer.from(authTagHex, 'hex')
+      
+      const decipher = crypto.createDecipheriv(ALGORITHM, key, iv)
+      decipher.setAuthTag(authTag)
+      
+      let decrypted = decipher.update(encrypted, 'hex', 'utf8')
+      decrypted += decipher.final('utf8')
+      
+      return decrypted
+    } catch (error) {
+      console.error('Decryption error:', error)
+      throw new Error('Failed to decrypt API key')
+    }
+  }
+  
+  /**
    * Sync executions from all active providers
    */
   async syncAllProviders(options: SyncOptions = {}) {
@@ -141,8 +170,20 @@ export class ExecutionSyncService {
       console.log(`📡 Found ${providers.length} active providers to sync`)
       
       // Process all providers concurrently (with error isolation)
+      // Decrypt API keys before passing to syncProvider
       const results = await Promise.allSettled(
-        providers.map(provider => this.syncProvider(provider, options))
+        providers.map(provider => {
+          try {
+            const decryptedProvider = {
+              ...provider,
+              api_key_encrypted: this.decryptApiKey(provider.api_key_encrypted)
+            }
+            return this.syncProvider(decryptedProvider, options)
+          } catch (error) {
+            console.error(`Failed to decrypt API key for provider ${provider.name}:`, error)
+            return Promise.reject(new Error(`Failed to decrypt API key for ${provider.name}`))
+          }
+        })
       )
       
       // Log results
