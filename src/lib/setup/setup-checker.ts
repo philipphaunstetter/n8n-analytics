@@ -205,18 +205,14 @@ export class SetupChecker {
 
   private async areIntegrationsSetup(): Promise<boolean> {
     try {
-      // Check if at least one integration is configured
-      const n8nApiKey = await configProvider.get<string>('integrations.n8n.api_key')
-      const n8nUrl = await configProvider.get<string>('integrations.n8n.url')
-      
-      // Integrations are optional, so we'll consider this step complete if:
-      // 1. n8n integration is configured (both URL and key), OR
-      // 2. User has explicitly marked integrations as skipped, OR
-      // 3. Setup is marked as complete (integrations are optional)
-      const integrationsSkipped = await configProvider.get<string>('setup.integrations_skipped')
+      // With multi-provider architecture, integrations are now managed through
+      // the providers page, not during setup. This step is always considered complete
+      // once onboarding finishes. Users add n8n instances via /providers page.
+      const onboardingCompleted = await configProvider.get<string>('app.onboarding_completed')
       const setupComplete = await this.isSetupComplete()
       
-      return Boolean(n8nApiKey && n8nUrl) || integrationsSkipped === 'true' || setupComplete
+      // Integrations are optional during setup - they're added later via providers page
+      return onboardingCompleted === 'true' || setupComplete
     } catch (error) {
       return false
     }
