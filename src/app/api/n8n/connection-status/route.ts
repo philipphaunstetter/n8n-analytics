@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Check status of all providers
-    const connectedProviders = providers.filter(p => p.is_connected && p.status === 'healthy')
+    const connectedProviders = providers.filter(p => p.isConnected && p.status === 'healthy')
     const totalWorkflows = providers.reduce((sum, p) => sum + ((p.metadata as any)?.workflowCount || 0), 0)
     
     if (connectedProviders.length === 0) {
