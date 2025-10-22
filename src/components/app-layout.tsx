@@ -38,7 +38,6 @@ const navigation = [
   { name: 'Analytics', href: '/analytics', icon: AnalyticsIcon, current: false },
   { name: 'Monitors', href: '/monitors', icon: MonitorsIcon, current: false },
   { name: 'History', href: '/history', icon: HistoryIcon, current: false },
-  { name: 'Settings', href: '/settings', icon: SettingsIcon, current: false },
 ]
 
 function AppSidebar() {
@@ -99,10 +98,6 @@ function UserProfileSection() {
         <DropdownItem href="/profile">
           <ProfileIcon />
           My Profile
-        </DropdownItem>
-        <DropdownItem href="/settings">
-          <ToolsIcon />
-          Settings
         </DropdownItem>
         <DropdownItem
           onClick={async () => {

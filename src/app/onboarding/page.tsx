@@ -10,17 +10,10 @@ import { ChartPieIcon } from '@heroicons/react/24/outline'
 
 const ONBOARDING_STEPS: OnboardingStep[] = [
   {
-    id: 'n8n-integration',
-    name: 'n8n Integration',
-    description: 'Connect to your n8n instance',
-    status: 'current',
-    required: true
-  },
-  {
     id: 'regional-settings',
     name: 'Regional Settings',
     description: 'Configure timezone settings',
-    status: 'upcoming',
+    status: 'current',
     required: true
   },
   {
@@ -57,7 +50,7 @@ interface OnboardingData {
 
 export default function OnboardingPage() {
   const router = useRouter()
-  const [currentStep, setCurrentStep] = useState('n8n-integration')
+  const [currentStep, setCurrentStep] = useState('regional-settings')
   const [steps, setSteps] = useState<OnboardingStep[]>(ONBOARDING_STEPS)
   const [onboardingData, setOnboardingData] = useState<OnboardingData>({})
   const [loading, setLoading] = useState(false)
@@ -85,9 +78,6 @@ export default function OnboardingPage() {
 
   const updateStepStatuses = (data: OnboardingData) => {
     setSteps(prev => prev.map(step => {
-      if (step.id === 'n8n-integration' && data.n8nIntegration) {
-        return { ...step, status: 'complete' as const }
-      }
       if (step.id === 'regional-settings' && data.regionalSettings) {
         return { ...step, status: 'complete' as const }
       }
@@ -177,17 +167,13 @@ export default function OnboardingPage() {
         throw new Error('Failed to complete onboarding')
       }
 
-      // Redirect to dashboard
-      router.push('/dashboard')
+      // Redirect to providers page to add n8n instances
+      router.push('/providers')
       
     } catch (error) {
       console.error('Failed to complete onboarding:', error)
       setLoading(false)
     }
-  }
-
-  const handleN8NIntegration = async (data: { url: string; apiKey: string }) => {
-    await saveStepData('n8n-integration', data)
   }
 
   const handleRegionalSettings = async (data: { timezone: string }) => {
@@ -205,21 +191,11 @@ export default function OnboardingPage() {
 
   const renderCurrentStep = () => {
     switch (currentStep) {
-      case 'n8n-integration':
-        return (
-          <N8NIntegrationStep
-            initialData={onboardingData.n8nIntegration}
-            onNext={handleN8NIntegration}
-            loading={loading}
-          />
-        )
-      
       case 'regional-settings':
         return (
           <BasicSettingsStep
             initialData={onboardingData.regionalSettings}
             onNext={handleRegionalSettings}
-            onBack={() => setCurrentStep('n8n-integration')}
             loading={loading}
           />
         )
@@ -241,8 +217,11 @@ export default function OnboardingPage() {
             <div className="mb-6">
               <ChartPieIcon className="h-16 w-16 text-green-500 mx-auto mb-4" />
               <h2 className="text-3xl font-bold text-gray-900 mb-2">Setup Complete!</h2>
-              <p className="text-xl text-gray-600">
-                Elova is now configured and ready to monitor your n8n workflows.
+              <p className="text-xl text-gray-600 mb-4">
+                Your basic configuration is complete. Now let's connect your n8n instances.
+              </p>
+              <p className="text-base text-gray-500">
+                You'll be redirected to the n8n Instances page where you can add one or more n8n instances to monitor.
               </p>
             </div>
             
@@ -252,7 +231,7 @@ export default function OnboardingPage() {
                 disabled={loading}
                 className="w-full px-6 py-3 bg-indigo-600 text-white text-lg rounded-lg hover:bg-indigo-700 disabled:opacity-50"
               >
-                {loading ? 'Finalizing...' : 'Go to Dashboard'}
+                {loading ? 'Finalizing...' : 'Continue to Add n8n Instances'}
               </button>
             </div>
           </div>
