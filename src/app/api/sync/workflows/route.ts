@@ -34,23 +34,8 @@ export async function POST(request: NextRequest) {
       
       result = await workflowSync.syncProvider(provider)
     } else {
-      // Sync all providers for user
-      const providerService = getProviderService()
-      const providers = await providerService.listProviders(actualUser.id)
-      
-      const results = []
-      for (const provider of providers) {
-        const providerWithKey = await providerService.getProviderWithApiKey(provider.id, actualUser.id)
-        if (providerWithKey) {
-          const syncResult = await workflowSync.syncProvider(providerWithKey)
-          results.push({ providerId: provider.id, providerName: provider.name, ...syncResult })
-        }
-      }
-      
-      result = {
-        totalProviders: providers.length,
-        results
-      }
+      // Sync all active providers
+      result = await workflowSync.syncAllProviders()
     }
     
     return NextResponse.json({

@@ -2,11 +2,87 @@ import { Database } from 'sqlite3'
 import { ConfigManager } from '@/lib/config/config-manager'
 import { n8nApi, N8nWorkflow } from '@/lib/n8n-api'
 
+interface Provider {
+  id: string
+  user_id: string
+  name: string
+  base_url: string
+  api_key_encrypted: string
+  is_connected: boolean
+  status: string
+  last_checked_at?: string
+  metadata?: any
+}
+
 export class WorkflowSyncService {
   private getSQLiteClient(): Database {
     const dbPath = ConfigManager.getDefaultDatabasePath()
     console.log('🔍 Using database path:', dbPath)
     return new Database(dbPath)
+  }
+
+  /**
+   * Sync workflows from all active providers
+   */
+  async syncAllProviders(): Promise<{
+    success: boolean
+    providers: number
+    successful: number
+    failed: number
+    results: PromiseSettledResult<any>[]
+  }> {
+    console.log('🔄 Starting multi-provider workflow sync...')
+    
+    try {
+      // Get all active providers
+      const db = this.getSQLiteClient()
+      const providers = await new Promise<Provider[]>((resolve, reject) => {
+        db.all(
+          'SELECT * FROM providers WHERE is_connected = 1 AND status = ?',
+          ['healthy'],
+          (err, rows: Provider[]) => {
+            if (err) reject(err)
+            else resolve(rows || [])
+          }
+        )
+      })
+      
+      db.close()
+      
+      if (providers.length === 0) {
+        console.log('ℹ️ No active providers found')
+        return { success: true, providers: 0, successful: 0, failed: 0, results: [] }
+      }
+      
+      console.log(`📡 Found ${providers.length} active providers to sync`)
+      
+      // Process all providers concurrently (with error isolation)
+      const results = await Promise.allSettled(
+        providers.map(provider => this.syncProvider({
+          id: provider.id,
+          name: provider.name,
+          baseUrl: provider.base_url,
+          apiKey: provider.api_key_encrypted
+        }))
+      )
+      
+      // Log results
+      const successful = results.filter(r => r.status === 'fulfilled').length
+      const failed = results.filter(r => r.status === 'rejected').length
+      
+      console.log(`✅ Workflow sync completed: ${successful} successful, ${failed} failed`)
+      
+      return {
+        success: true,
+        providers: providers.length,
+        successful,
+        failed,
+        results
+      }
+    } catch (error) {
+      console.error('❌ Multi-provider workflow sync failed:', error)
+      throw error
+    }
   }
 
   /**
@@ -45,7 +121,7 @@ export class WorkflowSyncService {
 
       const data = await response.json()
       const n8nWorkflows = data.data || []
-      const n8nWorkflowIds = new Set(n8nWorkflows.map((w: any) => w.id))
+      const n8nWorkflowIds = new Set<string>(n8nWorkflows.map((w: any) => String(w.id)))
       
       console.log(`📡 Found ${n8nWorkflows.length} workflows in ${provider.name}`)
 

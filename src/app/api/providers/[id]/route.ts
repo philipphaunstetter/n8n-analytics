@@ -5,7 +5,7 @@ import { getProviderService } from '@/lib/services/provider-service'
 // GET /api/providers/[id] - Get a specific provider
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { user, error: authError } = await authenticateRequest(request)
@@ -14,8 +14,9 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    const { id } = await params
     const providerService = getProviderService()
-    const provider = await providerService.getProvider(params.id, user.id)
+    const provider = await providerService.getProvider(id, user.id)
 
     if (!provider) {
       return NextResponse.json(
@@ -46,7 +47,7 @@ export async function GET(
 // PUT /api/providers/[id] - Update a provider
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { user, error: authError } = await authenticateRequest(request)
@@ -55,6 +56,7 @@ export async function PUT(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    const { id } = await params
     const body = await request.json()
     const { name, baseUrl, apiKey, metadata } = body
 
@@ -117,7 +119,7 @@ export async function PUT(
     
     // If credentials changed, test connection
     if (updateData.baseUrl || updateData.apiKey) {
-      const provider = await providerService.getProviderWithApiKey(params.id, user.id)
+      const provider = await providerService.getProviderWithApiKey(id, user.id)
       if (!provider) {
         return NextResponse.json(
           { 
@@ -144,7 +146,7 @@ export async function PUT(
 
       // Update connection status
       await providerService.updateConnectionStatus(
-        params.id,
+        id,
         user.id,
         true,
         'healthy',
@@ -153,7 +155,7 @@ export async function PUT(
     }
 
     const updatedProvider = await providerService.updateProvider(
-      params.id,
+      id,
       user.id,
       updateData
     )
@@ -178,7 +180,7 @@ export async function PUT(
 // DELETE /api/providers/[id] - Delete a provider
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { user, error: authError } = await authenticateRequest(request)
@@ -187,10 +189,11 @@ export async function DELETE(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    const { id } = await params
     const providerService = getProviderService()
     
     // Check if provider exists
-    const provider = await providerService.getProvider(params.id, user.id)
+    const provider = await providerService.getProvider(id, user.id)
     if (!provider) {
       return NextResponse.json(
         { 
@@ -201,7 +204,7 @@ export async function DELETE(
       )
     }
 
-    await providerService.deleteProvider(params.id, user.id)
+    await providerService.deleteProvider(id, user.id)
 
     return NextResponse.json({
       success: true,

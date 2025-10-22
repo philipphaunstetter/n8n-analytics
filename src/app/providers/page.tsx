@@ -281,11 +281,11 @@ function ProvidersContent() {
                   <p className="mt-1 text-xs text-gray-500">
                     Last checked: {formatDate(provider.lastChecked)}
                   </p>
-                  {provider.metadata?.version && (
+                  {provider.metadata?.version && typeof provider.metadata.version === 'string' ? (
                     <p className="mt-1 text-xs text-gray-500">
                       Version: {provider.metadata.version}
                     </p>
-                  )}
+                  ) : null}
                 </div>
                 <div className="flex items-center space-x-2">
                   <Button

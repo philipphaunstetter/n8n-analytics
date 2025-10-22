@@ -35,7 +35,6 @@ export async function migrateToProviders(userId: string = 'default-user'): Promi
     }
 
     // Get old n8n configuration
-    await configManager.initialize()
     const n8nUrl = await configManager.get('integrations.n8n.url')
     const n8nApiKey = await configManager.get('integrations.n8n.api_key')
 
@@ -153,7 +152,6 @@ export async function checkMigrationNeeded(userId: string = 'default-user'): Pro
     }
 
     // Check if old config exists
-    await configManager.initialize()
     const n8nUrl = await configManager.get('integrations.n8n.url')
     const n8nApiKey = await configManager.get('integrations.n8n.api_key')
 

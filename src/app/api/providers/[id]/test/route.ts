@@ -5,7 +5,7 @@ import { getProviderService } from '@/lib/services/provider-service'
 // POST /api/providers/[id]/test - Test connection to a provider
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { user, error: authError } = await authenticateRequest(request)
@@ -14,10 +14,11 @@ export async function POST(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    const { id } = await params
     const providerService = getProviderService()
     
     // Get provider with API key
-    const provider = await providerService.getProviderWithApiKey(params.id, user.id)
+    const provider = await providerService.getProviderWithApiKey(id, user.id)
     
     if (!provider) {
       return NextResponse.json(
@@ -34,7 +35,7 @@ export async function POST(
 
     // Update provider status
     await providerService.updateConnectionStatus(
-      params.id,
+      id,
       user.id,
       result.success,
       result.success ? 'healthy' : 'error',
