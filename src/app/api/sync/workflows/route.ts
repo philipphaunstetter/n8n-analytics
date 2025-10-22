@@ -17,7 +17,17 @@ export async function POST(request: NextRequest) {
       role: 'admin' as const
     }
 
-    console.log('🔄 Manual workflow sync triggered')
+    console.log('🔄 Manual workflow sync triggered for user:', actualUser.id)
+    
+    // First, check if any providers exist
+    const providerService = getProviderService()
+    const allProviders = await providerService.listProviders(actualUser.id)
+    console.log(`📊 Total providers for user: ${allProviders.length}`)
+    if (allProviders.length > 0) {
+      allProviders.forEach(p => {
+        console.log(`  - Provider: ${p.name}, connected: ${p.isConnected}, status: ${p.status}`)
+      })
+    }
     
     const body = await request.json().catch(() => ({}))
     const { providerId } = body
@@ -25,7 +35,7 @@ export async function POST(request: NextRequest) {
     let result
     if (providerId) {
       // Sync specific provider
-      const providerService = getProviderService()
+      console.log(`🎯 Syncing specific provider: ${providerId}`)
       const provider = await providerService.getProviderWithApiKey(providerId, actualUser.id)
       
       if (!provider) {
@@ -35,7 +45,9 @@ export async function POST(request: NextRequest) {
       result = await workflowSync.syncProvider(provider)
     } else {
       // Sync all active providers
+      console.log('🌐 Syncing all active and healthy providers')
       result = await workflowSync.syncAllProviders()
+      console.log(`📈 Sync result:`, JSON.stringify(result, null, 2))
     }
     
     return NextResponse.json({
