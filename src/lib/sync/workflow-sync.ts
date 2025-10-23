@@ -310,6 +310,9 @@ export class WorkflowSyncService {
           tags: n8nWorkflow.tags || []
         }
 
+        // Extract cron schedules from workflow nodes
+        const cronSchedules = this.extractCronSchedules(n8nWorkflow)
+
         const now = new Date().toISOString()
         const n8nUpdatedAt = new Date(n8nWorkflow.updatedAt)
 
@@ -320,8 +323,8 @@ export class WorkflowSyncService {
           db.run(`
             INSERT INTO workflows (
               id, provider_id, provider_workflow_id, name, is_active,
-              tags, node_count, workflow_data, created_at, updated_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+              tags, node_count, workflow_data, cron_schedules, created_at, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
           `, [
             workflowId,
             providerId,
@@ -331,6 +334,7 @@ export class WorkflowSyncService {
             JSON.stringify(n8nWorkflow.tags || []),
             n8nWorkflow.nodes?.length || 0,
             JSON.stringify(workflowData),
+            JSON.stringify(cronSchedules),
             n8nWorkflow.createdAt || now,
             n8nWorkflow.updatedAt || now
           ], (err) => {
@@ -379,7 +383,7 @@ export class WorkflowSyncService {
           db.run(`
             UPDATE workflows SET
               name = ?, is_active = ?, tags = ?, node_count = ?,
-              workflow_data = ?, updated_at = ?
+              workflow_data = ?, cron_schedules = ?, updated_at = ?
             WHERE id = ?
           `, [
             n8nWorkflow.name,
@@ -387,6 +391,7 @@ export class WorkflowSyncService {
             JSON.stringify(n8nWorkflow.tags || []),
             n8nWorkflow.nodes?.length || 0,
             JSON.stringify(workflowData),
+            JSON.stringify(cronSchedules),
             n8nWorkflow.updatedAt || now,
             existing.id
           ], (err) => {
@@ -581,6 +586,59 @@ export class WorkflowSyncService {
     // Note: backup_enabled column doesn't exist in current schema
     // This is a placeholder for future implementation
     console.log(`💾 Backup toggle requested for workflow ${workflowId}: ${backupEnabled}`)
+  }
+
+  /**
+   * Extract cron schedules from workflow nodes
+   */
+  private extractCronSchedules(n8nWorkflow: N8nWorkflow): Array<{
+    nodeName: string
+    nodeType: string
+    cronExpression: string
+  }> {
+    const schedules: Array<{
+      nodeName: string
+      nodeType: string
+      cronExpression: string
+    }> = []
+
+    const nodes = n8nWorkflow.nodes || []
+    
+    for (const node of nodes) {
+      // Check for Schedule Trigger nodes
+      if (node.type === 'n8n-nodes-base.scheduleTrigger') {
+        const params = node.parameters || {}
+        const rule = params.rule as any
+        
+        // Check if it's using cron mode
+        if (rule?.interval?.[0]?.field === 'cronExpression') {
+          const cronExpression = rule.interval[0]?.expression
+          if (cronExpression) {
+            schedules.push({
+              nodeName: node.name,
+              nodeType: 'Schedule Trigger',
+              cronExpression
+            })
+          }
+        }
+      }
+      
+      // Check for Cron nodes
+      if (node.type === 'n8n-nodes-base.cron') {
+        const params = node.parameters || {}
+        const cronExpression = params.cronExpression as string
+        
+        if (cronExpression) {
+          schedules.push({
+            nodeName: node.name,
+            nodeType: 'Cron',
+            cronExpression
+          })
+        }
+      }
+    }
+
+    return schedules
   }
 
   private async ensureDefaultProvider(db: Database): Promise<string> {

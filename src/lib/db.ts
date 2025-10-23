@@ -31,6 +31,7 @@ function ensureSchema(database: Database) {
         tags TEXT DEFAULT '[]',
         node_count INTEGER DEFAULT 0,
         workflow_data TEXT,
+        cron_schedules TEXT DEFAULT '[]',
         created_at TEXT DEFAULT CURRENT_TIMESTAMP,
         updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (provider_id) REFERENCES providers (id) ON DELETE CASCADE
