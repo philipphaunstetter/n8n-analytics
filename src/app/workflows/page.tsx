@@ -170,13 +170,20 @@ function WorkflowsContent() {
     )
   })
 
-  const formatDate = (date: Date) => {
-    return new Intl.DateTimeFormat('en-US', {
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    }).format(new Date(date))
+  const formatDate = (date: Date | string | undefined | null) => {
+    if (!date) return 'Never'
+    try {
+      const dateObj = typeof date === 'string' ? new Date(date) : date
+      return new Intl.DateTimeFormat('en-US', {
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      }).format(dateObj)
+    } catch (error) {
+      console.error('Failed to format date:', date, error)
+      return 'Invalid date'
+    }
   }
 
   if (error) {
