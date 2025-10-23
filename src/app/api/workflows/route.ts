@@ -94,9 +94,9 @@ export async function GET(request: NextRequest) {
           isActive: Boolean(dbWorkflow.is_active),
           isArchived: isArchived,
           tags,
-          createdAt: new Date(dbWorkflow.created_at),
-          updatedAt: new Date(dbWorkflow.updated_at),
-          lastExecutedAt: dbWorkflow.last_executed_at ? new Date(dbWorkflow.last_executed_at) : undefined,
+          createdAt: dbWorkflow.created_at, // Keep as ISO string from database
+          updatedAt: dbWorkflow.updated_at, // Keep as ISO string from database
+          lastExecutedAt: dbWorkflow.last_executed_at || undefined, // Keep as ISO string from database
           totalExecutions: parseInt(dbWorkflow.total_executions) || 0,
           successCount: parseInt(dbWorkflow.success_count) || 0,
           failureCount: parseInt(dbWorkflow.failure_count) || 0,
