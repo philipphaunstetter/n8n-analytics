@@ -77,6 +77,10 @@ export async function GET(request: NextRequest) {
         let tags: any[] = []
         try { workflowData = dbWorkflow.workflow_data ? JSON.parse(dbWorkflow.workflow_data) : {} } catch {}
         try { tags = dbWorkflow.tags ? JSON.parse(dbWorkflow.tags) : [] } catch {}
+        // Normalize tags to string[] (n8n returns array of tag objects with id/name/createdAt/updatedAt)
+        const tagNames: string[] = Array.isArray(tags)
+          ? tags.map((t: any) => (typeof t === 'string' ? t : (t?.name ?? ''))).filter(Boolean)
+          : []
         
         const successRate = dbWorkflow.total_executions > 0 
           ? (dbWorkflow.success_count / dbWorkflow.total_executions) * 100
@@ -93,7 +97,7 @@ export async function GET(request: NextRequest) {
           description: '', // n8n workflows don't have descriptions
           isActive: Boolean(dbWorkflow.is_active),
           isArchived: isArchived,
-          tags,
+          tags: tagNames,
           createdAt: dbWorkflow.created_at, // Keep as ISO string from database
           updatedAt: dbWorkflow.updated_at, // Keep as ISO string from database
           lastExecutedAt: dbWorkflow.last_executed_at || undefined, // Keep as ISO string from database
