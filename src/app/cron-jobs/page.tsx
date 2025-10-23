@@ -239,8 +239,6 @@ function CronJobsContent() {
               <TableHeader>Instance</TableHeader>
               <TableHeader>Workflow Name</TableHeader>
               <TableHeader>Cron Schedules</TableHeader>
-              <TableHeader>Last Updated</TableHeader>
-              <TableHeader>Actions</TableHeader>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -248,7 +246,7 @@ function CronJobsContent() {
               // Loading rows
               Array.from({ length: 5 }).map((_, i) => (
                 <TableRow key={i}>
-                  <TableCell colSpan={6}>
+                  <TableCell colSpan={4}>
                     <div className="animate-pulse flex space-x-4 py-4">
                       <div className="rounded-full bg-gray-300 h-6 w-6"></div>
                       <div className="flex-1 space-y-2">
@@ -261,7 +259,7 @@ function CronJobsContent() {
               ))
             ) : cronJobs.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center py-8 text-gray-500">
+                <TableCell colSpan={4} className="text-center py-8 text-gray-500">
                   No workflows with cron schedules found
                 </TableCell>
               </TableRow>
@@ -326,21 +324,6 @@ function CronJobsContent() {
                           </div>
                         ))}
                       </div>
-                    </TableCell>
-                    <TableCell>
-                      {formatDate(job.updatedAt)}
-                    </TableCell>
-                    <TableCell>
-                      <Button 
-                        outline 
-                        className="text-sm px-3 py-1"
-                        onClick={(e: React.MouseEvent) => {
-                          e.stopPropagation()
-                          router.push(`/workflows/${job.workflowId}`)
-                        }}
-                      >
-                        View
-                      </Button>
                     </TableCell>
                   </TableRow>
                 )
