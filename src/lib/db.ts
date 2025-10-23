@@ -33,7 +33,7 @@ function ensureSchema(database: Database) {
         workflow_data TEXT,
         created_at TEXT DEFAULT CURRENT_TIMESTAMP,
         updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (provider_id) REFERENCES providers (id)
+        FOREIGN KEY (provider_id) REFERENCES providers (id) ON DELETE CASCADE
       )
     `)
 
@@ -55,8 +55,8 @@ function ensureSchema(database: Database) {
         metadata TEXT DEFAULT '{}',
         created_at TEXT DEFAULT CURRENT_TIMESTAMP,
         updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (provider_id) REFERENCES providers (id),
-        FOREIGN KEY (workflow_id) REFERENCES workflows (id)
+        FOREIGN KEY (provider_id) REFERENCES providers (id) ON DELETE CASCADE,
+        FOREIGN KEY (workflow_id) REFERENCES workflows (id) ON DELETE CASCADE
       )
     `)
 
@@ -74,7 +74,7 @@ function ensureSchema(database: Database) {
         metadata TEXT DEFAULT '{}',
         last_cursor TEXT,
         created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (provider_id) REFERENCES providers (id)
+        FOREIGN KEY (provider_id) REFERENCES providers (id) ON DELETE CASCADE
       )
     `)
   })

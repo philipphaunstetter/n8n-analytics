@@ -1,51 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { authenticateRequest } from '@/lib/api-auth'
 import { TimeRange, Execution } from '@/types'
-import { n8nApi, N8nExecution, N8nWorkflow } from '@/lib/n8n-api'
+import { getDb } from '@/lib/db'
 import { ExecutionStatus } from '@/types'
 
-// Convert n8n executions to internal format (same as other APIs)
-function convertN8nExecutions(n8nExecutions: N8nExecution[], workflows: N8nWorkflow[]): Execution[] {
-  const workflowMap = new Map(workflows.map(w => [w.id, w]))
-  
-  return n8nExecutions.map(n8nExec => {
-    const workflow = workflowMap.get(n8nExec.workflowId)
-    const startedAt = new Date(n8nExec.startedAt)
-    const stoppedAt = n8nExec.stoppedAt ? new Date(n8nExec.stoppedAt) : undefined
-    const duration = stoppedAt ? stoppedAt.getTime() - startedAt.getTime() : undefined
-    
-    let status: ExecutionStatus = 'unknown'
-    switch (n8nExec.status) {
-      case 'success': status = 'success'; break
-      case 'failed':
-      case 'error':
-      case 'crashed': status = 'error'; break
-      case 'running': status = 'running'; break
-      case 'waiting': status = 'waiting'; break
-      case 'canceled': status = 'canceled'; break
-      case 'new': status = 'waiting'; break
-      default: status = 'unknown'
-    }
-    
-    return {
-      id: n8nExec.id,
-      providerId: 'n8n-main',
-      workflowId: n8nExec.workflowId,
-      providerExecutionId: n8nExec.id,
-      providerWorkflowId: n8nExec.workflowId,
-      status,
-      startedAt,
-      stoppedAt,
-      duration,
-      mode: 'unknown',
-      metadata: {
-        workflowName: workflow?.name || 'Unknown Workflow',
-        n8nWorkflowId: n8nExec.workflowId,
-        finished: n8nExec.finished
-      }
-    }
-  })
-}
 
 // Apply time range filters (same as other APIs)
 function applyTimeRangeFilter(executions: Execution[], timeRange: TimeRange): Execution[] {
@@ -90,18 +48,49 @@ export interface ChartDataPoint {
 /**
  * Aggregate execution data into time series for charts
  */
-async function generateChartData(timeRange: TimeRange): Promise<ChartDataPoint[]> {
+async function generateChartData(userId: string, timeRange: TimeRange): Promise<ChartDataPoint[]> {
   try {
-    // Fetch executions using the same approach as other APIs
-    const [n8nExecutions, n8nWorkflows] = await Promise.all([
-      n8nApi.getExecutions(), // No limit, let filtering handle it
-      n8nApi.getWorkflows()
-    ])
+    const db = getDb()
     
-    // Convert to internal format (same as dashboard stats API)
-    const allExecutions = convertN8nExecutions(n8nExecutions.data, n8nWorkflows)
+    // Fetch executions from database
+    const allExecutions = await new Promise<Execution[]>((resolve, reject) => {
+      db.all(
+        `SELECT e.*, w.name as workflow_name
+         FROM executions e
+         LEFT JOIN workflows w ON e.workflow_id = w.id
+         LEFT JOIN providers p ON e.provider_id = p.id
+         WHERE p.user_id = ?
+         ORDER BY e.started_at DESC`,
+        [userId],
+        (err, rows: any[]) => {
+          if (err) {
+            reject(err)
+            return
+          }
+          
+          const executions: Execution[] = rows.map(row => ({
+            id: row.id,
+            providerId: row.provider_id,
+            workflowId: row.workflow_id,
+            providerExecutionId: row.provider_execution_id,
+            providerWorkflowId: row.provider_workflow_id,
+            status: row.status as ExecutionStatus,
+            mode: row.mode,
+            startedAt: new Date(row.started_at),
+            stoppedAt: row.stopped_at ? new Date(row.stopped_at) : undefined,
+            duration: row.duration,
+            metadata: {
+              workflowName: row.workflow_name || 'Unknown',
+              finished: Boolean(row.finished)
+            }
+          }))
+          
+          resolve(executions)
+        }
+      )
+    })
     
-    // Apply time range filtering (same as dashboard stats API)
+    // Apply time range filtering
     const filteredExecutions = applyTimeRangeFilter(allExecutions, timeRange)
     
     // Determine granularity based on time range
@@ -216,9 +205,9 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Generate chart data from real n8n data
+    // Generate chart data from database
     try {
-      const chartData = await generateChartData(timeRange)
+      const chartData = await generateChartData(user.id, timeRange)
       
       return NextResponse.json({
         success: true,
@@ -227,7 +216,7 @@ export async function GET(request: NextRequest) {
         count: chartData.length
       })
     } catch (error) {
-      console.error('Failed to generate chart data:', error)
+      console.error('Failed to generate chart data from database:', error)
       
       // Fallback to empty chart data
       return NextResponse.json({

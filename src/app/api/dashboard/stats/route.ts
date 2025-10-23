@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { authenticateRequest } from '@/lib/api-auth'
 import { DashboardStats, TimeRange, ExecutionFilters, Execution } from '@/types'
-import { n8nApi, N8nExecution, N8nWorkflow } from '@/lib/n8n-api'
+import { getDb } from '@/lib/db'
 import { ExecutionStatus } from '@/types'
 
 // Helper function to apply filters to executions (copied from executions API)
@@ -52,79 +52,51 @@ function applyExecutionFilters(executions: Execution[], filters: ExecutionFilter
   return filtered
 }
 
-// Convert n8n executions to internal format (copied from executions API)
-function convertN8nExecutions(n8nExecutions: N8nExecution[], workflows: N8nWorkflow[]): Execution[] {
-  // Create workflow lookup map for faster access
-  const workflowMap = new Map(workflows.map(w => [w.id, w]))
-  
-  return n8nExecutions.map(n8nExec => {
-    const workflow = workflowMap.get(n8nExec.workflowId)
-    const startedAt = new Date(n8nExec.startedAt)
-    const stoppedAt = n8nExec.stoppedAt ? new Date(n8nExec.stoppedAt) : undefined
-    const duration = stoppedAt ? stoppedAt.getTime() - startedAt.getTime() : undefined
-    
-    // Map n8n status to our internal status format
-    let status: ExecutionStatus = 'unknown'
-    switch (n8nExec.status) {
-      case 'success':
-        status = 'success'
-        break
-      case 'failed':
-      case 'error':
-      case 'crashed':
-        status = 'error'
-        break
-      case 'running':
-        status = 'running'
-        break
-      case 'waiting':
-        status = 'waiting'
-        break
-      case 'canceled':
-        status = 'canceled'
-        break
-      case 'new':
-        status = 'waiting'
-        break
-      default:
-        status = 'unknown'
-    }
-    
-    const execution: Execution = {
-      id: n8nExec.id,
-      providerId: 'n8n-main',
-      workflowId: n8nExec.workflowId,
-      providerExecutionId: n8nExec.id,
-      providerWorkflowId: n8nExec.workflowId,
-      status,
-      startedAt,
-      stoppedAt,
-      duration,
-      mode: 'unknown', // Simplified for dashboard
-      metadata: {
-        workflowName: workflow?.name || 'Unknown Workflow',
-        n8nWorkflowId: n8nExec.workflowId,
-        finished: n8nExec.finished
-      }
-    }
-    
-    return execution
-  })
-}
 
 /**
- * Fetch dashboard statistics from n8n API
+ * Fetch dashboard statistics from database
  */
-async function fetchN8nDashboardStats(timeRange: TimeRange): Promise<DashboardStats> {
+async function fetchDashboardStatsFromDb(userId: string, timeRange: TimeRange): Promise<DashboardStats> {
   try {
-    // Fetch executions from n8n API using the same approach as executions endpoint
-    const [n8nExecutions, n8nWorkflows] = await Promise.all([
-      n8nApi.getExecutions(), // Remove arbitrary limit, let filtering handle it
-      n8nApi.getWorkflows()
-    ])
+    const db = getDb()
     
-    // Convert n8n executions to our internal format (same as executions API)
-    const allExecutions = convertN8nExecutions(n8nExecutions.data, n8nWorkflows)
+    // Fetch executions from database
+    const allExecutions = await new Promise<Execution[]>((resolve, reject) => {
+      db.all(
+        `SELECT e.*, w.name as workflow_name
+         FROM executions e
+         LEFT JOIN workflows w ON e.workflow_id = w.id
+         LEFT JOIN providers p ON e.provider_id = p.id
+         WHERE p.user_id = ?
+         ORDER BY e.started_at DESC`,
+        [userId],
+        (err, rows: any[]) => {
+          if (err) {
+            reject(err)
+            return
+          }
+          
+          const executions: Execution[] = rows.map(row => ({
+            id: row.id,
+            providerId: row.provider_id,
+            workflowId: row.workflow_id,
+            providerExecutionId: row.provider_execution_id,
+            providerWorkflowId: row.provider_workflow_id,
+            status: row.status as ExecutionStatus,
+            mode: row.mode,
+            startedAt: new Date(row.started_at),
+            stoppedAt: row.stopped_at ? new Date(row.stopped_at) : undefined,
+            duration: row.duration,
+            metadata: {
+              workflowName: row.workflow_name || 'Unknown',
+              finished: Boolean(row.finished)
+            }
+          }))
+          
+          resolve(executions)
+        }
+      )
+    })
     
     // Create filters object using same structure as executions API
     const filters: ExecutionFilters = {
@@ -226,16 +198,16 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Fetch real data from n8n instance
+    // Fetch data from database
     try {
-      const n8nStats = await fetchN8nDashboardStats(timeRange)
+      const stats = await fetchDashboardStatsFromDb(user.id, timeRange)
       
       return NextResponse.json({
         success: true,
-        data: n8nStats
+        data: stats
       })
     } catch (error) {
-      console.error('Failed to fetch n8n data:', error)
+      console.error('Failed to fetch dashboard stats from database:', error)
       
       // Fallback to empty stats
       const emptyStats: DashboardStats = {
