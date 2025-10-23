@@ -38,15 +38,16 @@ function applyExecutionFilters(executions: Execution[], filters: ExecutionFilter
         startDate = new Date(now.getTime() - 24 * 60 * 60 * 1000)
     }
     
-    filtered = filtered.filter(exec => exec.startedAt >= startDate)
+    filtered = filtered.filter(exec => new Date(exec.startedAt as any) >= startDate)
   }
   
   // Filter by custom time range
   if (filters.timeRange === 'custom' && filters.customTimeRange) {
     const { start, end } = filters.customTimeRange
-    filtered = filtered.filter(exec => 
-      exec.startedAt >= start && exec.startedAt <= end
-    )
+    filtered = filtered.filter(exec => {
+      const execDate = new Date(exec.startedAt as any)
+      return execDate >= start && execDate <= end
+    })
   }
   
   return filtered
@@ -84,14 +85,14 @@ async function fetchDashboardStatsFromDb(userId: string, timeRange: TimeRange): 
             providerWorkflowId: row.provider_workflow_id,
             status: row.status as ExecutionStatus,
             mode: row.mode,
-            startedAt: new Date(row.started_at),
-            stoppedAt: row.stopped_at ? new Date(row.stopped_at) : undefined,
+            startedAt: row.started_at, // Keep as ISO string from database
+            stoppedAt: row.stopped_at || undefined, // Keep as ISO string from database
             duration: row.duration,
             metadata: {
               workflowName: row.workflow_name || 'Unknown',
               finished: Boolean(row.finished)
             }
-          }))
+          }) as any)
           
           resolve(executions)
         }
@@ -124,13 +125,13 @@ async function fetchDashboardStatsFromDb(userId: string, timeRange: TimeRange): 
     // Get recent failures
     const recentFailures = filteredExecutions
       .filter(e => e.status === 'error')
-      .sort((a, b) => new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime())
+      .sort((a, b) => new Date(b.startedAt as any).getTime() - new Date(a.startedAt as any).getTime())
       .slice(0, 5)
       .map(execution => ({
         executionId: execution.id,
         workflowName: (execution.metadata?.workflowName as string) || 'Unknown Workflow',
         error: execution.error?.message || 'Execution failed',
-        timestamp: execution.startedAt
+timestamp: execution.startedAt
       }))
 
     // Calculate top workflows by execution count

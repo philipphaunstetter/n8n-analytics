@@ -32,7 +32,7 @@ function applyTimeRangeFilter(executions: Execution[], timeRange: TimeRange): Ex
       startDate = new Date(now.getTime() - 24 * 60 * 60 * 1000)
   }
   
-  return executions.filter(exec => exec.startedAt >= startDate)
+  return executions.filter(exec => new Date(exec.startedAt as any) >= startDate)
 }
 
 export interface ChartDataPoint {
@@ -76,14 +76,14 @@ async function generateChartData(userId: string, timeRange: TimeRange): Promise<
             providerWorkflowId: row.provider_workflow_id,
             status: row.status as ExecutionStatus,
             mode: row.mode,
-            startedAt: new Date(row.started_at),
-            stoppedAt: row.stopped_at ? new Date(row.stopped_at) : undefined,
+            startedAt: row.started_at, // Keep as ISO string from database
+            stoppedAt: row.stopped_at || undefined, // Keep as ISO string from database
             duration: row.duration,
             metadata: {
               workflowName: row.workflow_name || 'Unknown',
               finished: Boolean(row.finished)
             }
-          }))
+          }) as any)
           
           resolve(executions)
         }
@@ -117,7 +117,7 @@ async function generateChartData(userId: string, timeRange: TimeRange): Promise<
     }>()
 
     for (const execution of filteredExecutions) {
-      const executionDate = execution.startedAt // Already a Date object
+      const executionDate = new Date(execution.startedAt as any) // Parse ISO string
       let bucketKey: string
       let bucketDate: Date
 
