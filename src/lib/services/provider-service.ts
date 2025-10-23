@@ -91,11 +91,11 @@ export class ProviderService {
               type: 'n8n' as const,
               baseUrl: row.base_url,
               isConnected: Boolean(row.is_connected),
-              lastChecked: row.last_checked_at ? new Date(row.last_checked_at) : new Date(),
+              lastChecked: row.last_checked_at || new Date().toISOString(),
               status: row.status || 'unknown',
               metadata,
               userId: row.user_id
-            }
+            } as any
           })
 
           resolve(providers)
@@ -134,11 +134,11 @@ export class ProviderService {
             type: 'n8n',
             baseUrl: row.base_url,
             isConnected: Boolean(row.is_connected),
-            lastChecked: row.last_checked_at ? new Date(row.last_checked_at) : new Date(),
+            lastChecked: row.last_checked_at || new Date().toISOString(),
             status: row.status || 'unknown',
             metadata,
             userId: row.user_id
-          }
+          } as any
 
           resolve(provider)
         }
@@ -184,11 +184,11 @@ export class ProviderService {
             baseUrl: row.base_url,
             apiKey,
             isConnected: Boolean(row.is_connected),
-            lastChecked: row.last_checked_at ? new Date(row.last_checked_at) : new Date(),
+            lastChecked: row.last_checked_at || new Date().toISOString(),
             status: row.status || 'unknown',
             metadata,
             userId: row.user_id
-          }
+          } as any
 
           resolve(provider)
         }
