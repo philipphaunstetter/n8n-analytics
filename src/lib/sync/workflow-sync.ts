@@ -590,6 +590,7 @@ export class WorkflowSyncService {
 
   /**
    * Extract cron schedules from workflow nodes
+   * Supports both cron expressions and interval-based schedules
    */
   private extractCronSchedules(n8nWorkflow: N8nWorkflow): Array<{
     nodeName: string
@@ -609,17 +610,39 @@ export class WorkflowSyncService {
       if (node.type === 'n8n-nodes-base.scheduleTrigger') {
         const params = node.parameters || {}
         const rule = params.rule as any
+        const interval = rule?.interval?.[0]
         
-        // Check if it's using cron mode
-        if (rule?.interval?.[0]?.field === 'cronExpression') {
-          const cronExpression = rule.interval[0]?.expression
-          if (cronExpression) {
-            schedules.push({
-              nodeName: node.name,
-              nodeType: 'Schedule Trigger',
-              cronExpression
-            })
-          }
+        if (!interval) continue
+        
+        let scheduleString = ''
+        
+        // Handle different schedule types
+        if (interval.field === 'cronExpression') {
+          // Cron expression mode
+          scheduleString = interval.expression || ''
+        } else if (interval.field === 'seconds') {
+          scheduleString = `Every ${interval.secondsInterval || 30} seconds`
+        } else if (interval.field === 'minutes') {
+          scheduleString = `Every ${interval.minutesInterval || 1} minutes`
+        } else if (interval.field === 'hours') {
+          scheduleString = `Every ${interval.hoursInterval || 1} hours`
+        } else if (interval.field === 'days') {
+          scheduleString = `Every ${interval.daysInterval || 1} days`
+        } else if (interval.field === 'weeks') {
+          scheduleString = `Every ${interval.weeksInterval || 1} weeks`
+        } else if (interval.field === 'months') {
+          scheduleString = `Every ${interval.monthsInterval || 1} months`
+        } else {
+          // Fallback for unknown types
+          scheduleString = `${interval.field}: ${JSON.stringify(interval)}`
+        }
+        
+        if (scheduleString) {
+          schedules.push({
+            nodeName: node.name,
+            nodeType: 'Schedule Trigger',
+            cronExpression: scheduleString
+          })
         }
       }
       
