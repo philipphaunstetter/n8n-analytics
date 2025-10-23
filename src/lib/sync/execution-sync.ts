@@ -119,30 +119,6 @@ export class ExecutionSyncService {
   private readonly MAX_RETRIES = 3
   
   /**
-   * Decrypt API key from storage
-   */
-  private decryptApiKey(encryptedData: string): string {
-    try {
-      const [ivHex, authTagHex, encrypted] = encryptedData.split(':')
-      
-      const key = crypto.scryptSync(ENCRYPTION_KEY, 'salt', 32)
-      const iv = Buffer.from(ivHex, 'hex')
-      const authTag = Buffer.from(authTagHex, 'hex')
-      
-      const decipher = crypto.createDecipheriv(ALGORITHM, key, iv)
-      decipher.setAuthTag(authTag)
-      
-      let decrypted = decipher.update(encrypted, 'hex', 'utf8')
-      decrypted += decipher.final('utf8')
-      
-      return decrypted
-    } catch (error) {
-      console.error('Decryption error:', error)
-      throw new Error('Failed to decrypt API key')
-    }
-  }
-  
-  /**
    * Sync executions from all active providers
    */
   async syncAllProviders(options: SyncOptions = {}) {
@@ -1067,10 +1043,25 @@ export class ExecutionSyncService {
     }
   }
   
-  private async decryptApiKey(encryptedKey: string): Promise<string> {
-    // TODO: Implement proper encryption/decryption
-    // For now, return as-is (assuming base64 or similar)
-    return encryptedKey
+  private decryptApiKey(encryptedData: string): string {
+    try {
+      const [ivHex, authTagHex, encrypted] = encryptedData.split(':')
+      
+      const key = crypto.scryptSync(ENCRYPTION_KEY, 'salt', 32)
+      const iv = Buffer.from(ivHex, 'hex')
+      const authTag = Buffer.from(authTagHex, 'hex')
+      
+      const decipher = crypto.createDecipheriv(ALGORITHM, key, iv)
+      decipher.setAuthTag(authTag)
+      
+      let decrypted = decipher.update(encrypted, 'hex', 'utf8')
+      decrypted += decipher.final('utf8')
+      
+      return decrypted
+    } catch (error) {
+      console.error('Decryption error:', error)
+      throw new Error('Failed to decrypt API key')
+    }
   }
   
   private createN8nClient(baseUrl: string, apiKey: string) {
