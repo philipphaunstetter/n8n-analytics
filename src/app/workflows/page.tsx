@@ -32,9 +32,9 @@ interface Workflow {
   isActive: boolean
   isArchived?: boolean
   tags: string[]
-  createdAt: Date
-  updatedAt: Date
-  lastExecutedAt?: Date
+  createdAt: string | Date  // Accept both for compatibility
+  updatedAt: string | Date  // Accept both for compatibility
+  lastExecutedAt?: string | Date  // Accept both for compatibility
   totalExecutions: number
   successCount: number
   failureCount: number
