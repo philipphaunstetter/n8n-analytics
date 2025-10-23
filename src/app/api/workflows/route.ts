@@ -20,6 +20,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const isActiveFilter = searchParams.get('isActive')
     const isArchivedFilter = searchParams.get('isArchived')
+    const providerIdFilter = searchParams.get('providerId')
 
     const db = getDb()
     
@@ -27,6 +28,11 @@ export async function GET(request: NextRequest) {
       // Build SQL query with filters
       let whereConditions: string[] = []
       let queryParams: any[] = []
+      
+      if (providerIdFilter) {
+        whereConditions.push('w.provider_id = ?')
+        queryParams.push(providerIdFilter)
+      }
       
       if (isActiveFilter !== null) {
         const isActiveValue = isActiveFilter.toLowerCase() === 'true'

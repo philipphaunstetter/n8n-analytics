@@ -92,6 +92,11 @@ export async function GET(request: NextRequest) {
       const params: any[] = []
       
       // Add filters
+      if (filters.providerId) {
+        sql += ' AND e.provider_id = ?'
+        params.push(filters.providerId)
+      }
+      
       if (filters.workflowId) {
         sql += ' AND w.provider_workflow_id = ?'
         params.push(filters.workflowId)
