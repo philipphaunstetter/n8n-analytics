@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { workflowSync } from '@/lib/sync/workflow-sync'
-import { n8nApi } from '@/lib/n8n-api'
 import { authenticateRequest } from '@/lib/api-auth'
+import { getDb } from '@/lib/db'
 
 // GET /api/workflows/[id] - Get individual workflow details
 export async function GET(
@@ -20,56 +20,82 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Fetch workflow from n8n API
-    let n8nWorkflow
-    try {
-      n8nWorkflow = await n8nApi.getWorkflow(id)
-      console.log(`✅ Found workflow: ${n8nWorkflow.name}`)
-    } catch (error) {
-      console.error('❌ Failed to fetch workflow from n8n:', error)
+    // Fetch workflow from database
+    const db = getDb()
+    const workflow = await new Promise<any>((resolve, reject) => {
+      db.get(
+        `SELECT w.*, 
+          COUNT(e.id) as total_executions,
+          SUM(CASE WHEN e.status = 'success' THEN 1 ELSE 0 END) as success_count,
+          SUM(CASE WHEN e.status = 'error' THEN 1 ELSE 0 END) as failure_count,
+          AVG(CASE WHEN e.duration IS NOT NULL THEN e.duration ELSE NULL END) as avg_duration,
+          MAX(COALESCE(e.stopped_at, e.started_at)) as last_executed_at
+        FROM workflows w
+        LEFT JOIN executions e ON w.id = e.workflow_id
+        WHERE w.provider_workflow_id = ?
+        GROUP BY w.id`,
+        [id],
+        (err, row) => {
+          if (err) reject(err)
+          else resolve(row || null)
+        }
+      )
+    })
+    
+    if (!workflow) {
+      console.log(`❌ Workflow ${id} not found in database`)
       return NextResponse.json(
-        { error: 'Workflow not found or failed to connect to n8n API' },
+        { error: 'Workflow not found' },
         { status: 404 }
       )
     }
     
-    // Helper function to determine if a workflow is archived
-    const isWorkflowArchived = (workflow: any): boolean => {
-      if (workflow.active) {
-        return false // Active workflows are never archived
-      }
-      
-      const now = new Date()
-      const updatedAt = new Date(workflow.updatedAt)
-      const daysSinceUpdate = Math.floor((now.getTime() - updatedAt.getTime()) / (1000 * 60 * 60 * 24))
-      
-      // Consider inactive workflows archived if they haven't been updated in 90 days
-      return daysSinceUpdate > 90
+    console.log(`✅ Found workflow: ${workflow.name}`)
+    
+    // Parse workflow data
+    let workflowJson: any = {}
+    try {
+      workflowJson = workflow.workflow_data ? JSON.parse(workflow.workflow_data) : {}
+    } catch (e) {
+      console.error('Failed to parse workflow_data:', e)
     }
+    
+    let tags: any[] = []
+    try {
+      tags = workflow.tags ? JSON.parse(workflow.tags) : []
+    } catch (e) {}
+    
+    const successRate = workflow.total_executions > 0 
+      ? (workflow.success_count / workflow.total_executions) * 100
+      : 0
     
     // Convert to API format with full workflow JSON
     const workflowData = {
-      id: n8nWorkflow.id,
-      providerId: 'n8n-main',
-      providerWorkflowId: n8nWorkflow.id,
-      name: n8nWorkflow.name,
-      description: '', // n8n workflows don't have descriptions in the API response
-      isActive: n8nWorkflow.active,
-      isArchived: isWorkflowArchived(n8nWorkflow),
-      tags: n8nWorkflow.tags || [],
-      createdAt: new Date(n8nWorkflow.createdAt),
-      updatedAt: new Date(n8nWorkflow.updatedAt),
-      lastExecutedAt: undefined, // Would need to be calculated from executions
-      totalExecutions: 0, // Would need to be calculated from executions
-      successCount: 0,
-      failureCount: 0,
-      successRate: 0,
-      avgDuration: undefined,
-      workflowJson: n8nWorkflow, // Include the full n8n workflow JSON
+      id: workflow.provider_workflow_id,
+      providerId: workflow.provider_id || 'n8n-main',
+      providerWorkflowId: workflow.provider_workflow_id,
+      name: workflow.name,
+      description: '', // n8n workflows don't have descriptions
+      isActive: Boolean(workflow.is_active),
+      isArchived: Boolean(workflow.is_archived),
+      tags: tags,
+      createdAt: new Date(workflow.created_at),
+      updatedAt: new Date(workflow.updated_at),
+      lastExecutedAt: workflow.last_executed_at ? new Date(workflow.last_executed_at) : undefined,
+      totalExecutions: parseInt(workflow.total_executions) || 0,
+      successCount: parseInt(workflow.success_count) || 0,
+      failureCount: parseInt(workflow.failure_count) || 0,
+      successRate: Math.round(successRate * 100) / 100,
+      avgDuration: workflow.avg_duration ? Math.round(workflow.avg_duration) : undefined,
+      workflowJson: workflowJson, // Include the full n8n workflow JSON from database
+      graph: {
+        nodes: workflowJson.nodes || [],
+        connections: workflowJson.connections || {}
+      },
       metadata: {
-        nodeCount: n8nWorkflow.nodes?.length || 0,
-        n8nWorkflowId: n8nWorkflow.id,
-        connections: n8nWorkflow.connections
+        nodeCount: workflow.node_count || 0,
+        n8nWorkflowId: workflow.provider_workflow_id,
+        connections: workflowJson.connections
       }
     }
     
