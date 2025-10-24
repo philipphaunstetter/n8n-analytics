@@ -54,8 +54,8 @@ const CustomTooltip = ({ active, payload, label }: any) => {
     const date = new Date(data.timestamp)
     
     return (
-      <div className="bg-white p-4 shadow-lg rounded-lg border border-gray-200">
-        <p className="text-sm font-medium text-gray-900 mb-2">
+      <div className="bg-white dark:bg-zinc-800 p-4 shadow-lg rounded-lg border border-gray-200 dark:border-zinc-700">
+        <p className="text-sm font-medium text-gray-900 dark:text-white dark:text-white mb-2">
           {date.toLocaleDateString()} {date.toLocaleTimeString()}
         </p>
         <div className="space-y-1">
@@ -112,11 +112,11 @@ export function ExecutionCharts({ timeRange, onTimeRangeChange }: ExecutionChart
 
   if (error) {
     return (
-      <div className="bg-white p-6 rounded-lg shadow">
+      <div className="bg-white dark:bg-zinc-900 p-6 rounded-lg shadow">
         <div className="text-center">
           <XCircleIcon className="mx-auto h-12 w-12 text-red-400" />
-          <h3 className="mt-2 text-sm font-semibold text-gray-900">Error loading charts</h3>
-          <p className="mt-1 text-sm text-gray-500">{error}</p>
+          <h3 className="mt-2 text-sm font-semibold text-gray-900 dark:text-white dark:text-white">Error loading charts</h3>
+          <p className="mt-1 text-sm text-gray-500 dark:text-zinc-400 dark:text-zinc-400">{error}</p>
         </div>
       </div>
     )
@@ -125,10 +125,10 @@ export function ExecutionCharts({ timeRange, onTimeRangeChange }: ExecutionChart
   return (
     <div className="space-y-6">
       {/* Time Range Selector */}
-      <div className="bg-white p-4 rounded-lg shadow">
+      <div className="bg-white dark:bg-zinc-900 p-4 rounded-lg shadow">
         <div className="flex items-center justify-between">
-          <h3 className="text-lg font-medium text-gray-900 flex items-center">
-            <CalendarDaysIcon className="h-5 w-5 mr-2 text-gray-400" />
+          <h3 className="text-lg font-medium text-gray-900 dark:text-white dark:text-white flex items-center">
+            <CalendarDaysIcon className="h-5 w-5 mr-2 text-gray-400 dark:text-zinc-400" />
             Execution Analytics
           </h3>
           <div className="flex space-x-2">
@@ -138,8 +138,8 @@ export function ExecutionCharts({ timeRange, onTimeRangeChange }: ExecutionChart
                 onClick={() => onTimeRangeChange(option.value)}
                 className={`px-3 py-1 text-sm font-medium rounded-md transition-colors ${
                   timeRange === option.value
-                    ? 'bg-blue-100 text-blue-700 border border-blue-200'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    ? 'bg-blue-100 text-blue-700 border border-blue-200 dark:bg-blue-900 dark:text-blue-300 dark:border-blue-800'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700'
                 }`}
               >
                 {option.label}
@@ -152,17 +152,17 @@ export function ExecutionCharts({ timeRange, onTimeRangeChange }: ExecutionChart
       {loading ? (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="bg-white p-6 rounded-lg shadow animate-pulse">
-              <div className="h-4 bg-gray-200 rounded w-1/3 mb-4"></div>
-              <div className="h-64 bg-gray-200 rounded"></div>
+            <div key={i} className="bg-white dark:bg-zinc-900 p-6 rounded-lg shadow animate-pulse">
+              <div className="h-4 bg-gray-200 dark:bg-zinc-700 rounded w-1/3 mb-4"></div>
+              <div className="h-64 bg-gray-200 dark:bg-zinc-700 rounded"></div>
             </div>
           ))}
         </div>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Execution Volume Chart */}
-          <div className="bg-white p-6 rounded-lg shadow">
-            <h4 className="text-md font-medium text-gray-900 mb-4 flex items-center">
+          <div className="bg-white dark:bg-zinc-900 p-6 rounded-lg shadow">
+            <h4 className="text-md font-medium text-gray-900 dark:text-white dark:text-white mb-4 flex items-center">
               <CheckCircleIcon className="h-5 w-5 mr-2 text-green-500" />
               Execution Volume
             </h4>
@@ -211,8 +211,8 @@ export function ExecutionCharts({ timeRange, onTimeRangeChange }: ExecutionChart
           </div>
 
           {/* Success Rate Chart */}
-          <div className="bg-white p-6 rounded-lg shadow">
-            <h4 className="text-md font-medium text-gray-900 mb-4 flex items-center">
+          <div className="bg-white dark:bg-zinc-900 p-6 rounded-lg shadow">
+            <h4 className="text-md font-medium text-gray-900 dark:text-white mb-4 flex items-center">
               <CheckCircleIcon className="h-5 w-5 mr-2 text-blue-500" />
               Success Rate
             </h4>
@@ -247,8 +247,8 @@ export function ExecutionCharts({ timeRange, onTimeRangeChange }: ExecutionChart
           </div>
 
           {/* Response Time Chart */}
-          <div className="bg-white p-6 rounded-lg shadow">
-            <h4 className="text-md font-medium text-gray-900 mb-4 flex items-center">
+          <div className="bg-white dark:bg-zinc-900 p-6 rounded-lg shadow">
+            <h4 className="text-md font-medium text-gray-900 dark:text-white mb-4 flex items-center">
               <ClockIcon className="h-5 w-5 mr-2 text-purple-500" />
               Average Response Time
             </h4>
@@ -282,8 +282,8 @@ export function ExecutionCharts({ timeRange, onTimeRangeChange }: ExecutionChart
           </div>
 
           {/* Execution Distribution Chart */}
-          <div className="bg-white p-6 rounded-lg shadow">
-            <h4 className="text-md font-medium text-gray-900 mb-4 flex items-center">
+          <div className="bg-white dark:bg-zinc-900 p-6 rounded-lg shadow">
+            <h4 className="text-md font-medium text-gray-900 dark:text-white mb-4 flex items-center">
               <CheckCircleIcon className="h-5 w-5 mr-2 text-orange-500" />
               Execution Distribution
             </h4>
@@ -315,7 +315,7 @@ export function ExecutionCharts({ timeRange, onTimeRangeChange }: ExecutionChart
 
       {/* Chart Summary */}
       {!loading && chartData.length > 0 && (
-        <div className="bg-white p-4 rounded-lg shadow">
+        <div className="bg-white dark:bg-zinc-900 p-4 rounded-lg shadow">
           <div className="text-sm text-gray-600">
             <p>
               Showing data for <span className="font-medium">{TIME_RANGE_OPTIONS.find(o => o.value === timeRange)?.label}</span>

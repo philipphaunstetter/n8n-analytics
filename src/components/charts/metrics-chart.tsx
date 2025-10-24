@@ -43,7 +43,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
     
     return (
       <div className="bg-white p-3 shadow-lg rounded-lg border border-gray-200 text-xs">
-        <p className="font-medium text-gray-900 mb-1">
+        <p className="font-medium text-gray-900 dark:text-white mb-1">
           {date.toLocaleDateString('en-US', { 
             month: 'short', 
             day: 'numeric',
@@ -61,7 +61,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
                 />
                 <span className="text-gray-600">{entry.name}:</span>
               </div>
-              <span className="font-medium text-gray-900 ml-2">
+              <span className="font-medium text-gray-900 dark:text-white ml-2">
                 {entry.value}
                 {entry.name.includes('Time') && ' ms'}
                 {entry.name.includes('Rate') && '%'}
@@ -137,7 +137,7 @@ export function MetricsChart({ timeRange, onTimeRangeChange }: MetricsChartProps
       <div className="px-6 py-4 border-b border-gray-200">
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="text-lg font-semibold text-gray-900">Execution Metrics</h3>
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Execution Metrics</h3>
             <div className="flex items-center mt-1 space-x-4 text-sm text-gray-600">
               <div className="flex items-center">
                 <div className="w-2 h-2 bg-emerald-500 rounded-full mr-1" />
@@ -181,12 +181,12 @@ export function MetricsChart({ timeRange, onTimeRangeChange }: MetricsChartProps
       <div className="p-6">
         {loading ? (
           <div className="h-80 flex items-center justify-center">
-            <div className="animate-pulse text-sm text-gray-500">Loading metrics...</div>
+            <div className="animate-pulse text-sm text-gray-500 dark:text-zinc-400">Loading metrics...</div>
           </div>
         ) : chartData.length === 0 ? (
           <div className="h-80 flex items-center justify-center">
             <div className="text-center">
-              <p className="text-sm text-gray-500">No execution data available</p>
+              <p className="text-sm text-gray-500 dark:text-zinc-400">No execution data available</p>
               <p className="text-xs text-gray-400 mt-1">Execute some workflows to see metrics</p>
             </div>
           </div>
@@ -260,7 +260,7 @@ export function MetricsChart({ timeRange, onTimeRangeChange }: MetricsChartProps
 
       {/* Footer */}
       <div className="px-6 py-3 border-t border-gray-200 bg-gray-50 rounded-b-lg">
-        <div className="flex items-center justify-between text-xs text-gray-500">
+        <div className="flex items-center justify-between text-xs text-gray-500 dark:text-zinc-400">
           <span>
             {chartData.length > 0 
               ? `${chartData.length} data points • Last updated: ${new Date().toLocaleTimeString()}`

@@ -32,7 +32,7 @@ interface TabsListProps {
 
 export function TabsList({ children, className }: TabsListProps) {
   return (
-    <div className={clsx('flex space-x-1 rounded-lg bg-gray-100 p-1', className)}>
+    <div className={clsx('flex space-x-1 rounded-lg bg-gray-100 dark:bg-zinc-800 p-1', className)}>
       {children}
     </div>
   )
@@ -56,8 +56,8 @@ export function TabsTrigger({ value, children, className }: TabsTriggerProps) {
       className={clsx(
         'flex-1 rounded-md px-3 py-2 text-sm font-medium transition-all focus:outline-none focus:ring-2 focus:ring-blue-500',
         isActive 
-          ? 'bg-white text-gray-900 shadow-sm' 
-          : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50',
+          ? 'bg-white dark:bg-zinc-900 text-gray-900 dark:text-white shadow-sm' 
+          : 'text-gray-600 dark:text-zinc-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-zinc-700',
         className
       )}
     >
