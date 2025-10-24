@@ -297,7 +297,7 @@ function ExecutionsContent() {
       </div>
 
       {/* Results Summary */}
-      <div className="bg-white px-4 py-3 border border-gray-200 rounded-md">
+      <div className="bg-white dark:bg-zinc-900 px-4 py-3 border border-gray-200 dark:border-zinc-700 rounded-md">
         <div className="flex items-center justify-between text-sm text-gray-600 dark:text-zinc-400">
           <span>
             Showing {filteredExecutions.length} of {executions.length} executions
@@ -312,7 +312,7 @@ function ExecutionsContent() {
       </div>
 
       {/* Executions Table */}
-      <div className="bg-white shadow overflow-hidden sm:rounded-md">
+      <div className="bg-white dark:bg-zinc-900 shadow overflow-hidden sm:rounded-md">
         <Table>
           <TableHead>
             <TableRow>

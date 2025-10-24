@@ -381,7 +381,7 @@ function HistoryContent() {
       </div>
 
       {/* Results Summary */}
-      <div className="bg-white px-4 py-3 border border-gray-200 rounded-md">
+      <div className="bg-white dark:bg-zinc-900 px-4 py-3 border border-gray-200 dark:border-zinc-700 rounded-md">
         <div className="flex items-center justify-between text-sm text-gray-600 dark:text-zinc-400">
           <span>
             Showing {filteredAndSortedExecutions.length} of {executions.length} executions
@@ -398,7 +398,7 @@ function HistoryContent() {
       </div>
 
       {/* Executions List */}
-      <div className="bg-white shadow overflow-hidden sm:rounded-lg">
+      <div className="bg-white dark:bg-zinc-900 shadow overflow-hidden sm:rounded-lg">
         {loading ? (
           <div className="p-8 text-center">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mx-auto"></div>
