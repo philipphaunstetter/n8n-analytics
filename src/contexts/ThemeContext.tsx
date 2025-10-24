@@ -22,20 +22,32 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     const savedTheme = localStorage.getItem('theme') as Theme | null
     if (savedTheme) {
       setThemeState(savedTheme)
-      document.documentElement.classList.toggle('dark', savedTheme === 'dark')
+      if (savedTheme === 'dark') {
+        document.documentElement.classList.add('dark')
+      } else {
+        document.documentElement.classList.remove('dark')
+      }
     } else {
       // Optional: Check system preference
       const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
       const initialTheme = prefersDark ? 'dark' : 'light'
       setThemeState(initialTheme)
-      document.documentElement.classList.toggle('dark', initialTheme === 'dark')
+      if (initialTheme === 'dark') {
+        document.documentElement.classList.add('dark')
+      } else {
+        document.documentElement.classList.remove('dark')
+      }
     }
   }, [])
 
   const setTheme = (newTheme: Theme) => {
     setThemeState(newTheme)
     localStorage.setItem('theme', newTheme)
-    document.documentElement.classList.toggle('dark', newTheme === 'dark')
+    if (newTheme === 'dark') {
+      document.documentElement.classList.add('dark')
+    } else {
+      document.documentElement.classList.remove('dark')
+    }
   }
 
   const toggleTheme = () => {
