@@ -358,7 +358,7 @@ function ExecutionsContent() {
                 return (
                   <TableRow 
                     key={execution.id}
-                    className="hover:bg-gray-50 cursor-pointer"
+                    className="hover:bg-gray-50 dark:hover:bg-zinc-800 cursor-pointer"
                     onClick={() => openN8nExecution(execution)}
                   >
                     <TableCell>

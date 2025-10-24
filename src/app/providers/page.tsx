@@ -247,12 +247,12 @@ function ProvidersContent() {
 
       {/* Providers List */}
       {loading ? (
-        <div className="bg-white rounded-lg shadow p-8 text-center">
+        <div className="bg-white dark:bg-zinc-900 rounded-lg shadow p-8 text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mx-auto"></div>
-          <p className="mt-2 text-gray-600">Loading providers...</p>
+          <p className="mt-2 text-gray-600 dark:text-zinc-400">Loading providers...</p>
         </div>
       ) : providers.length === 0 ? (
-        <div className="bg-white rounded-lg shadow p-12 text-center">
+        <div className="bg-white dark:bg-zinc-900 rounded-lg shadow p-12 text-center">
           <div className="mx-auto h-12 w-12 text-gray-400">
             <ExclamationTriangleIcon />
           </div>
@@ -270,19 +270,19 @@ function ProvidersContent() {
       ) : (
         <div className="grid gap-4">
           {providers.map((provider) => (
-            <div key={provider.id} className="bg-white rounded-lg shadow p-6">
+            <div key={provider.id} className="bg-white dark:bg-zinc-900 rounded-lg shadow p-6">
               <div className="flex items-start justify-between">
                 <div className="flex-1">
                   <div className="flex items-center space-x-3">
-                    <h3 className="text-lg font-semibold text-gray-900">{provider.name}</h3>
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{provider.name}</h3>
                     {getStatusBadge(provider)}
                   </div>
                   <p className="mt-1 text-sm text-gray-600 dark:text-zinc-400">{provider.baseUrl}</p>
-                  <p className="mt-1 text-xs text-gray-500">
+                  <p className="mt-1 text-xs text-gray-500 dark:text-zinc-400">
                     Last checked: {formatDate(provider.lastChecked)}
                   </p>
                   {provider.metadata?.version && typeof provider.metadata.version === 'string' ? (
-                    <p className="mt-1 text-xs text-gray-500">
+                    <p className="mt-1 text-xs text-gray-500 dark:text-zinc-400">
                       Version: {provider.metadata.version}
                     </p>
                   ) : null}
@@ -323,7 +323,7 @@ function ProvidersContent() {
       {/* Add/Edit Modal */}
       {showAddModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md">
+          <div className="bg-white dark:bg-zinc-900 rounded-lg shadow-xl p-6 w-full max-w-md">
             <h2 className="text-xl font-bold text-gray-900 mb-4">
               {editingProvider ? 'Edit Provider' : 'Add n8n Instance'}
             </h2>
@@ -356,7 +356,7 @@ function ProvidersContent() {
               </div>
               <div>
                 <label htmlFor="apiKey" className="block text-sm font-medium text-gray-700 dark:text-zinc-300 mb-1">
-                  API Key {editingProvider && <span className="text-xs text-gray-500">(leave blank to keep current)</span>}
+                  API Key {editingProvider && <span className="text-xs text-gray-500 dark:text-zinc-400">(leave blank to keep current)</span>}
                 </label>
                 <Input
                   id="apiKey"

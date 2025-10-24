@@ -422,7 +422,7 @@ function HistoryContent() {
               const statusColor = statusColors[execution.status]
               
               return (
-                <li key={execution.id} className="px-4 py-4 sm:px-6 hover:bg-gray-50">
+                <li key={execution.id} className="px-4 py-4 sm:px-6 hover:bg-gray-50 dark:hover:bg-zinc-800">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center min-w-0 flex-1">
                       <div className="flex-shrink-0">

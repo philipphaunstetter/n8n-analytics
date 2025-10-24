@@ -269,7 +269,7 @@ function CronJobsContent() {
                 return (
                   <TableRow 
                     key={job.id}
-                    className="hover:bg-gray-50 cursor-pointer"
+                    className="hover:bg-gray-50 dark:hover:bg-zinc-800 cursor-pointer"
                     onClick={() => router.push(`/workflows/${job.workflowId}`)}
                   >
                     <TableCell>

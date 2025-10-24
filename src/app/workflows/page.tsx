@@ -351,7 +351,7 @@ function WorkflowsContent() {
                 return (
                   <TableRow 
                     key={workflow.id}
-                    className="hover:bg-gray-50 cursor-pointer"
+                    className="hover:bg-gray-50 dark:hover:bg-zinc-800 cursor-pointer"
                     onClick={() => router.push(`/workflows/${workflow.id}`)}
                   >
                     <TableCell>
