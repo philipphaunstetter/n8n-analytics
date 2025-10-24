@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useTheme } from '@/contexts/ThemeContext'
 import {
   LineChart,
   Line,
@@ -87,9 +88,15 @@ const formatXAxisLabel = (timestamp: number, timeRange: TimeRange) => {
 }
 
 export function ExecutionCharts({ timeRange, onTimeRangeChange }: ExecutionChartsProps) {
+  const { theme } = useTheme()
   const [chartData, setChartData] = useState<ChartDataPoint[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  
+  // Theme-aware colors
+  const gridColor = theme === 'dark' ? '#3f3f46' : '#f3f4f6'
+  const axisColor = theme === 'dark' ? '#a1a1aa' : '#6b7280'
+  const textColor = theme === 'dark' ? '#e4e4e7' : '#374151'
 
   useEffect(() => {
     const fetchChartData = async () => {
@@ -178,16 +185,17 @@ export function ExecutionCharts({ timeRange, onTimeRangeChange }: ExecutionChart
                     <stop offset="95%" stopColor="#ef4444" stopOpacity={0.1}/>
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
+                <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
                 <XAxis 
                   dataKey="timestamp"
                   type="number"
                   scale="time"
                   domain={['dataMin', 'dataMax']}
                   tickFormatter={(timestamp) => formatXAxisLabel(timestamp, timeRange)}
-                  stroke="#6b7280"
+                  stroke={axisColor} tick={{ fill: textColor }}
+                  tick={{ fill: textColor }}
                 />
-                <YAxis stroke="#6b7280" />
+                <YAxis stroke={axisColor} tick={{ fill: textColor }} />
                 <Tooltip content={<CustomTooltip />} />
                 <Legend />
                 <Area
@@ -218,18 +226,18 @@ export function ExecutionCharts({ timeRange, onTimeRangeChange }: ExecutionChart
             </h4>
             <ResponsiveContainer width="100%" height={300}>
               <LineChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
+                <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
                 <XAxis 
                   dataKey="timestamp"
                   type="number"
                   scale="time"
                   domain={['dataMin', 'dataMax']}
                   tickFormatter={(timestamp) => formatXAxisLabel(timestamp, timeRange)}
-                  stroke="#6b7280"
+                  stroke={axisColor} tick={{ fill: textColor }}
                 />
                 <YAxis 
                   domain={[0, 100]}
-                  stroke="#6b7280"
+                  stroke={axisColor} tick={{ fill: textColor }}
                   tickFormatter={(value) => `${value}%`}
                 />
                 <Tooltip content={<CustomTooltip />} />
@@ -254,17 +262,17 @@ export function ExecutionCharts({ timeRange, onTimeRangeChange }: ExecutionChart
             </h4>
             <ResponsiveContainer width="100%" height={300}>
               <LineChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
+                <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
                 <XAxis 
                   dataKey="timestamp"
                   type="number"
                   scale="time"
                   domain={['dataMin', 'dataMax']}
                   tickFormatter={(timestamp) => formatXAxisLabel(timestamp, timeRange)}
-                  stroke="#6b7280"
+                  stroke={axisColor} tick={{ fill: textColor }}
                 />
                 <YAxis 
-                  stroke="#6b7280"
+                  stroke={axisColor} tick={{ fill: textColor }}
                   tickFormatter={(value) => `${value}ms`}
                 />
                 <Tooltip content={<CustomTooltip />} />
@@ -289,16 +297,16 @@ export function ExecutionCharts({ timeRange, onTimeRangeChange }: ExecutionChart
             </h4>
             <ResponsiveContainer width="100%" height={300}>
               <BarChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
+                <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
                 <XAxis 
                   dataKey="timestamp"
                   type="number"
                   scale="time"
                   domain={['dataMin', 'dataMax']}
                   tickFormatter={(timestamp) => formatXAxisLabel(timestamp, timeRange)}
-                  stroke="#6b7280"
+                  stroke={axisColor} tick={{ fill: textColor }}
                 />
-                <YAxis stroke="#6b7280" />
+                <YAxis stroke={axisColor} tick={{ fill: textColor }} />
                 <Tooltip content={<CustomTooltip />} />
                 <Legend />
                 <Bar

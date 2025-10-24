@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useTheme } from '@/contexts/ThemeContext'
 import {
   Line,
   AreaChart,
@@ -91,10 +92,16 @@ const formatXAxisLabel = (timestamp: number, timeRange: TimeRange) => {
 }
 
 export function MetricsChart({ timeRange, onTimeRangeChange }: MetricsChartProps) {
+  const { theme } = useTheme()
   const [chartData, setChartData] = useState<ChartDataPoint[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [showEvents, setShowEvents] = useState(true)
+  
+  // Theme-aware colors
+  const gridColor = theme === 'dark' ? '#3f3f46' : '#f3f4f6'
+  const axisColor = theme === 'dark' ? '#a1a1aa' : '#6b7280'
+  const textColor = theme === 'dark' ? '#e4e4e7' : '#374151'
 
   useEffect(() => {
     const fetchChartData = async () => {
@@ -206,7 +213,7 @@ export function MetricsChart({ timeRange, onTimeRangeChange }: MetricsChartProps
               </defs>
               
               {/* Grid */}
-              <CartesianGrid strokeDasharray="1 1" stroke="#f3f4f6" vertical={false} />
+              <CartesianGrid strokeDasharray="1 1" stroke={gridColor} vertical={false} />
               
               {/* X Axis */}
               <XAxis
