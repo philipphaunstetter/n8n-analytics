@@ -225,7 +225,7 @@ function HistoryContent() {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
-        <div className="bg-white overflow-hidden shadow rounded-lg">
+        <div className="bg-white dark:bg-slate-800 overflow-hidden shadow rounded-lg">
           <div className="p-5">
             <div className="flex items-center">
               <div className="flex-shrink-0">
@@ -234,7 +234,7 @@ function HistoryContent() {
               <div className="ml-5 w-0 flex-1">
                 <dl>
                   <dt className="text-sm font-medium text-gray-500 truncate">Total Executions</dt>
-                  <dd className="text-lg font-medium text-gray-900">
+                  <dd className="text-lg font-medium text-gray-900 dark:text-white">
                     {loading ? '...' : stats.total.toLocaleString()}
                   </dd>
                 </dl>
@@ -243,7 +243,7 @@ function HistoryContent() {
           </div>
         </div>
 
-        <div className="bg-white overflow-hidden shadow rounded-lg">
+        <div className="bg-white dark:bg-slate-800 overflow-hidden shadow rounded-lg">
           <div className="p-5">
             <div className="flex items-center">
               <div className="flex-shrink-0">
@@ -252,7 +252,7 @@ function HistoryContent() {
               <div className="ml-5 w-0 flex-1">
                 <dl>
                   <dt className="text-sm font-medium text-gray-500 truncate">Successful</dt>
-                  <dd className="text-lg font-medium text-gray-900">
+                  <dd className="text-lg font-medium text-gray-900 dark:text-white">
                     {loading ? '...' : stats.success.toLocaleString()}
                   </dd>
                 </dl>
@@ -261,7 +261,7 @@ function HistoryContent() {
           </div>
         </div>
 
-        <div className="bg-white overflow-hidden shadow rounded-lg">
+        <div className="bg-white dark:bg-slate-800 overflow-hidden shadow rounded-lg">
           <div className="p-5">
             <div className="flex items-center">
               <div className="flex-shrink-0">
@@ -270,7 +270,7 @@ function HistoryContent() {
               <div className="ml-5 w-0 flex-1">
                 <dl>
                   <dt className="text-sm font-medium text-gray-500 truncate">Failed</dt>
-                  <dd className="text-lg font-medium text-gray-900">
+                  <dd className="text-lg font-medium text-gray-900 dark:text-white">
                     {loading ? '...' : stats.error.toLocaleString()}
                   </dd>
                 </dl>
@@ -279,7 +279,7 @@ function HistoryContent() {
           </div>
         </div>
 
-        <div className="bg-white overflow-hidden shadow rounded-lg">
+        <div className="bg-white dark:bg-slate-800 overflow-hidden shadow rounded-lg">
           <div className="p-5">
             <div className="flex items-center">
               <div className="flex-shrink-0">
@@ -288,7 +288,7 @@ function HistoryContent() {
               <div className="ml-5 w-0 flex-1">
                 <dl>
                   <dt className="text-sm font-medium text-gray-500 truncate">Running</dt>
-                  <dd className="text-lg font-medium text-gray-900">
+                  <dd className="text-lg font-medium text-gray-900 dark:text-white">
                     {loading ? '...' : stats.running.toLocaleString()}
                   </dd>
                 </dl>
@@ -299,7 +299,7 @@ function HistoryContent() {
       </div>
 
       {/* Filters and Search */}
-      <div className="bg-white p-6 shadow rounded-lg">
+      <div className="bg-white dark:bg-slate-800 p-6 shadow rounded-lg">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-6">
           <div className="lg:col-span-2">
             <label htmlFor="search" className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">

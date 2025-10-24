@@ -131,7 +131,7 @@ function ProfileContent() {
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
         {/* Profile Information */}
         <div className="lg:col-span-2">
-          <div className="bg-white shadow sm:rounded-lg">
+          <div className="bg-white dark:bg-slate-800 shadow sm:rounded-lg">
             <div className="px-4 py-5 sm:p-6">
               <div className="flex items-center justify-between mb-6">
                 <h3 className="text-lg font-medium text-gray-900 flex items-center">
@@ -207,12 +207,12 @@ function ProfileContent() {
                 <div className="space-y-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-slate-300">Name</label>
-                    <p className="mt-1 text-sm text-gray-900">{userName}</p>
+                    <p className="mt-1 text-sm text-gray-900 dark:text-white">{userName}</p>
                   </div>
                   
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-slate-300">Email</label>
-                    <p className="mt-1 text-sm text-gray-900">{userEmail}</p>
+                    <p className="mt-1 text-sm text-gray-900 dark:text-white">{userEmail}</p>
                   </div>
                 </div>
               )}
@@ -319,7 +319,7 @@ function ProfileContent() {
         {/* Sidebar */}
         <div className="space-y-6">
           {/* Account Summary */}
-          <div className="bg-white shadow sm:rounded-lg">
+          <div className="bg-white dark:bg-slate-800 shadow sm:rounded-lg">
             <div className="px-4 py-5 sm:p-6">
               <h3 className="text-lg font-medium text-gray-900 mb-4">Account Summary</h3>
               
@@ -327,7 +327,7 @@ function ProfileContent() {
                 <div className="flex items-center">
                   <EnvelopeIcon className="h-5 w-5 text-gray-400 mr-3" />
                   <div>
-                    <p className="text-sm font-medium text-gray-900">Email</p>
+                    <p className="text-sm font-medium text-gray-900 dark:text-white">Email</p>
                     <p className="text-sm text-gray-500 dark:text-slate-400">{userEmail}</p>
                   </div>
                 </div>
@@ -335,7 +335,7 @@ function ProfileContent() {
                 <div className="flex items-center">
                   <CalendarIcon className="h-5 w-5 text-gray-400 mr-3" />
                   <div>
-                    <p className="text-sm font-medium text-gray-900">Joined</p>
+                    <p className="text-sm font-medium text-gray-900 dark:text-white">Joined</p>
                     <p className="text-sm text-gray-500 dark:text-slate-400">{joinDate.toLocaleDateString()}</p>
                   </div>
                 </div>
@@ -343,7 +343,7 @@ function ProfileContent() {
                 <div className="flex items-center">
                   <ShieldCheckIcon className="h-5 w-5 text-green-400 mr-3" />
                   <div>
-                    <p className="text-sm font-medium text-gray-900">Account Status</p>
+                    <p className="text-sm font-medium text-gray-900 dark:text-white">Account Status</p>
                     <Badge color="green">Active</Badge>
                   </div>
                 </div>
@@ -352,7 +352,7 @@ function ProfileContent() {
           </div>
 
           {/* Quick Actions */}
-          <div className="bg-white shadow sm:rounded-lg">
+          <div className="bg-white dark:bg-slate-800 shadow sm:rounded-lg">
             <div className="px-4 py-5 sm:p-6">
               <h3 className="text-lg font-medium text-gray-900 mb-4">Quick Actions</h3>
               
@@ -385,7 +385,7 @@ function ProfileContent() {
           </div>
 
           {/* Account Actions */}
-          <div className="bg-white shadow sm:rounded-lg">
+          <div className="bg-white dark:bg-slate-800 shadow sm:rounded-lg">
             <div className="px-4 py-5 sm:p-6">
               <h3 className="text-lg font-medium text-gray-900 mb-4">Account Actions</h3>
               

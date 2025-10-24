@@ -155,7 +155,7 @@ function MonitorsContent() {
 
       {/* Stats Overview */}
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
-        <div className="bg-white overflow-hidden shadow rounded-lg">
+        <div className="bg-white dark:bg-slate-800 overflow-hidden shadow rounded-lg">
           <div className="p-5">
             <div className="flex items-center">
               <div className="flex-shrink-0">
@@ -164,14 +164,14 @@ function MonitorsContent() {
               <div className="ml-5 w-0 flex-1">
                 <dl>
                   <dt className="text-sm font-medium text-gray-500 truncate">Healthy</dt>
-                  <dd className="text-lg font-medium text-gray-900">{healthyCount}</dd>
+                  <dd className="text-lg font-medium text-gray-900 dark:text-white">{healthyCount}</dd>
                 </dl>
               </div>
             </div>
           </div>
         </div>
 
-        <div className="bg-white overflow-hidden shadow rounded-lg">
+        <div className="bg-white dark:bg-slate-800 overflow-hidden shadow rounded-lg">
           <div className="p-5">
             <div className="flex items-center">
               <div className="flex-shrink-0">
@@ -180,14 +180,14 @@ function MonitorsContent() {
               <div className="ml-5 w-0 flex-1">
                 <dl>
                   <dt className="text-sm font-medium text-gray-500 truncate">Down</dt>
-                  <dd className="text-lg font-medium text-gray-900">{downCount}</dd>
+                  <dd className="text-lg font-medium text-gray-900 dark:text-white">{downCount}</dd>
                 </dl>
               </div>
             </div>
           </div>
         </div>
 
-        <div className="bg-white overflow-hidden shadow rounded-lg">
+        <div className="bg-white dark:bg-slate-800 overflow-hidden shadow rounded-lg">
           <div className="p-5">
             <div className="flex items-center">
               <div className="flex-shrink-0">
@@ -196,14 +196,14 @@ function MonitorsContent() {
               <div className="ml-5 w-0 flex-1">
                 <dl>
                   <dt className="text-sm font-medium text-gray-500 truncate">Warning</dt>
-                  <dd className="text-lg font-medium text-gray-900">{warningCount}</dd>
+                  <dd className="text-lg font-medium text-gray-900 dark:text-white">{warningCount}</dd>
                 </dl>
               </div>
             </div>
           </div>
         </div>
 
-        <div className="bg-white overflow-hidden shadow rounded-lg">
+        <div className="bg-white dark:bg-slate-800 overflow-hidden shadow rounded-lg">
           <div className="p-5">
             <div className="flex items-center">
               <div className="flex-shrink-0">
@@ -212,7 +212,7 @@ function MonitorsContent() {
               <div className="ml-5 w-0 flex-1">
                 <dl>
                   <dt className="text-sm font-medium text-gray-500 truncate">Total Active</dt>
-                  <dd className="text-lg font-medium text-gray-900">{totalEnabled}</dd>
+                  <dd className="text-lg font-medium text-gray-900 dark:text-white">{totalEnabled}</dd>
                 </dl>
               </div>
             </div>
@@ -223,7 +223,7 @@ function MonitorsContent() {
       {/* Monitors List */}
       <div className="bg-white dark:bg-slate-800 shadow border border-gray-200 dark:border-slate-300 overflow-hidden sm:rounded-md">
         <div className="px-4 py-5 sm:px-6 border-b border-gray-200">
-          <h3 className="text-lg font-medium text-gray-900">All Monitors</h3>
+          <h3 className="text-lg font-medium text-gray-900 dark:text-white">All Monitors</h3>
           <p className="mt-1 text-sm text-gray-500 dark:text-slate-400">
             Endpoint monitoring and uptime tracking for your critical services
           </p>
