@@ -56,7 +56,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
     
     return (
       <div className="bg-white dark:bg-zinc-800 p-4 shadow-lg rounded-lg border border-gray-200 dark:border-zinc-700">
-        <p className="text-sm font-medium text-gray-900 dark:text-white dark:text-white mb-2">
+        <p className="text-sm font-medium text-gray-900 dark:text-white mb-2">
           {date.toLocaleDateString()} {date.toLocaleTimeString()}
         </p>
         <div className="space-y-1">
@@ -122,8 +122,8 @@ export function ExecutionCharts({ timeRange, onTimeRangeChange }: ExecutionChart
       <div className="bg-white dark:bg-zinc-900 p-6 rounded-lg shadow">
         <div className="text-center">
           <XCircleIcon className="mx-auto h-12 w-12 text-red-400" />
-          <h3 className="mt-2 text-sm font-semibold text-gray-900 dark:text-white dark:text-white">Error loading charts</h3>
-          <p className="mt-1 text-sm text-gray-500 dark:text-zinc-400 dark:text-zinc-400">{error}</p>
+          <h3 className="mt-2 text-sm font-semibold text-gray-900 dark:text-white">Error loading charts</h3>
+          <p className="mt-1 text-sm text-gray-500 dark:text-zinc-400">{error}</p>
         </div>
       </div>
     )
@@ -134,7 +134,7 @@ export function ExecutionCharts({ timeRange, onTimeRangeChange }: ExecutionChart
       {/* Time Range Selector */}
       <div className="bg-white dark:bg-zinc-900 p-4 rounded-lg shadow">
         <div className="flex items-center justify-between">
-          <h3 className="text-lg font-medium text-gray-900 dark:text-white dark:text-white flex items-center">
+          <h3 className="text-lg font-medium text-gray-900 dark:text-white flex items-center">
             <CalendarDaysIcon className="h-5 w-5 mr-2 text-gray-400 dark:text-zinc-400" />
             Execution Analytics
           </h3>
@@ -169,7 +169,7 @@ export function ExecutionCharts({ timeRange, onTimeRangeChange }: ExecutionChart
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Execution Volume Chart */}
           <div className="bg-white dark:bg-zinc-900 p-6 rounded-lg shadow">
-            <h4 className="text-md font-medium text-gray-900 dark:text-white dark:text-white mb-4 flex items-center">
+            <h4 className="text-md font-medium text-gray-900 dark:text-white mb-4 flex items-center">
               <CheckCircleIcon className="h-5 w-5 mr-2 text-green-500" />
               Execution Volume
             </h4>
@@ -192,7 +192,7 @@ export function ExecutionCharts({ timeRange, onTimeRangeChange }: ExecutionChart
                   scale="time"
                   domain={['dataMin', 'dataMax']}
                   tickFormatter={(timestamp) => formatXAxisLabel(timestamp, timeRange)}
-                  stroke={axisColor} tick={{ fill: textColor }}
+                  stroke={axisColor}
                   tick={{ fill: textColor }}
                 />
                 <YAxis stroke={axisColor} tick={{ fill: textColor }} />
