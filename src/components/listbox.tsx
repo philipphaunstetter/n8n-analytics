@@ -88,7 +88,7 @@ export function Listbox<T>({
           // Handle scrolling when menu won't fit in viewport
           'overflow-y-scroll overscroll-contain',
           // Popover background
-          'bg-white/75 backdrop-blur-xl dark:bg-zinc-800/75',
+          'bg-white/75 backdrop-blur-xl dark:bg-slate-800/75',
           // Shadows
           'shadow-lg ring-1 ring-zinc-950/10 dark:ring-white/10 dark:ring-inset',
           // Transitions
@@ -168,7 +168,7 @@ export function ListboxDescription({ className, children, ...props }: React.Comp
       {...props}
       className={clsx(
         className,
-        'flex flex-1 overflow-hidden text-zinc-500 group-data-focus/option:text-white before:w-2 before:min-w-0 before:shrink dark:text-zinc-400'
+        'flex flex-1 overflow-hidden text-zinc-500 group-data-focus/option:text-white before:w-2 before:min-w-0 before:shrink dark:text-slate-400'
       )}
     >
       <span className="flex-1 truncate">{children}</span>

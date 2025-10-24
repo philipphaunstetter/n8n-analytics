@@ -56,7 +56,7 @@ function AnalyticsContent() {
       <div className="text-center py-12">
         <ChartBarIcon className="mx-auto h-12 w-12 text-red-400" />
         <h3 className="mt-2 text-sm font-semibold text-gray-900 dark:text-white">Error loading analytics</h3>
-        <p className="mt-1 text-sm text-gray-500 dark:text-zinc-400">{error}</p>
+        <p className="mt-1 text-sm text-gray-500 dark:text-slate-400">{error}</p>
         <button
           onClick={refreshData}
           className="mt-4 inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
@@ -73,7 +73,7 @@ function AnalyticsContent() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Analytics</h1>
-          <p className="mt-2 text-sm text-gray-600 dark:text-zinc-400">
+          <p className="mt-2 text-sm text-gray-600 dark:text-slate-400">
             Deep dive into your workflow performance and execution patterns
           </p>
         </div>
@@ -81,7 +81,7 @@ function AnalyticsContent() {
         <div className="flex items-center space-x-4">
           {/* Time Range Selector */}
           <div className="flex items-center space-x-2">
-            <label htmlFor="timeRange" className="text-sm font-medium text-gray-700 dark:text-zinc-300">
+            <label htmlFor="timeRange" className="text-sm font-medium text-gray-700 dark:text-slate-300">
               Period:
             </label>
             <select 
@@ -101,7 +101,7 @@ function AnalyticsContent() {
           <button
             onClick={refreshData}
             disabled={refreshing || loading}
-            className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 dark:hover:bg-zinc-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
+            className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 dark:hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
           >
             <ArrowPathIcon className={`h-4 w-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
             {refreshing ? 'Refreshing...' : 'Refresh'}
@@ -217,7 +217,7 @@ function AnalyticsContent() {
                         <p className="text-sm font-medium text-gray-900 truncate">
                           {workflow.name}
                         </p>
-                        <p className="text-sm text-gray-500 dark:text-zinc-400">
+                        <p className="text-sm text-gray-500 dark:text-slate-400">
                           {workflow.executions.toLocaleString()} executions
                         </p>
                       </div>

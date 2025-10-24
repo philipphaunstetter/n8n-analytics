@@ -28,7 +28,7 @@ export default function SignUp() {
         <h2 className="mt-6 text-center text-2xl font-bold leading-9 tracking-tight text-gray-900">
           Create your account
         </h2>
-        <p className="mt-2 text-center text-sm text-gray-600 dark:text-zinc-400">
+        <p className="mt-2 text-center text-sm text-gray-600 dark:text-slate-400">
           Start monitoring your workflow automation across all platforms
         </p>
       </div>
@@ -37,10 +37,10 @@ export default function SignUp() {
         <div className="bg-white px-6 py-12 shadow sm:rounded-lg sm:px-12">
           <div className="text-center py-8">
             <p className="text-gray-600 mb-4">Sign up functionality is not available in development mode.</p>
-            <p className="text-sm text-gray-500 dark:text-zinc-400">Please use the sign in page with any credentials.</p>
+            <p className="text-sm text-gray-500 dark:text-slate-400">Please use the sign in page with any credentials.</p>
           </div>
           
-          <p className="mt-6 text-center text-sm text-gray-500 dark:text-zinc-400">
+          <p className="mt-6 text-center text-sm text-gray-500 dark:text-slate-400">
             Already have an account?{' '}
             <Link href="/auth/signin" className="font-semibold leading-6 text-indigo-600 hover:text-indigo-500">
               Sign in

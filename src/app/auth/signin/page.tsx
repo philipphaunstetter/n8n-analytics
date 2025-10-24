@@ -108,7 +108,7 @@ export default function SignIn() {
           </div>
           
           <div className="mt-4 text-center">
-            <span className="text-sm text-gray-500 dark:text-zinc-400">Don&apos;t have an account? </span>
+            <span className="text-sm text-gray-500 dark:text-slate-400">Don&apos;t have an account? </span>
             <Link href="#" className="text-sm text-indigo-600 hover:text-indigo-500 font-medium">
               Sign up
             </Link>

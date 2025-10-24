@@ -35,7 +35,7 @@ export function Table({
 }
 
 export function TableHead({ className, ...props }: React.ComponentPropsWithoutRef<'thead'>) {
-  return <thead {...props} className={clsx(className, 'text-zinc-500 dark:text-zinc-400')} />
+  return <thead {...props} className={clsx(className, 'text-zinc-500 dark:text-slate-400')} />
 }
 
 export function TableBody(props: React.ComponentPropsWithoutRef<'tbody'>) {
@@ -64,10 +64,10 @@ export function TableRow({
         className={clsx(
           className,
           href &&
-            'has-[[data-row-link][data-focus]]:outline-2 has-[[data-row-link][data-focus]]:-outline-offset-2 has-[[data-row-link][data-focus]]:outline-blue-500 dark:focus-within:bg-zinc-800/50',
-          striped && 'even:bg-zinc-950/2.5 dark:even:bg-zinc-800/30',
-          href && striped && 'hover:bg-zinc-950/5 dark:hover:bg-zinc-800/50',
-          href && !striped && 'hover:bg-zinc-950/2.5 dark:hover:bg-zinc-800/50'
+            'has-[[data-row-link][data-focus]]:outline-2 has-[[data-row-link][data-focus]]:-outline-offset-2 has-[[data-row-link][data-focus]]:outline-blue-500 dark:focus-within:bg-slate-800/50',
+          striped && 'even:bg-zinc-950/2.5 dark:even:bg-slate-800/30',
+          href && striped && 'hover:bg-zinc-950/5 dark:hover:bg-slate-800/50',
+          href && !striped && 'hover:bg-zinc-950/2.5 dark:hover:bg-slate-800/50'
         )}
       />
     </TableRowContext.Provider>
@@ -102,7 +102,7 @@ export function TableCell({ className, children, ...props }: React.ComponentProp
       className={clsx(
         className,
         'relative px-6 first:pl-6 last:pr-6',
-        !striped && 'border-b border-zinc-950/5 dark:border-zinc-800',
+        !striped && 'border-b border-zinc-950/5 dark:border-slate-800',
         grid && 'border-l border-l-zinc-950/5 first:border-l-0 dark:border-l-zinc-700',
         dense ? 'py-2.5' : 'py-4',
         !bleed && 'sm:first:pl-6 sm:last:pr-6'

@@ -76,7 +76,7 @@ function DashboardContent() {
       <div className="text-center py-12">
         <ExclamationTriangleIcon className="mx-auto h-12 w-12 text-red-400" />
         <h3 className="mt-2 text-sm font-semibold text-gray-900 dark:text-white dark:text-white">Error loading dashboard</h3>
-        <p className="mt-1 text-sm text-gray-500 dark:text-zinc-400">{error}</p>
+        <p className="mt-1 text-sm text-gray-500 dark:text-slate-400">{error}</p>
         <button
           onClick={() => window.location.reload()}
           className="mt-4 inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
@@ -94,7 +94,7 @@ function DashboardContent() {
         <div className="flex items-start justify-between mb-6">
           <div>
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white dark:text-white">Dashboard</h1>
-            <p className="mt-2 text-sm text-gray-600 dark:text-zinc-400">
+            <p className="mt-2 text-sm text-gray-600 dark:text-slate-400">
               Overview of your workflow automation across all platforms
             </p>
           </div>
@@ -104,9 +104,9 @@ function DashboardContent() {
       {/* Stats Cards */}
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4 mb-8">
         {statsDisplay.map((item) => (
-          <div key={item.name} className="bg-white dark:bg-zinc-900 px-4 py-5 sm:p-6 shadow rounded-lg overflow-hidden ring-1 ring-zinc-950/5 dark:ring-white/10">
-            <dt className="text-sm font-medium text-gray-500 dark:text-zinc-400 truncate flex items-center">
-              <item.icon className="h-5 w-5 mr-2 text-gray-400 dark:text-zinc-500" />
+          <div key={item.name} className="bg-white dark:bg-slate-900 px-4 py-5 sm:p-6 shadow rounded-lg overflow-hidden ring-1 ring-zinc-950/5 dark:ring-white/10">
+            <dt className="text-sm font-medium text-gray-500 dark:text-slate-400 truncate flex items-center">
+              <item.icon className="h-5 w-5 mr-2 text-gray-400 dark:text-slate-500" />
               {item.name}
             </dt>
             <dd className="mt-1 text-3xl font-semibold text-gray-900 dark:text-white">{item.value}</dd>

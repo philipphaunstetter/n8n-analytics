@@ -124,7 +124,7 @@ export function MetricsChart({ timeRange, onTimeRangeChange }: MetricsChartProps
 
   if (error) {
     return (
-      <div className="bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-700 rounded-lg p-6">
+      <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-lg p-6">
         <div className="text-center">
           <p className="text-sm text-red-600">{error}</p>
         </div>
@@ -139,9 +139,9 @@ export function MetricsChart({ timeRange, onTimeRangeChange }: MetricsChartProps
     : 0
 
   return (
-    <div className="bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-700 rounded-lg">
+    <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-lg">
       {/* Header */}
-      <div className="px-6 py-4 border-b border-gray-200 dark:border-zinc-700">
+      <div className="px-6 py-4 border-b border-gray-200 dark:border-slate-700">
         <div className="flex items-center justify-between">
           <div>
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Execution Metrics</h3>
@@ -188,12 +188,12 @@ export function MetricsChart({ timeRange, onTimeRangeChange }: MetricsChartProps
       <div className="p-6">
         {loading ? (
           <div className="h-80 flex items-center justify-center">
-            <div className="animate-pulse text-sm text-gray-500 dark:text-zinc-400">Loading metrics...</div>
+            <div className="animate-pulse text-sm text-gray-500 dark:text-slate-400">Loading metrics...</div>
           </div>
         ) : chartData.length === 0 ? (
           <div className="h-80 flex items-center justify-center">
             <div className="text-center">
-              <p className="text-sm text-gray-500 dark:text-zinc-400">No execution data available</p>
+              <p className="text-sm text-gray-500 dark:text-slate-400">No execution data available</p>
               <p className="text-xs text-gray-400 mt-1">Execute some workflows to see metrics</p>
             </div>
           </div>
@@ -266,8 +266,8 @@ export function MetricsChart({ timeRange, onTimeRangeChange }: MetricsChartProps
       </div>
 
       {/* Footer */}
-      <div className="px-6 py-3 border-t border-gray-200 dark:border-zinc-700 bg-gray-50 dark:bg-zinc-800 rounded-b-lg">
-        <div className="flex items-center justify-between text-xs text-gray-500 dark:text-zinc-400">
+      <div className="px-6 py-3 border-t border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-800 rounded-b-lg">
+        <div className="flex items-center justify-between text-xs text-gray-500 dark:text-slate-400">
           <span>
             {chartData.length > 0 
               ? `${chartData.length} data points • Last updated: ${new Date().toLocaleTimeString()}`

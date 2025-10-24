@@ -149,7 +149,7 @@ function CronJobsContent() {
       <div className="text-center py-12">
         <ExclamationTriangleIcon className="mx-auto h-12 w-12 text-red-400" />
         <h3 className="mt-2 text-sm font-semibold text-gray-900 dark:text-white dark:text-white">Error loading cron jobs</h3>
-        <p className="mt-1 text-sm text-gray-500 dark:text-zinc-400">{error}</p>
+        <p className="mt-1 text-sm text-gray-500 dark:text-slate-400">{error}</p>
         <Button onClick={fetchCronJobs} className="mt-4">
           Try again
         </Button>
@@ -163,7 +163,7 @@ function CronJobsContent() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white dark:text-white">Cron Jobs</h1>
-          <p className="mt-2 text-sm text-gray-600 dark:text-zinc-400">
+          <p className="mt-2 text-sm text-gray-600 dark:text-slate-400">
             View all scheduled cron jobs from your workflows
           </p>
         </div>
@@ -186,7 +186,7 @@ function CronJobsContent() {
       {/* Filters */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div>
-          <label htmlFor="provider" className="block text-sm font-medium text-gray-700 dark:text-zinc-300 dark:text-zinc-300 mb-1">
+          <label htmlFor="provider" className="block text-sm font-medium text-gray-700 dark:text-slate-300 dark:text-slate-300 mb-1">
             n8n Instance
           </label>
           <Select 
@@ -203,7 +203,7 @@ function CronJobsContent() {
         </div>
 
         <div>
-          <label htmlFor="status" className="block text-sm font-medium text-gray-700 dark:text-zinc-300 dark:text-zinc-300 mb-1">
+          <label htmlFor="status" className="block text-sm font-medium text-gray-700 dark:text-slate-300 dark:text-slate-300 mb-1">
             Workflow Status
           </label>
           <Select 
@@ -219,8 +219,8 @@ function CronJobsContent() {
       </div>
 
       {/* Results Summary */}
-      <div className="bg-white dark:bg-zinc-900 px-4 py-3 border border-gray-200 dark:border-zinc-700 rounded-md">
-        <div className="flex items-center justify-between text-sm text-gray-600 dark:text-zinc-400">
+      <div className="bg-white dark:bg-slate-900 px-4 py-3 border border-gray-200 dark:border-slate-700 rounded-md">
+        <div className="flex items-center justify-between text-sm text-gray-600 dark:text-slate-400">
           <span>
             Showing {cronJobs.length} workflow{cronJobs.length !== 1 ? 's' : ''} with cron schedules
           </span>
@@ -231,7 +231,7 @@ function CronJobsContent() {
       </div>
 
       {/* Cron Jobs Table */}
-      <div className="bg-white dark:bg-zinc-900 shadow overflow-hidden sm:rounded-md ring-1 ring-zinc-950/5 dark:ring-white/10">
+      <div className="bg-white dark:bg-slate-900 shadow overflow-hidden sm:rounded-md ring-1 ring-zinc-950/5 dark:ring-white/10">
         <Table>
           <TableHead>
             <TableRow>
@@ -269,7 +269,7 @@ function CronJobsContent() {
                 return (
                   <TableRow 
                     key={job.id}
-                    className="hover:bg-gray-50 dark:hover:bg-zinc-800 cursor-pointer"
+                    className="hover:bg-gray-50 dark:hover:bg-slate-800 cursor-pointer"
                     onClick={() => router.push(`/workflows/${job.workflowId}`)}
                   >
                     <TableCell>

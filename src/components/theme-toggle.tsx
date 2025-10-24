@@ -14,18 +14,18 @@ export function ThemeToggle() {
       <div 
         className={clsx(
           'flex items-center gap-3 rounded-lg px-4 py-3 shadow-lg ring-1',
-          'bg-white ring-zinc-950/10 dark:bg-zinc-900 dark:ring-white/10',
+          'bg-white ring-zinc-950/10 dark:bg-slate-900 dark:ring-white/10',
           'transition-all duration-200'
         )}
       >
-        <SunIcon className="h-4 w-4 text-zinc-700 dark:text-zinc-400" />
+        <SunIcon className="h-4 w-4 text-zinc-700 dark:text-slate-400" />
         <Switch
           checked={isDark}
           onChange={toggleTheme}
           color="blue"
           aria-label="Toggle dark mode"
         />
-        <MoonIcon className="h-4 w-4 text-zinc-700 dark:text-zinc-400" />
+        <MoonIcon className="h-4 w-4 text-zinc-700 dark:text-slate-400" />
       </div>
     </div>
   )

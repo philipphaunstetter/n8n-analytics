@@ -191,7 +191,7 @@ function HistoryContent() {
       <div className="text-center py-12">
         <ExclamationTriangleIcon className="mx-auto h-12 w-12 text-red-400" />
         <h3 className="mt-2 text-sm font-semibold text-gray-900 dark:text-white">Error loading history</h3>
-        <p className="mt-1 text-sm text-gray-500 dark:text-zinc-400">{error}</p>
+        <p className="mt-1 text-sm text-gray-500 dark:text-slate-400">{error}</p>
         <Button onClick={fetchExecutions} className="mt-4">
           Try again
         </Button>
@@ -205,7 +205,7 @@ function HistoryContent() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">History</h1>
-          <p className="mt-2 text-sm text-gray-600 dark:text-zinc-400">
+          <p className="mt-2 text-sm text-gray-600 dark:text-slate-400">
             Complete execution history with advanced filtering and analysis
           </p>
         </div>
@@ -302,7 +302,7 @@ function HistoryContent() {
       <div className="bg-white p-6 shadow rounded-lg">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-6">
           <div className="lg:col-span-2">
-            <label htmlFor="search" className="block text-sm font-medium text-gray-700 dark:text-zinc-300 mb-1">
+            <label htmlFor="search" className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
               Search
             </label>
             <div className="relative">
@@ -319,7 +319,7 @@ function HistoryContent() {
           </div>
 
           <div>
-            <label htmlFor="status" className="block text-sm font-medium text-gray-700 dark:text-zinc-300 mb-1">
+            <label htmlFor="status" className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
               Status
             </label>
             <Select 
@@ -336,7 +336,7 @@ function HistoryContent() {
           </div>
 
           <div>
-            <label htmlFor="timeRange" className="block text-sm font-medium text-gray-700 dark:text-zinc-300 mb-1">
+            <label htmlFor="timeRange" className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
               Time Range
             </label>
             <Select 
@@ -352,7 +352,7 @@ function HistoryContent() {
           </div>
 
           <div>
-            <label htmlFor="sortBy" className="block text-sm font-medium text-gray-700 dark:text-zinc-300 mb-1">
+            <label htmlFor="sortBy" className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
               Sort By
             </label>
             <Select 
@@ -366,7 +366,7 @@ function HistoryContent() {
           </div>
 
           <div>
-            <label htmlFor="sortOrder" className="block text-sm font-medium text-gray-700 dark:text-zinc-300 mb-1">
+            <label htmlFor="sortOrder" className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
               Order
             </label>
             <Select 
@@ -381,8 +381,8 @@ function HistoryContent() {
       </div>
 
       {/* Results Summary */}
-      <div className="bg-white dark:bg-zinc-900 px-4 py-3 border border-gray-200 dark:border-zinc-700 rounded-md">
-        <div className="flex items-center justify-between text-sm text-gray-600 dark:text-zinc-400">
+      <div className="bg-white dark:bg-slate-900 px-4 py-3 border border-gray-200 dark:border-slate-700 rounded-md">
+        <div className="flex items-center justify-between text-sm text-gray-600 dark:text-slate-400">
           <span>
             Showing {filteredAndSortedExecutions.length} of {executions.length} executions
           </span>
@@ -398,17 +398,17 @@ function HistoryContent() {
       </div>
 
       {/* Executions List */}
-      <div className="bg-white dark:bg-zinc-900 shadow overflow-hidden sm:rounded-lg">
+      <div className="bg-white dark:bg-slate-900 shadow overflow-hidden sm:rounded-lg">
         {loading ? (
           <div className="p-8 text-center">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mx-auto"></div>
-            <p className="mt-2 text-sm text-gray-500 dark:text-zinc-400">Loading execution history...</p>
+            <p className="mt-2 text-sm text-gray-500 dark:text-slate-400">Loading execution history...</p>
           </div>
         ) : filteredAndSortedExecutions.length === 0 ? (
           <div className="p-8 text-center">
             <ClockIcon className="mx-auto h-12 w-12 text-gray-400" />
             <h3 className="mt-2 text-sm font-semibold text-gray-900 dark:text-white">No executions found</h3>
-            <p className="mt-1 text-sm text-gray-500 dark:text-zinc-400">
+            <p className="mt-1 text-sm text-gray-500 dark:text-slate-400">
               {executions.length === 0 
                 ? 'No executions found for this time range'
                 : 'No executions match your search criteria'
@@ -422,7 +422,7 @@ function HistoryContent() {
               const statusColor = statusColors[execution.status]
               
               return (
-                <li key={execution.id} className="px-4 py-4 sm:px-6 hover:bg-gray-50 dark:hover:bg-zinc-800">
+                <li key={execution.id} className="px-4 py-4 sm:px-6 hover:bg-gray-50 dark:hover:bg-slate-800">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center min-w-0 flex-1">
                       <div className="flex-shrink-0">

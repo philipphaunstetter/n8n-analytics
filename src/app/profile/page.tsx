@@ -123,7 +123,7 @@ function ProfileContent() {
       {/* Page Header */}
       <div>
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Profile</h1>
-        <p className="mt-2 text-sm text-gray-600 dark:text-zinc-400">
+        <p className="mt-2 text-sm text-gray-600 dark:text-slate-400">
           Manage your account information and preferences
         </p>
       </div>
@@ -152,7 +152,7 @@ function ProfileContent() {
               {editingProfile ? (
                 <div className="space-y-4">
                   <div>
-                    <label htmlFor="name" className="block text-sm font-medium text-gray-700 dark:text-zinc-300">
+                    <label htmlFor="name" className="block text-sm font-medium text-gray-700 dark:text-slate-300">
                       Name
                     </label>
                     <Input
@@ -166,7 +166,7 @@ function ProfileContent() {
                   </div>
                   
                   <div>
-                    <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-zinc-300">
+                    <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-slate-300">
                       Email
                     </label>
                     <Input
@@ -206,12 +206,12 @@ function ProfileContent() {
               ) : (
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-zinc-300">Name</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-slate-300">Name</label>
                     <p className="mt-1 text-sm text-gray-900">{userName}</p>
                   </div>
                   
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-zinc-300">Email</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-slate-300">Email</label>
                     <p className="mt-1 text-sm text-gray-900">{userEmail}</p>
                   </div>
                 </div>
@@ -241,7 +241,7 @@ function ProfileContent() {
               {editingPassword ? (
                 <div className="space-y-4">
                   <div>
-                    <label htmlFor="currentPassword" className="block text-sm font-medium text-gray-700 dark:text-zinc-300">
+                    <label htmlFor="currentPassword" className="block text-sm font-medium text-gray-700 dark:text-slate-300">
                       Current Password
                     </label>
                     <Input
@@ -255,7 +255,7 @@ function ProfileContent() {
                   </div>
                   
                   <div>
-                    <label htmlFor="newPassword" className="block text-sm font-medium text-gray-700 dark:text-zinc-300">
+                    <label htmlFor="newPassword" className="block text-sm font-medium text-gray-700 dark:text-slate-300">
                       New Password
                     </label>
                     <Input
@@ -269,7 +269,7 @@ function ProfileContent() {
                   </div>
                   
                   <div>
-                    <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 dark:text-zinc-300">
+                    <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 dark:text-slate-300">
                       Confirm New Password
                     </label>
                     <Input
@@ -308,7 +308,7 @@ function ProfileContent() {
                   </div>
                 </div>
               ) : (
-                <p className="text-sm text-gray-600 dark:text-zinc-400">
+                <p className="text-sm text-gray-600 dark:text-slate-400">
                   Change your account password to keep your account secure.
                 </p>
               )}
@@ -328,7 +328,7 @@ function ProfileContent() {
                   <EnvelopeIcon className="h-5 w-5 text-gray-400 mr-3" />
                   <div>
                     <p className="text-sm font-medium text-gray-900">Email</p>
-                    <p className="text-sm text-gray-500 dark:text-zinc-400">{userEmail}</p>
+                    <p className="text-sm text-gray-500 dark:text-slate-400">{userEmail}</p>
                   </div>
                 </div>
                 
@@ -336,7 +336,7 @@ function ProfileContent() {
                   <CalendarIcon className="h-5 w-5 text-gray-400 mr-3" />
                   <div>
                     <p className="text-sm font-medium text-gray-900">Joined</p>
-                    <p className="text-sm text-gray-500 dark:text-zinc-400">{joinDate.toLocaleDateString()}</p>
+                    <p className="text-sm text-gray-500 dark:text-slate-400">{joinDate.toLocaleDateString()}</p>
                   </div>
                 </div>
                 

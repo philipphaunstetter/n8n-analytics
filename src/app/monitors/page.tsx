@@ -132,7 +132,7 @@ function MonitorsContent() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Monitors</h1>
-          <p className="mt-2 text-sm text-gray-600 dark:text-zinc-400">
+          <p className="mt-2 text-sm text-gray-600 dark:text-slate-400">
             Monitor your n8n instance and critical endpoints for availability and performance
           </p>
         </div>
@@ -221,10 +221,10 @@ function MonitorsContent() {
       </div>
 
       {/* Monitors List */}
-      <div className="bg-white dark:bg-zinc-900 shadow overflow-hidden sm:rounded-md">
+      <div className="bg-white dark:bg-slate-900 shadow overflow-hidden sm:rounded-md">
         <div className="px-4 py-5 sm:px-6 border-b border-gray-200">
           <h3 className="text-lg font-medium text-gray-900">All Monitors</h3>
-          <p className="mt-1 text-sm text-gray-500 dark:text-zinc-400">
+          <p className="mt-1 text-sm text-gray-500 dark:text-slate-400">
             Endpoint monitoring and uptime tracking for your critical services
           </p>
         </div>

@@ -125,7 +125,7 @@ function WorkflowDetailContent() {
       <div className="text-center py-12">
         <ExclamationTriangleIcon className="mx-auto h-12 w-12 text-red-400" />
         <h3 className="mt-2 text-sm font-semibold text-gray-900 dark:text-white">Error loading workflow</h3>
-        <p className="mt-1 text-sm text-gray-500 dark:text-zinc-400">{error || 'Workflow not found'}</p>
+        <p className="mt-1 text-sm text-gray-500 dark:text-slate-400">{error || 'Workflow not found'}</p>
         <div className="mt-6 space-x-3">
           <Button onClick={() => router.back()}>
             <ArrowLeftIcon className="h-4 w-4 mr-2" />
@@ -301,7 +301,7 @@ function WorkflowDetailContent() {
               <div>
                 <ExclamationTriangleIcon className="mx-auto h-12 w-12 text-gray-400" />
                 <h3 className="mt-2 text-sm font-semibold text-gray-900 dark:text-white">No workflow data available</h3>
-                <p className="mt-1 text-sm text-gray-500 dark:text-zinc-400">
+                <p className="mt-1 text-sm text-gray-500 dark:text-slate-400">
                   The workflow JSON data is not available for visualization.
                 </p>
               </div>
