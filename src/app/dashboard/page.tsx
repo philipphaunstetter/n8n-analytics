@@ -104,12 +104,12 @@ function DashboardContent() {
       {/* Stats Cards */}
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4 mb-8">
         {statsDisplay.map((item) => (
-          <div key={item.name} className="bg-white px-4 py-5 sm:p-6 shadow rounded-lg overflow-hidden">
-            <dt className="text-sm font-medium text-gray-500 truncate flex items-center">
-              <item.icon className="h-5 w-5 mr-2 text-gray-400" />
+          <div key={item.name} className="bg-white dark:bg-zinc-900 px-4 py-5 sm:p-6 shadow rounded-lg overflow-hidden">
+            <dt className="text-sm font-medium text-gray-500 dark:text-zinc-400 truncate flex items-center">
+              <item.icon className="h-5 w-5 mr-2 text-gray-400 dark:text-zinc-500" />
               {item.name}
             </dt>
-            <dd className="mt-1 text-3xl font-semibold text-gray-900">{item.value}</dd>
+            <dd className="mt-1 text-3xl font-semibold text-gray-900 dark:text-white">{item.value}</dd>
           </div>
         ))}
       </div>
