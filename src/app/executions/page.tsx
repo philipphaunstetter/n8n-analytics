@@ -185,8 +185,8 @@ function ExecutionsContent() {
     return (
       <div className="text-center py-12">
         <ExclamationTriangleIcon className="mx-auto h-12 w-12 text-red-400" />
-        <h3 className="mt-2 text-sm font-semibold text-gray-900">Error loading executions</h3>
-        <p className="mt-1 text-sm text-gray-500">{error}</p>
+        <h3 className="mt-2 text-sm font-semibold text-gray-900 dark:text-white">Error loading executions</h3>
+        <p className="mt-1 text-sm text-gray-500 dark:text-zinc-400">{error}</p>
         <Button onClick={fetchExecutions} className="mt-4">
           Try again
         </Button>
@@ -199,8 +199,8 @@ function ExecutionsContent() {
       {/* Page Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Executions</h1>
-          <p className="mt-2 text-sm text-gray-600">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Executions</h1>
+          <p className="mt-2 text-sm text-gray-600 dark:text-zinc-400">
             Monitor and debug workflow execution history
           </p>
         </div>
@@ -223,7 +223,7 @@ function ExecutionsContent() {
       {/* Filters */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-5">
         <div>
-          <label htmlFor="provider" className="block text-sm font-medium text-gray-700 mb-1">
+          <label htmlFor="provider" className="block text-sm font-medium text-gray-700 dark:text-zinc-300 mb-1">
             n8n Instance
           </label>
           <Select 
@@ -240,7 +240,7 @@ function ExecutionsContent() {
         </div>
 
         <div>
-          <label htmlFor="search" className="block text-sm font-medium text-gray-700 mb-1">
+          <label htmlFor="search" className="block text-sm font-medium text-gray-700 dark:text-zinc-300 mb-1">
             Search
           </label>
           <div className="relative">
@@ -257,7 +257,7 @@ function ExecutionsContent() {
         </div>
 
         <div>
-          <label htmlFor="status" className="block text-sm font-medium text-gray-700 mb-1">
+          <label htmlFor="status" className="block text-sm font-medium text-gray-700 dark:text-zinc-300 mb-1">
             Status
           </label>
           <Select 
@@ -274,7 +274,7 @@ function ExecutionsContent() {
         </div>
 
         <div>
-          <label htmlFor="timeRange" className="block text-sm font-medium text-gray-700 mb-1">
+          <label htmlFor="timeRange" className="block text-sm font-medium text-gray-700 dark:text-zinc-300 mb-1">
             Time Range
           </label>
           <Select 
@@ -298,7 +298,7 @@ function ExecutionsContent() {
 
       {/* Results Summary */}
       <div className="bg-white px-4 py-3 border border-gray-200 rounded-md">
-        <div className="flex items-center justify-between text-sm text-gray-600">
+        <div className="flex items-center justify-between text-sm text-gray-600 dark:text-zinc-400">
           <span>
             Showing {filteredExecutions.length} of {executions.length} executions
           </span>

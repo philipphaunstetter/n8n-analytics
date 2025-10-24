@@ -234,8 +234,8 @@ function ProvidersContent() {
       {/* Page Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">n8n Instances</h1>
-          <p className="mt-2 text-sm text-gray-600">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">n8n Instances</h1>
+          <p className="mt-2 text-sm text-gray-600 dark:text-zinc-400">
             Manage your n8n instances and monitor their connection status
           </p>
         </div>
@@ -256,8 +256,8 @@ function ProvidersContent() {
           <div className="mx-auto h-12 w-12 text-gray-400">
             <ExclamationTriangleIcon />
           </div>
-          <h3 className="mt-2 text-sm font-semibold text-gray-900">No n8n instances</h3>
-          <p className="mt-1 text-sm text-gray-500">
+          <h3 className="mt-2 text-sm font-semibold text-gray-900 dark:text-white">No n8n instances</h3>
+          <p className="mt-1 text-sm text-gray-500 dark:text-zinc-400">
             Get started by adding your first n8n instance
           </p>
           <div className="mt-6">
@@ -277,7 +277,7 @@ function ProvidersContent() {
                     <h3 className="text-lg font-semibold text-gray-900">{provider.name}</h3>
                     {getStatusBadge(provider)}
                   </div>
-                  <p className="mt-1 text-sm text-gray-600">{provider.baseUrl}</p>
+                  <p className="mt-1 text-sm text-gray-600 dark:text-zinc-400">{provider.baseUrl}</p>
                   <p className="mt-1 text-xs text-gray-500">
                     Last checked: {formatDate(provider.lastChecked)}
                   </p>
@@ -329,7 +329,7 @@ function ProvidersContent() {
             </h2>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="name" className="block text-sm font-medium text-gray-700 dark:text-zinc-300 mb-1">
                   Instance Name
                 </label>
                 <Input
@@ -342,7 +342,7 @@ function ProvidersContent() {
                 />
               </div>
               <div>
-                <label htmlFor="baseUrl" className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="baseUrl" className="block text-sm font-medium text-gray-700 dark:text-zinc-300 mb-1">
                   n8n URL
                 </label>
                 <Input
@@ -355,7 +355,7 @@ function ProvidersContent() {
                 />
               </div>
               <div>
-                <label htmlFor="apiKey" className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="apiKey" className="block text-sm font-medium text-gray-700 dark:text-zinc-300 mb-1">
                   API Key {editingProvider && <span className="text-xs text-gray-500">(leave blank to keep current)</span>}
                 </label>
                 <Input

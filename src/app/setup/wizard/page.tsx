@@ -518,7 +518,7 @@ export default function SetupWizardPage() {
         <div className="text-center mb-8">
           <div className="flex items-center justify-center space-x-2 mb-4">
             <ChartPieIcon className="h-8 w-8 text-indigo-600" />
-            <span className="text-2xl font-bold text-gray-900">Elova</span>
+            <span className="text-2xl font-bold text-gray-900 dark:text-white">Elova</span>
           </div>
           <h1 className="text-3xl font-bold text-gray-900">Setup Wizard</h1>
           <p className="text-gray-600 mt-2">Configure your workflow observability platform</p>

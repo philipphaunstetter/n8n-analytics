@@ -75,8 +75,8 @@ function DashboardContent() {
     return (
       <div className="text-center py-12">
         <ExclamationTriangleIcon className="mx-auto h-12 w-12 text-red-400" />
-        <h3 className="mt-2 text-sm font-semibold text-gray-900">Error loading dashboard</h3>
-        <p className="mt-1 text-sm text-gray-500">{error}</p>
+        <h3 className="mt-2 text-sm font-semibold text-gray-900 dark:text-white dark:text-white">Error loading dashboard</h3>
+        <p className="mt-1 text-sm text-gray-500 dark:text-zinc-400">{error}</p>
         <button
           onClick={() => window.location.reload()}
           className="mt-4 inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
@@ -93,8 +93,8 @@ function DashboardContent() {
       <div className="mb-8">
         <div className="flex items-start justify-between mb-6">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-            <p className="mt-2 text-sm text-gray-600">
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white dark:text-white">Dashboard</h1>
+            <p className="mt-2 text-sm text-gray-600 dark:text-zinc-400">
               Overview of your workflow automation across all platforms
             </p>
           </div>

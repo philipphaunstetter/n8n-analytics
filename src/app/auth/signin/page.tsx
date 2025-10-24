@@ -46,7 +46,7 @@ export default function SignIn() {
         <div className="text-center">
           <Link href="/" className="inline-flex items-center space-x-2">
             <ChartPieIcon className="h-8 w-8 text-indigo-600" />
-            <span className="text-2xl font-bold text-gray-900">Elova</span>
+            <span className="text-2xl font-bold text-gray-900 dark:text-white">Elova</span>
           </Link>
           <h2 className="mt-6 text-xl text-gray-600">
             Sign in to your account
@@ -108,7 +108,7 @@ export default function SignIn() {
           </div>
           
           <div className="mt-4 text-center">
-            <span className="text-sm text-gray-500">Don&apos;t have an account? </span>
+            <span className="text-sm text-gray-500 dark:text-zinc-400">Don&apos;t have an account? </span>
             <Link href="#" className="text-sm text-indigo-600 hover:text-indigo-500 font-medium">
               Sign up
             </Link>

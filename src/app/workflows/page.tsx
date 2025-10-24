@@ -190,8 +190,8 @@ function WorkflowsContent() {
     return (
       <div className="text-center py-12">
         <ExclamationTriangleIcon className="mx-auto h-12 w-12 text-red-400" />
-        <h3 className="mt-2 text-sm font-semibold text-gray-900">Error loading workflows</h3>
-        <p className="mt-1 text-sm text-gray-500">{error}</p>
+        <h3 className="mt-2 text-sm font-semibold text-gray-900 dark:text-white">Error loading workflows</h3>
+        <p className="mt-1 text-sm text-gray-500 dark:text-zinc-400">{error}</p>
         <Button onClick={fetchWorkflows} className="mt-4">
           Try again
         </Button>
@@ -204,8 +204,8 @@ function WorkflowsContent() {
       {/* Page Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Workflows</h1>
-          <p className="mt-2 text-sm text-gray-600">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Workflows</h1>
+          <p className="mt-2 text-sm text-gray-600 dark:text-zinc-400">
             Manage and monitor your n8n workflows
           </p>
         </div>
@@ -237,7 +237,7 @@ function WorkflowsContent() {
       {/* Filters */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-4">
         <div>
-          <label htmlFor="provider" className="block text-sm font-medium text-gray-700 mb-1">
+          <label htmlFor="provider" className="block text-sm font-medium text-gray-700 dark:text-zinc-300 mb-1">
             n8n Instance
           </label>
           <Select 
@@ -254,7 +254,7 @@ function WorkflowsContent() {
         </div>
 
         <div>
-          <label htmlFor="search" className="block text-sm font-medium text-gray-700 mb-1">
+          <label htmlFor="search" className="block text-sm font-medium text-gray-700 dark:text-zinc-300 mb-1">
             Search
           </label>
           <div className="relative">
@@ -271,7 +271,7 @@ function WorkflowsContent() {
         </div>
 
         <div>
-          <label htmlFor="status" className="block text-sm font-medium text-gray-700 mb-1">
+          <label htmlFor="status" className="block text-sm font-medium text-gray-700 dark:text-zinc-300 mb-1">
             Status
           </label>
           <Select 
@@ -295,7 +295,7 @@ function WorkflowsContent() {
 
       {/* Results Summary */}
       <div className="bg-white px-4 py-3 border border-gray-200 rounded-md">
-        <div className="flex items-center justify-between text-sm text-gray-600">
+        <div className="flex items-center justify-between text-sm text-gray-600 dark:text-zinc-400">
           <span>
             Showing {filteredWorkflows.length} of {workflows.length} workflows
           </span>

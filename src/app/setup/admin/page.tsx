@@ -100,7 +100,7 @@ export default function AdminSetupPage() {
             {/* Branding */}
             <div className="flex items-center justify-center space-x-2 mb-6">
               <ChartPieIcon className="h-8 w-8 text-indigo-600" />
-              <span className="text-2xl font-bold text-gray-900">Elova</span>
+              <span className="text-2xl font-bold text-gray-900 dark:text-white">Elova</span>
             </div>
             
             {/* Headline and Subheadline */}
