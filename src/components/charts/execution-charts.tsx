@@ -119,7 +119,7 @@ export function ExecutionCharts({ timeRange, onTimeRangeChange }: ExecutionChart
 
   if (error) {
     return (
-      <div className="bg-white dark:bg-slate-900 p-6 rounded-lg shadow">
+      <div className="bg-white dark:bg-slate-800 p-6 rounded-lg shadow">
         <div className="text-center">
           <XCircleIcon className="mx-auto h-12 w-12 text-red-400" />
           <h3 className="mt-2 text-sm font-semibold text-gray-900 dark:text-white">Error loading charts</h3>
@@ -132,7 +132,7 @@ export function ExecutionCharts({ timeRange, onTimeRangeChange }: ExecutionChart
   return (
     <div className="space-y-6">
       {/* Time Range Selector */}
-      <div className="bg-white dark:bg-slate-900 p-4 rounded-lg shadow">
+      <div className="bg-white dark:bg-slate-800 p-4 rounded-lg shadow">
         <div className="flex items-center justify-between">
           <h3 className="text-lg font-medium text-gray-900 dark:text-white flex items-center">
             <CalendarDaysIcon className="h-5 w-5 mr-2 text-gray-400 dark:text-slate-400" />
@@ -159,7 +159,7 @@ export function ExecutionCharts({ timeRange, onTimeRangeChange }: ExecutionChart
       {loading ? (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="bg-white dark:bg-slate-900 p-6 rounded-lg shadow animate-pulse">
+            <div key={i} className="bg-white dark:bg-slate-800 p-6 rounded-lg shadow animate-pulse">
               <div className="h-4 bg-gray-200 dark:bg-slate-700 rounded w-1/3 mb-4"></div>
               <div className="h-64 bg-gray-200 dark:bg-slate-700 rounded"></div>
             </div>
@@ -168,7 +168,7 @@ export function ExecutionCharts({ timeRange, onTimeRangeChange }: ExecutionChart
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Execution Volume Chart */}
-          <div className="bg-white dark:bg-slate-900 p-6 rounded-lg shadow">
+          <div className="bg-white dark:bg-slate-800 p-6 rounded-lg shadow">
             <h4 className="text-md font-medium text-gray-900 dark:text-white mb-4 flex items-center">
               <CheckCircleIcon className="h-5 w-5 mr-2 text-green-500" />
               Execution Volume
@@ -219,7 +219,7 @@ export function ExecutionCharts({ timeRange, onTimeRangeChange }: ExecutionChart
           </div>
 
           {/* Success Rate Chart */}
-          <div className="bg-white dark:bg-slate-900 p-6 rounded-lg shadow">
+          <div className="bg-white dark:bg-slate-800 p-6 rounded-lg shadow">
             <h4 className="text-md font-medium text-gray-900 dark:text-white mb-4 flex items-center">
               <CheckCircleIcon className="h-5 w-5 mr-2 text-blue-500" />
               Success Rate
@@ -255,7 +255,7 @@ export function ExecutionCharts({ timeRange, onTimeRangeChange }: ExecutionChart
           </div>
 
           {/* Response Time Chart */}
-          <div className="bg-white dark:bg-slate-900 p-6 rounded-lg shadow">
+          <div className="bg-white dark:bg-slate-800 p-6 rounded-lg shadow">
             <h4 className="text-md font-medium text-gray-900 dark:text-white mb-4 flex items-center">
               <ClockIcon className="h-5 w-5 mr-2 text-purple-500" />
               Average Response Time
@@ -290,7 +290,7 @@ export function ExecutionCharts({ timeRange, onTimeRangeChange }: ExecutionChart
           </div>
 
           {/* Execution Distribution Chart */}
-          <div className="bg-white dark:bg-slate-900 p-6 rounded-lg shadow">
+          <div className="bg-white dark:bg-slate-800 p-6 rounded-lg shadow">
             <h4 className="text-md font-medium text-gray-900 dark:text-white mb-4 flex items-center">
               <CheckCircleIcon className="h-5 w-5 mr-2 text-orange-500" />
               Execution Distribution
@@ -323,7 +323,7 @@ export function ExecutionCharts({ timeRange, onTimeRangeChange }: ExecutionChart
 
       {/* Chart Summary */}
       {!loading && chartData.length > 0 && (
-        <div className="bg-white dark:bg-slate-900 p-4 rounded-lg shadow">
+        <div className="bg-white dark:bg-slate-800 p-4 rounded-lg shadow">
           <div className="text-sm text-gray-600">
             <p>
               Showing data for <span className="font-medium">{TIME_RANGE_OPTIONS.find(o => o.value === timeRange)?.label}</span>

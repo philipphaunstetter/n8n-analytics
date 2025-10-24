@@ -104,7 +104,7 @@ function DashboardContent() {
       {/* Stats Cards */}
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4 mb-8">
         {statsDisplay.map((item) => (
-          <div key={item.name} className="bg-white dark:bg-slate-900 px-4 py-5 sm:p-6 shadow rounded-lg overflow-hidden ring-1 ring-zinc-950/5 dark:ring-white/10">
+          <div key={item.name} className="bg-white dark:bg-slate-800 px-4 py-5 sm:p-6 shadow rounded-lg overflow-hidden ring-1 ring-zinc-950/5 dark:ring-white/10">
             <dt className="text-sm font-medium text-gray-500 dark:text-slate-400 truncate flex items-center">
               <item.icon className="h-5 w-5 mr-2 text-gray-400 dark:text-slate-500" />
               {item.name}

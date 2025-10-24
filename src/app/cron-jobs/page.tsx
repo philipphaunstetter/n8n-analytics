@@ -219,7 +219,7 @@ function CronJobsContent() {
       </div>
 
       {/* Results Summary */}
-      <div className="bg-white dark:bg-slate-900 px-4 py-3 border border-gray-200 dark:border-slate-300 rounded-md">
+      <div className="bg-white dark:bg-slate-800 px-4 py-3 border border-gray-200 dark:border-slate-300 rounded-md">
         <div className="flex items-center justify-between text-sm text-gray-600 dark:text-slate-400">
           <span>
             Showing {cronJobs.length} workflow{cronJobs.length !== 1 ? 's' : ''} with cron schedules
@@ -231,7 +231,7 @@ function CronJobsContent() {
       </div>
 
       {/* Cron Jobs Table */}
-      <div className="bg-white dark:bg-slate-900 shadow overflow-hidden sm:rounded-md ring-1 ring-zinc-950/5 dark:ring-white/10">
+      <div className="bg-white dark:bg-slate-800 shadow overflow-hidden sm:rounded-md ring-1 ring-zinc-950/5 dark:ring-white/10">
         <Table>
           <TableHead>
             <TableRow>

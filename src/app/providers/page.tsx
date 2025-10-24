@@ -247,12 +247,12 @@ function ProvidersContent() {
 
       {/* Providers List */}
       {loading ? (
-        <div className="bg-white dark:bg-slate-900 rounded-lg shadow p-8 text-center">
+        <div className="bg-white dark:bg-slate-800 rounded-lg shadow p-8 text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mx-auto"></div>
           <p className="mt-2 text-gray-600 dark:text-slate-400">Loading providers...</p>
         </div>
       ) : providers.length === 0 ? (
-        <div className="bg-white dark:bg-slate-900 rounded-lg shadow p-12 text-center">
+        <div className="bg-white dark:bg-slate-800 rounded-lg shadow p-12 text-center">
           <div className="mx-auto h-12 w-12 text-gray-400">
             <ExclamationTriangleIcon />
           </div>
@@ -270,7 +270,7 @@ function ProvidersContent() {
       ) : (
         <div className="grid gap-4">
           {providers.map((provider) => (
-            <div key={provider.id} className="bg-white dark:bg-slate-900 rounded-lg shadow border border-gray-200 dark:border-slate-300 p-6">
+            <div key={provider.id} className="bg-white dark:bg-slate-800 rounded-lg shadow border border-gray-200 dark:border-slate-300 p-6">
               <div className="flex items-start justify-between">
                 <div className="flex-1">
                   <div className="flex items-center space-x-3">
@@ -323,7 +323,7 @@ function ProvidersContent() {
       {/* Add/Edit Modal */}
       {showAddModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-slate-900 rounded-lg shadow-xl p-6 w-full max-w-md">
+          <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl p-6 w-full max-w-md">
             <h2 className="text-xl font-bold text-gray-900 mb-4">
               {editingProvider ? 'Edit Provider' : 'Add n8n Instance'}
             </h2>

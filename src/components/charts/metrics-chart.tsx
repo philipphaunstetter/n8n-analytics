@@ -124,7 +124,7 @@ export function MetricsChart({ timeRange, onTimeRangeChange }: MetricsChartProps
 
   if (error) {
     return (
-      <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-300 rounded-lg p-6">
+      <div className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-300 rounded-lg p-6">
         <div className="text-center">
           <p className="text-sm text-red-600">{error}</p>
         </div>
@@ -139,7 +139,7 @@ export function MetricsChart({ timeRange, onTimeRangeChange }: MetricsChartProps
     : 0
 
   return (
-    <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-300 rounded-lg">
+    <div className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-300 rounded-lg">
       {/* Header */}
       <div className="px-6 py-4 border-b border-gray-200 dark:border-slate-300">
         <div className="flex items-center justify-between">
