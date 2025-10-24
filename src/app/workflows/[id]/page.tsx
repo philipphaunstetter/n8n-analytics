@@ -125,7 +125,7 @@ function WorkflowDetailContent() {
       <div className="text-center py-12">
         <ExclamationTriangleIcon className="mx-auto h-12 w-12 text-red-400" />
         <h3 className="mt-2 text-sm font-semibold text-gray-900 dark:text-white">Error loading workflow</h3>
-        <p className="mt-1 text-sm text-gray-500 dark:text-slate-400">{error || 'Workflow not found'}</p>
+        <p className="mt-1 text-sm text-gray-500 dark:text-slate-400 dark:text-slate-400">{error || 'Workflow not found'}</p>
         <div className="mt-6 space-x-3">
           <Button onClick={() => router.back()}>
             <ArrowLeftIcon className="h-4 w-4 mr-2" />
@@ -172,9 +172,9 @@ function WorkflowDetailContent() {
               </Badge>
             </div>
             {workflow.description && (
-              <p className="text-gray-600">{workflow.description}</p>
+              <p className="text-gray-600 dark:text-slate-400">{workflow.description}</p>
             )}
-            <div className="flex items-center space-x-4 text-sm text-gray-500 mt-2">
+            <div className="flex items-center space-x-4 text-sm text-gray-500 dark:text-slate-400 mt-2">
               <span className="font-mono">{workflow.id}</span>
               <span>•</span>
               <span>{workflow.metadata?.nodeCount || 0} nodes</span>
@@ -196,7 +196,7 @@ function WorkflowDetailContent() {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-4">
-        <div className="bg-white overflow-hidden shadow rounded-lg">
+        <div className="bg-white dark:bg-slate-800 overflow-hidden shadow rounded-lg">
           <div className="p-5">
             <div className="flex items-center">
               <div className="flex-shrink-0">
@@ -204,15 +204,15 @@ function WorkflowDetailContent() {
               </div>
               <div className="ml-5 w-0 flex-1">
                 <dl>
-                  <dt className="text-sm font-medium text-gray-500 truncate">Total Executions</dt>
-                  <dd className="text-lg font-medium text-gray-900">{workflow.totalExecutions}</dd>
+                  <dt className="text-sm font-medium text-gray-500 dark:text-slate-400 truncate">Total Executions</dt>
+                  <dd className="text-lg font-medium text-gray-900 dark:text-white">{workflow.totalExecutions}</dd>
                 </dl>
               </div>
             </div>
           </div>
         </div>
 
-        <div className="bg-white overflow-hidden shadow rounded-lg">
+        <div className="bg-white dark:bg-slate-800 overflow-hidden shadow rounded-lg">
           <div className="p-5">
             <div className="flex items-center">
               <div className="flex-shrink-0">
@@ -220,15 +220,15 @@ function WorkflowDetailContent() {
               </div>
               <div className="ml-5 w-0 flex-1">
                 <dl>
-                  <dt className="text-sm font-medium text-gray-500 truncate">Success Rate</dt>
-                  <dd className="text-lg font-medium text-gray-900">{workflow.successRate.toFixed(1)}%</dd>
+                  <dt className="text-sm font-medium text-gray-500 dark:text-slate-400 truncate">Success Rate</dt>
+                  <dd className="text-lg font-medium text-gray-900 dark:text-white">{workflow.successRate.toFixed(1)}%</dd>
                 </dl>
               </div>
             </div>
           </div>
         </div>
 
-        <div className="bg-white overflow-hidden shadow rounded-lg">
+        <div className="bg-white dark:bg-slate-800 overflow-hidden shadow rounded-lg">
           <div className="p-5">
             <div className="flex items-center">
               <div className="flex-shrink-0">
@@ -236,15 +236,15 @@ function WorkflowDetailContent() {
               </div>
               <div className="ml-5 w-0 flex-1">
                 <dl>
-                  <dt className="text-sm font-medium text-gray-500 truncate">Avg Duration</dt>
-                  <dd className="text-lg font-medium text-gray-900">{formatDuration(workflow.avgDuration)}</dd>
+                  <dt className="text-sm font-medium text-gray-500 dark:text-slate-400 truncate">Avg Duration</dt>
+                  <dd className="text-lg font-medium text-gray-900 dark:text-white">{formatDuration(workflow.avgDuration)}</dd>
                 </dl>
               </div>
             </div>
           </div>
         </div>
 
-        <div className="bg-white overflow-hidden shadow rounded-lg">
+        <div className="bg-white dark:bg-slate-800 overflow-hidden shadow rounded-lg">
           <div className="p-5">
             <div className="flex items-center">
               <div className="flex-shrink-0">
@@ -252,8 +252,8 @@ function WorkflowDetailContent() {
               </div>
               <div className="ml-5 w-0 flex-1">
                 <dl>
-                  <dt className="text-sm font-medium text-gray-500 truncate">Last Executed</dt>
-                  <dd className="text-sm font-medium text-gray-900">
+                  <dt className="text-sm font-medium text-gray-500 dark:text-slate-400 truncate">Last Executed</dt>
+                  <dd className="text-sm font-medium text-gray-900 dark:text-white">
                     {workflow.lastExecutedAt ? formatDate(workflow.lastExecutedAt) : 'Never'}
                   </dd>
                 </dl>
@@ -265,10 +265,10 @@ function WorkflowDetailContent() {
 
       {/* Tags */}
       {workflow.tags && workflow.tags.length > 0 && (
-        <div className="bg-white shadow rounded-lg p-6">
+        <div className="bg-white dark:bg-slate-800 shadow rounded-lg p-6">
           <div className="flex items-center mb-4">
             <TagIcon className="h-5 w-5 text-gray-400 mr-2" />
-            <h3 className="text-lg font-medium text-gray-900">Tags</h3>
+            <h3 className="text-lg font-medium text-gray-900 dark:text-white">Tags</h3>
           </div>
           <div className="flex flex-wrap gap-2">
             {workflow.tags.map((tag, index) => (
@@ -281,10 +281,10 @@ function WorkflowDetailContent() {
       )}
 
       {/* Workflow Visualization */}
-      <div className="bg-white shadow rounded-lg flex flex-col">
-        <div className="px-6 py-4 border-b border-gray-200 flex-shrink-0">
-          <h3 className="text-lg font-medium text-gray-900">Workflow Visualization</h3>
-          <p className="text-sm text-gray-500 mt-1">Interactive preview of your n8n workflow</p>
+      <div className="bg-white dark:bg-slate-800 shadow rounded-lg flex flex-col">
+        <div className="px-6 py-4 border-b border-gray-200 dark:border-slate-300 flex-shrink-0">
+          <h3 className="text-lg font-medium text-gray-900 dark:text-white">Workflow Visualization</h3>
+          <p className="text-sm text-gray-500 dark:text-slate-400 mt-1">Interactive preview of your n8n workflow</p>
         </div>
         <div className="flex-1 flex flex-col" style={{ minHeight: '85vh', height: '85vh' }}>
           {workflow.workflowJson ? (
@@ -301,7 +301,7 @@ function WorkflowDetailContent() {
               <div>
                 <ExclamationTriangleIcon className="mx-auto h-12 w-12 text-gray-400" />
                 <h3 className="mt-2 text-sm font-semibold text-gray-900 dark:text-white">No workflow data available</h3>
-                <p className="mt-1 text-sm text-gray-500 dark:text-slate-400">
+                <p className="mt-1 text-sm text-gray-500 dark:text-slate-400 dark:text-slate-400">
                   The workflow JSON data is not available for visualization.
                 </p>
               </div>
@@ -311,19 +311,19 @@ function WorkflowDetailContent() {
       </div>
 
       {/* Metadata */}
-      <div className="bg-white shadow rounded-lg">
+      <div className="bg-white dark:bg-slate-800 shadow rounded-lg">
         <div className="px-6 py-4 border-b border-gray-200">
-          <h3 className="text-lg font-medium text-gray-900">Workflow Details</h3>
+          <h3 className="text-lg font-medium text-gray-900 dark:text-white">Workflow Details</h3>
         </div>
         <div className="px-6 py-4">
           <dl className="grid grid-cols-1 gap-x-4 gap-y-6 sm:grid-cols-2">
             <div>
               <dt className="text-sm font-medium text-gray-500">Created</dt>
-              <dd className="mt-1 text-sm text-gray-900">{formatDate(workflow.createdAt)}</dd>
+              <dd className="mt-1 text-sm text-gray-900 dark:text-white">{formatDate(workflow.createdAt)}</dd>
             </div>
             <div>
               <dt className="text-sm font-medium text-gray-500">Last Updated</dt>
-              <dd className="mt-1 text-sm text-gray-900">{formatDate(workflow.updatedAt)}</dd>
+              <dd className="mt-1 text-sm text-gray-900 dark:text-white">{formatDate(workflow.updatedAt)}</dd>
             </div>
             <div>
               <dt className="text-sm font-medium text-gray-500">Provider ID</dt>
@@ -335,11 +335,11 @@ function WorkflowDetailContent() {
             </div>
             <div>
               <dt className="text-sm font-medium text-gray-500">Success Count</dt>
-              <dd className="mt-1 text-sm text-gray-900">{workflow.successCount}</dd>
+              <dd className="mt-1 text-sm text-gray-900 dark:text-white">{workflow.successCount}</dd>
             </div>
             <div>
               <dt className="text-sm font-medium text-gray-500">Failure Count</dt>
-              <dd className="mt-1 text-sm text-gray-900">{workflow.failureCount}</dd>
+              <dd className="mt-1 text-sm text-gray-900 dark:text-white">{workflow.failureCount}</dd>
             </div>
           </dl>
         </div>

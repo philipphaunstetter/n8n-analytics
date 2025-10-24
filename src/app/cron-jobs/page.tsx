@@ -301,7 +301,7 @@ function CronJobsContent() {
                     <TableCell>
                       <div className="flex flex-col">
                         <span 
-                          className="font-medium text-gray-900 truncate max-w-xs" 
+                          className="font-medium text-gray-900 dark:text-white truncate max-w-xs" 
                           title={job.workflowName}
                         >
                           {job.workflowName}

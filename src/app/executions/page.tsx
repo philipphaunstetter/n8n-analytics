@@ -381,7 +381,7 @@ function ExecutionsContent() {
                     </TableCell>
                     <TableCell>
                       <div className="flex flex-col">
-                        <span className="font-medium text-gray-900">
+                        <span className="font-medium text-gray-900 dark:text-white">
                           {(typeof execution.metadata?.workflowName === 'string' ? execution.metadata.workflowName : null) || 
                            DEMO_WORKFLOWS.find(w => w.id === execution.workflowId)?.name || 
                            execution.workflowId}
