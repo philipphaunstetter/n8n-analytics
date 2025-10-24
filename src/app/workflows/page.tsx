@@ -306,7 +306,7 @@ function WorkflowsContent() {
       </div>
 
       {/* Workflows Table */}
-      <div className="bg-white dark:bg-slate-900 shadow overflow-hidden sm:rounded-md">
+      <div className="bg-white dark:bg-slate-900 shadow border border-gray-200 dark:border-slate-700 overflow-hidden sm:rounded-md">
         <Table>
           <TableHead>
             <TableRow>
