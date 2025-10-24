@@ -29,7 +29,6 @@ import { Navbar, NavbarItem, NavbarSection, NavbarSpacer } from './navbar'
 import { Dropdown, DropdownButton, DropdownItem, DropdownMenu } from './dropdown'
 import { Avatar } from './avatar'
 import { ToastContainer } from './toast'
-import { ThemeToggle } from './theme-toggle'
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: DashboardIcon, current: true },
@@ -73,7 +72,6 @@ function AppSidebar() {
       </SidebarBody>
 
       <SidebarFooter>
-        <ThemeToggle />
         <UserProfileSection />
       </SidebarFooter>
     </Sidebar>

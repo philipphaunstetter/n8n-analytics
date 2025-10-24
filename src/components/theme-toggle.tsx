@@ -1,33 +1,32 @@
 'use client'
 
 import { useTheme } from '@/contexts/ThemeContext'
-import { SunIcon, MoonIcon } from '@heroicons/react/24/outline'
+import { SunIcon, MoonIcon } from '@heroicons/react/16/solid'
+import { Switch } from './switch'
 import clsx from 'clsx'
 
 export function ThemeToggle() {
   const { theme, toggleTheme } = useTheme()
+  const isDark = theme === 'dark'
 
   return (
-    <button
-      onClick={toggleTheme}
-      className={clsx(
-        'flex items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
-        'text-zinc-700 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-800',
-        'focus:outline-none focus:ring-2 focus:ring-zinc-500 focus:ring-offset-2 dark:focus:ring-offset-zinc-900'
-      )}
-      aria-label={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
-    >
-      {theme === 'light' ? (
-        <>
-          <MoonIcon className="h-5 w-5" />
-          <span>Dark</span>
-        </>
-      ) : (
-        <>
-          <SunIcon className="h-5 w-5" />
-          <span>Light</span>
-        </>
-      )}
-    </button>
+    <div className="fixed bottom-6 right-6 z-50">
+      <div 
+        className={clsx(
+          'flex items-center gap-3 rounded-lg px-4 py-3 shadow-lg ring-1',
+          'bg-white ring-zinc-950/10 dark:bg-zinc-900 dark:ring-white/10',
+          'transition-all duration-200'
+        )}
+      >
+        <SunIcon className="h-4 w-4 text-zinc-700 dark:text-zinc-400" />
+        <Switch
+          checked={isDark}
+          onChange={toggleTheme}
+          color="blue"
+          aria-label="Toggle dark mode"
+        />
+        <MoonIcon className="h-4 w-4 text-zinc-700 dark:text-zinc-400" />
+      </div>
+    </div>
   )
 }
