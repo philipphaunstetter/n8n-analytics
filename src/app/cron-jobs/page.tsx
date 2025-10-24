@@ -314,7 +314,7 @@ function CronJobsContent() {
                     <TableCell>
                       <div className="flex flex-col gap-2">
                         {job.cronSchedules.map((schedule, index) => (
-                          <div key={index} className="text-sm text-gray-900">
+                          <div key={index} className="text-sm text-gray-900 dark:text-white">
                             {formatCronExpression(schedule.cronExpression)}
                           </div>
                         ))}
