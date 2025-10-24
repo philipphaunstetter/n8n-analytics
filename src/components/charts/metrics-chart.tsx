@@ -124,7 +124,7 @@ export function MetricsChart({ timeRange, onTimeRangeChange }: MetricsChartProps
 
   if (error) {
     return (
-      <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-600 rounded-lg p-6">
+      <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-300 rounded-lg p-6">
         <div className="text-center">
           <p className="text-sm text-red-600">{error}</p>
         </div>
@@ -139,9 +139,9 @@ export function MetricsChart({ timeRange, onTimeRangeChange }: MetricsChartProps
     : 0
 
   return (
-    <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-600 rounded-lg">
+    <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-300 rounded-lg">
       {/* Header */}
-      <div className="px-6 py-4 border-b border-gray-200 dark:border-slate-600">
+      <div className="px-6 py-4 border-b border-gray-200 dark:border-slate-300">
         <div className="flex items-center justify-between">
           <div>
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Execution Metrics</h3>
@@ -266,7 +266,7 @@ export function MetricsChart({ timeRange, onTimeRangeChange }: MetricsChartProps
       </div>
 
       {/* Footer */}
-      <div className="px-6 py-3 border-t border-gray-200 dark:border-slate-600 bg-gray-50 dark:bg-slate-800 rounded-b-lg">
+      <div className="px-6 py-3 border-t border-gray-200 dark:border-slate-300 bg-gray-50 dark:bg-slate-800 rounded-b-lg">
         <div className="flex items-center justify-between text-xs text-gray-500 dark:text-slate-400">
           <span>
             {chartData.length > 0 

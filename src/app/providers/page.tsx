@@ -270,7 +270,7 @@ function ProvidersContent() {
       ) : (
         <div className="grid gap-4">
           {providers.map((provider) => (
-            <div key={provider.id} className="bg-white dark:bg-slate-900 rounded-lg shadow border border-gray-200 dark:border-slate-600 p-6">
+            <div key={provider.id} className="bg-white dark:bg-slate-900 rounded-lg shadow border border-gray-200 dark:border-slate-300 p-6">
               <div className="flex items-start justify-between">
                 <div className="flex-1">
                   <div className="flex items-center space-x-3">

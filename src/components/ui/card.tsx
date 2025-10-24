@@ -9,7 +9,7 @@ export function Card({ children, className, ...props }: CardProps) {
   return (
     <div
       className={clsx(
-        'rounded-lg border border-gray-200 bg-white shadow-sm dark:border-slate-600 dark:bg-slate-900',
+        'rounded-lg border border-gray-200 bg-white shadow-sm dark:border-slate-300 dark:bg-slate-900',
         className
       )}
       {...props}
@@ -26,7 +26,7 @@ interface CardHeaderProps extends React.HTMLAttributes<HTMLDivElement> {
 export function CardHeader({ children, className, ...props }: CardHeaderProps) {
   return (
     <div
-      className={clsx('px-6 py-4 border-b border-gray-200 dark:border-slate-600', className)}
+      className={clsx('px-6 py-4 border-b border-gray-200 dark:border-slate-300', className)}
       {...props}
     >
       {children}
