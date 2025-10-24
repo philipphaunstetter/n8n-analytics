@@ -55,7 +55,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
     const date = new Date(data.timestamp)
     
     return (
-      <div className="bg-white dark:bg-slate-800 p-4 shadow-lg rounded-lg border border-gray-200 dark:border-slate-700">
+      <div className="bg-white dark:bg-slate-800 p-4 shadow-lg rounded-lg border border-gray-200 dark:border-slate-600">
         <p className="text-sm font-medium text-gray-900 dark:text-white mb-2">
           {date.toLocaleDateString()} {date.toLocaleTimeString()}
         </p>

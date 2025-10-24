@@ -219,7 +219,7 @@ function CronJobsContent() {
       </div>
 
       {/* Results Summary */}
-      <div className="bg-white dark:bg-slate-900 px-4 py-3 border border-gray-200 dark:border-slate-700 rounded-md">
+      <div className="bg-white dark:bg-slate-900 px-4 py-3 border border-gray-200 dark:border-slate-600 rounded-md">
         <div className="flex items-center justify-between text-sm text-gray-600 dark:text-slate-400">
           <span>
             Showing {cronJobs.length} workflow{cronJobs.length !== 1 ? 's' : ''} with cron schedules
