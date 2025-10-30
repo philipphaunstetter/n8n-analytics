@@ -6,7 +6,7 @@ import { ExecutionStatus } from '@/types'
 // GET /api/executions/[id] - Get a single execution with full details
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
     // Authenticate the request
@@ -16,6 +16,7 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    const params = await context.params
     const executionId = params.id
 
     const db = getDb()
