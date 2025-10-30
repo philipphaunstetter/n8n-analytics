@@ -16,8 +16,11 @@ export interface N8nExecution {
   data?: {
     resultData?: {
       runData?: Record<string, any[]>;
+      error?: any;
+      lastNodeExecuted?: string;
     };
     executionData?: any;
+    startData?: any;
   };
 }
 
@@ -95,8 +98,13 @@ class N8nApiClient {
     return this.request<ExecutionsResponse>(endpoint);
   }
 
-  async getExecution(id: string): Promise<N8nExecution> {
-    return this.request<N8nExecution>(`/executions/${id}`);
+  async getExecution(id: string, includeData: boolean = false): Promise<N8nExecution> {
+    const params = includeData ? '?includeData=true' : '';
+    return this.request<N8nExecution>(`/executions/${id}${params}`);
+  }
+
+  async getExecutionWithData(id: string): Promise<N8nExecution> {
+    return this.getExecution(id, true);
   }
 
   async getWorkflows(): Promise<N8nWorkflow[]> {

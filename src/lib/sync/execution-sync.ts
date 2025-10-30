@@ -4,6 +4,7 @@ import { Database } from 'sqlite3'
 import { ConfigManager, getConfigManager } from '@/lib/config/config-manager'
 import path from 'path'
 import crypto from 'crypto'
+import { extractAIMetrics } from '@/lib/services/ai-metrics-extractor'
 
 // Encryption settings (must match provider-service.ts)
 const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || 'elova-default-encryption-key-change-me'
@@ -483,6 +484,9 @@ export class ExecutionSyncService {
       throw new Error(`Workflow not found: ${n8nExecution.workflowId}`)
     }
     
+    // Extract AI metrics if execution has data
+    const aiMetrics = n8nExecution.data ? extractAIMetrics(n8nExecution) : null
+    
     const executionData = {
       id: `exec_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       provider_id: providerId,
@@ -499,6 +503,13 @@ export class ExecutionSyncService {
       finished: n8nExecution.finished ? 1 : 0,
       retry_of: n8nExecution.retryOf,
       retry_success_id: n8nExecution.retrySuccessId,
+      // AI Metrics
+      execution_data: n8nExecution.data ? JSON.stringify(n8nExecution.data) : null,
+      total_tokens: aiMetrics?.totalTokens || 0,
+      input_tokens: aiMetrics?.inputTokens || 0,
+      output_tokens: aiMetrics?.outputTokens || 0,
+      ai_cost: aiMetrics?.aiCost || 0,
+      ai_provider: aiMetrics?.aiProvider || null,
       metadata: JSON.stringify({
         workflowName: workflow.name,
         waitTill: (n8nExecution as any).waitTill,
@@ -525,13 +536,17 @@ export class ExecutionSyncService {
           UPDATE executions SET
             workflow_id = ?, status = ?, mode = ?, started_at = ?, stopped_at = ?,
             duration = ?, finished = ?, retry_of = ?, retry_success_id = ?, metadata = ?,
+            execution_data = ?, total_tokens = ?, input_tokens = ?, output_tokens = ?,
+            ai_cost = ?, ai_provider = ?,
             updated_at = CURRENT_TIMESTAMP
           WHERE id = ?
         `, [
           executionData.workflow_id, executionData.status, executionData.mode,
           executionData.started_at, executionData.stopped_at, executionData.duration,
           executionData.finished, executionData.retry_of, executionData.retry_success_id,
-          executionData.metadata, existing.id
+          executionData.metadata, executionData.execution_data, executionData.total_tokens,
+          executionData.input_tokens, executionData.output_tokens, executionData.ai_cost,
+          executionData.ai_provider, existing.id
         ], function(err) {
           if (err) reject(err)
           else resolve({ updated: true, inserted: false })
@@ -542,14 +557,17 @@ export class ExecutionSyncService {
           INSERT INTO executions (
             id, provider_id, workflow_id, provider_execution_id, provider_workflow_id,
             status, mode, started_at, stopped_at, duration, finished, retry_of,
-            retry_success_id, metadata
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            retry_success_id, metadata, execution_data, total_tokens, input_tokens,
+            output_tokens, ai_cost, ai_provider
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `, [
           executionData.id, executionData.provider_id, executionData.workflow_id,
           executionData.provider_execution_id, executionData.provider_workflow_id,
           executionData.status, executionData.mode, executionData.started_at,
           executionData.stopped_at, executionData.duration, executionData.finished,
-          executionData.retry_of, executionData.retry_success_id, executionData.metadata
+          executionData.retry_of, executionData.retry_success_id, executionData.metadata,
+          executionData.execution_data, executionData.total_tokens, executionData.input_tokens,
+          executionData.output_tokens, executionData.ai_cost, executionData.ai_provider
         ], function(err) {
           if (err) reject(err)
           else resolve({ inserted: true, updated: false })

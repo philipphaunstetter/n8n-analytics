@@ -3,6 +3,31 @@ import { ConfigManager } from '@/lib/config/config-manager'
 
 let db: Database | null = null
 
+// Migration to add AI metrics columns to executions table
+function migrateAIMetrics(database: Database) {
+  database.serialize(() => {
+    // Check if columns already exist by attempting to add them
+    // SQLite will ignore if columns already exist with IF NOT EXISTS equivalent
+    const migrations = [
+      'ALTER TABLE executions ADD COLUMN execution_data TEXT DEFAULT NULL',
+      'ALTER TABLE executions ADD COLUMN total_tokens INTEGER DEFAULT 0',
+      'ALTER TABLE executions ADD COLUMN input_tokens INTEGER DEFAULT 0',
+      'ALTER TABLE executions ADD COLUMN output_tokens INTEGER DEFAULT 0',
+      'ALTER TABLE executions ADD COLUMN ai_cost REAL DEFAULT 0.0',
+      'ALTER TABLE executions ADD COLUMN ai_provider TEXT DEFAULT NULL'
+    ]
+
+    migrations.forEach(sql => {
+      database.run(sql, (err) => {
+        // Ignore "duplicate column" errors - means migration already ran
+        if (err && !err.message.includes('duplicate column')) {
+          console.error('Migration error:', err.message)
+        }
+      })
+    })
+  })
+}
+
 // Ensure core analytics tables exist (idempotent)
 function ensureSchema(database: Database) {
   database.serialize(() => {
@@ -103,6 +128,7 @@ export function getDb(): Database {
     db = new Database(dbPath)
     configureDatabase(db)
     ensureSchema(db)
+    migrateAIMetrics(db)
   }
   return db
 }

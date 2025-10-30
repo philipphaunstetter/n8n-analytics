@@ -69,6 +69,13 @@ export interface Execution {
   // Mode info
   mode: 'manual' | 'trigger' | 'webhook' | 'cron' | 'unknown'
   
+  // AI Metrics (token usage and costs)
+  totalTokens?: number
+  inputTokens?: number
+  outputTokens?: number
+  aiCost?: number
+  aiProvider?: string | null
+  
   // Provider-specific metadata
   metadata?: Record<string, unknown>
 }

@@ -323,6 +323,8 @@ function ExecutionsContent() {
               <TableHeader>Started</TableHeader>
               <TableHeader>Duration</TableHeader>
               <TableHeader>Mode</TableHeader>
+              <TableHeader>Tokens</TableHeader>
+              <TableHeader>AI Cost</TableHeader>
               <TableHeader>Actions</TableHeader>
             </TableRow>
           </TableHead>
@@ -331,7 +333,7 @@ function ExecutionsContent() {
               // Loading rows
               Array.from({ length: 5 }).map((_, i) => (
                 <TableRow key={i}>
-                  <TableCell colSpan={8}>
+                  <TableCell colSpan={10}>
                     <div className="animate-pulse flex space-x-4 py-4">
                       <div className="rounded-full bg-gray-300 h-6 w-6"></div>
                       <div className="flex-1 space-y-2">
@@ -344,7 +346,7 @@ function ExecutionsContent() {
               ))
             ) : filteredExecutions.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={8} className="text-center py-8 text-gray-500">
+                <TableCell colSpan={10} className="text-center py-8 text-gray-500">
                   {executions.length === 0 
                     ? 'No executions found for this time range'
                     : 'No executions match your search criteria'
@@ -406,6 +408,36 @@ function ExecutionsContent() {
                       <Badge color="blue" className="capitalize">
                         {(execution.metadata as any)?.firstNode?.name || execution.mode}
                       </Badge>
+                    </TableCell>
+                    <TableCell>
+                      {execution.totalTokens && execution.totalTokens > 0 ? (
+                        <div className="text-sm">
+                          <div className="font-medium text-gray-900 dark:text-white">
+                            {execution.totalTokens.toLocaleString()}
+                          </div>
+                          <div className="text-xs text-gray-500">
+                            {execution.inputTokens?.toLocaleString() || 0} in / {execution.outputTokens?.toLocaleString() || 0} out
+                          </div>
+                        </div>
+                      ) : (
+                        <span className="text-gray-400 text-sm">-</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {execution.aiCost && execution.aiCost > 0 ? (
+                        <div className="text-sm">
+                          <div className="font-medium text-gray-900 dark:text-white">
+                            ${execution.aiCost.toFixed(4)}
+                          </div>
+                          {execution.aiProvider && (
+                            <div className="text-xs text-gray-500 capitalize">
+                              {execution.aiProvider}
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-gray-400 text-sm">-</span>
+                      )}
                     </TableCell>
                     <TableCell>
                       <Button 

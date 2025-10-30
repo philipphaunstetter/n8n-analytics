@@ -81,6 +81,11 @@ export async function GET(request: NextRequest) {
           e.retry_of,
           e.retry_success_id,
           e.metadata,
+          e.total_tokens,
+          e.input_tokens,
+          e.output_tokens,
+          e.ai_cost,
+          e.ai_provider,
           w.name as workflow_name,
           p.name as provider_name
         FROM executions e
@@ -196,6 +201,12 @@ export async function GET(request: NextRequest) {
             message: `Execution failed`,
             timestamp: row.stopped_at ? new Date(row.stopped_at) : new Date(row.started_at)
           } : undefined,
+          // AI Metrics
+          totalTokens: row.total_tokens || 0,
+          inputTokens: row.input_tokens || 0,
+          outputTokens: row.output_tokens || 0,
+          aiCost: row.ai_cost || 0,
+          aiProvider: row.ai_provider || null,
           metadata: {
             workflowName: row.workflow_name || 'Unknown Workflow',
             providerName: row.provider_name || 'Unknown Provider',
