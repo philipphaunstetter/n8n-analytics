@@ -486,6 +486,9 @@ export class ExecutionSyncService {
     
     // Extract AI metrics if execution has data
     const aiMetrics = n8nExecution.data ? extractAIMetrics(n8nExecution) : null
+    if (aiMetrics && aiMetrics.totalTokens > 0) {
+      console.log(`🤖 AI metrics extracted for execution ${n8nExecution.id}: ${aiMetrics.totalTokens} tokens, $${aiMetrics.aiCost.toFixed(4)} (${aiMetrics.aiProvider})`)
+    }
     
     const executionData = {
       id: `exec_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
@@ -1089,6 +1092,8 @@ export class ExecutionSyncService {
         const searchParams = new URLSearchParams()
         if (params.limit) searchParams.append('limit', params.limit.toString())
         if (params.cursor) searchParams.append('cursor', params.cursor)
+        // IMPORTANT: Include full execution data for AI metrics extraction
+        searchParams.append('includeData', 'true')
         
         const response = await fetch(`${baseUrl}/api/v1/executions?${searchParams}`, {
           headers: {
