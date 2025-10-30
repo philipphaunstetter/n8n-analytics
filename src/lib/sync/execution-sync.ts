@@ -270,10 +270,11 @@ export class ExecutionSyncService {
     
     do {
       try {
-        // Fetch batch of executions
+        // Fetch batch of executions with data for AI metrics extraction
         const response = await n8nClient.getExecutions({
           limit: options.batchSize || this.DEFAULT_BATCH_SIZE,
-          cursor
+          cursor,
+          includeData: true
         })
         
         if (!response.data || response.data.length === 0) {

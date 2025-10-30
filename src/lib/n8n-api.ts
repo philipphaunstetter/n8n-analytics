@@ -84,6 +84,7 @@ class N8nApiClient {
     cursor?: string;
     status?: string;
     workflowId?: string;
+    includeData?: boolean;
   }): Promise<ExecutionsResponse> {
     const searchParams = new URLSearchParams();
     
@@ -91,6 +92,7 @@ class N8nApiClient {
     if (params?.cursor) searchParams.append('cursor', params.cursor);
     if (params?.status) searchParams.append('status', params.status);
     if (params?.workflowId) searchParams.append('workflowId', params.workflowId);
+    if (params?.includeData) searchParams.append('includeData', 'true');
 
     const queryString = searchParams.toString();
     const endpoint = `/executions${queryString ? `?${queryString}` : ''}`;
