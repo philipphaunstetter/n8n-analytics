@@ -297,100 +297,133 @@ function ExecutionDetailContent() {
         </div>
       </div>
 
-      {/* Node Execution Details */}
+      {/* Node Execution Timeline */}
       {nodeNames.length > 0 && (
         <div className="bg-white dark:bg-slate-800 shadow rounded-lg">
           <div className="px-6 py-4 border-b border-gray-200 dark:border-slate-300">
-            <h3 className="text-lg font-medium text-gray-900 dark:text-white">Node Execution Log</h3>
-            <p className="text-sm text-gray-500 dark:text-slate-400 mt-1">Execution details for each workflow node</p>
+            <h3 className="text-lg font-medium text-gray-900 dark:text-white">Execution Flow</h3>
+            <p className="text-sm text-gray-500 dark:text-slate-400 mt-1">Timeline of workflow node executions</p>
           </div>
-          <div className="divide-y divide-gray-200 dark:border-slate-300">
-            {nodeNames.map((nodeName) => {
-              const nodeData = execution.executionData?.resultData?.runData?.[nodeName]
-              if (!nodeData || nodeData.length === 0) return null
-              
-              const run = nodeData[0]
-              const startTime = run.startTime
-              const executionTime = run.executionTime
-              const hasError = run.error
-              
-              return (
-                <div key={nodeName} className="px-6 py-4 hover:bg-gray-50 dark:hover:bg-slate-800">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center space-x-3 mb-2">
-                        <h4 className="text-sm font-medium text-gray-900 dark:text-white">{nodeName}</h4>
-                        {hasError ? (
-                          <Badge color="red" className="flex items-center space-x-1">
-                            <XCircleIcon className="h-3 w-3" />
-                            <span>Error</span>
-                          </Badge>
-                        ) : (
-                          <Badge color="green" className="flex items-center space-x-1">
-                            <CheckCircleIcon className="h-3 w-3" />
-                            <span>Success</span>
-                          </Badge>
-                        )}
-                      </div>
-                      <div className="flex items-center space-x-4 text-xs text-gray-500 dark:text-slate-400">
-                        {startTime && (
-                          <span>Started: {new Date(startTime).toLocaleTimeString()}</span>
-                        )}
-                        {executionTime && (
-                          <span>Duration: {executionTime}ms</span>
-                        )}
-                        {run.data?.main?.[0] && (
-                          <span>Output: {run.data.main[0].length} items</span>
-                        )}
-                      </div>
-                      {hasError && (
-                        <div className="mt-2 p-3 bg-red-50 dark:bg-red-900/20 rounded-md">
-                          <p className="text-sm text-red-800 dark:text-red-200 font-mono">
-                            {run.error.message || 'Unknown error'}
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                    <Button
-                      outline
-                      className="text-xs px-2 py-1"
-                      onClick={() => setSelectedNode(selectedNode === nodeName ? null : nodeName)}
-                    >
-                      {selectedNode === nodeName ? 'Hide' : 'View'} Data
-                    </Button>
-                  </div>
-                  
-                  {selectedNode === nodeName && run.data && (
-                    <div className="mt-4 relative">
-                      <div className="absolute top-2 right-2 z-10">
-                        <Button
-                          outline
-                          className="text-xs px-2 py-1 bg-white dark:bg-slate-800 shadow-sm"
-                          onClick={() => copyNodeData(nodeName, run.data)}
-                        >
-                          {copiedNode === nodeName ? (
-                            <span className="flex items-center space-x-1">
-                              <CheckCircleIcon className="h-3 w-3 text-green-500" />
-                              <span>Copied!</span>
-                            </span>
+          <div className="px-6 py-6">
+            <div className="space-y-0">
+              {nodeNames.map((nodeName, index) => {
+                const nodeData = execution.executionData?.resultData?.runData?.[nodeName]
+                if (!nodeData || nodeData.length === 0) return null
+                
+                const run = nodeData[0]
+                const startTime = run.startTime
+                const executionTime = run.executionTime
+                const hasError = run.error
+                const isLast = index === nodeNames.length - 1
+                const isExpanded = selectedNode === nodeName
+                
+                return (
+                  <div key={nodeName} className="relative">
+                    {/* Timeline line */}
+                    {!isLast && (
+                      <div className="absolute left-[15px] top-8 bottom-0 w-0.5 bg-gray-200 dark:bg-slate-700" />
+                    )}
+                    
+                    {/* Node item */}
+                    <div className="flex items-start pb-6">
+                      {/* Status icon */}
+                      <div className="relative z-10 flex-shrink-0">
+                        <div className={`flex items-center justify-center w-8 h-8 rounded-full ${
+                          hasError 
+                            ? 'bg-red-500 text-white' 
+                            : 'bg-green-500 text-white'
+                        }`}>
+                          {hasError ? (
+                            <XCircleIcon className="h-5 w-5" />
                           ) : (
-                            <span className="flex items-center space-x-1">
-                              <ClipboardDocumentIcon className="h-3 w-3" />
-                              <span>Copy</span>
-                            </span>
+                            <CheckCircleIcon className="h-5 w-5" />
                           )}
-                        </Button>
+                        </div>
                       </div>
-                      <div className="p-4 bg-gray-50 dark:bg-slate-900 rounded-md overflow-x-auto">
-                        <pre className="text-xs text-gray-800 dark:text-gray-200 font-mono whitespace-pre-wrap">
-                          {JSON.stringify(run.data, null, 2)}
-                        </pre>
+                      
+                      {/* Node content */}
+                      <div className="ml-4 flex-1 min-w-0">
+                        <button
+                          onClick={() => setSelectedNode(isExpanded ? null : nodeName)}
+                          className="w-full text-left group"
+                        >
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1 min-w-0">
+                              <h4 className="text-base font-semibold text-gray-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                                {nodeName}
+                              </h4>
+                              <p className="text-sm text-gray-500 dark:text-slate-400 mt-0.5">
+                                {startTime && new Date(startTime).toLocaleString('en-US', {
+                                  month: 'short',
+                                  day: 'numeric',
+                                  hour: '2-digit',
+                                  minute: '2-digit',
+                                  second: '2-digit'
+                                })}
+                              </p>
+                            </div>
+                            <div className="flex items-center space-x-2 ml-4">
+                              {executionTime && (
+                                <span className="text-xs text-gray-500 dark:text-slate-400">
+                                  {executionTime}ms
+                                </span>
+                              )}
+                              {run.data?.main?.[0] && (
+                                <Badge color="blue" className="text-xs">
+                                  {run.data.main[0].length} items
+                                </Badge>
+                              )}
+                            </div>
+                          </div>
+                        </button>
+                        
+                        {/* Error message */}
+                        {hasError && (
+                          <div className="mt-2 p-3 bg-red-50 dark:bg-red-900/20 rounded-md border border-red-200 dark:border-red-800">
+                            <p className="text-sm text-red-800 dark:text-red-200 font-mono">
+                              {run.error.message || 'Unknown error'}
+                            </p>
+                          </div>
+                        )}
+                        
+                        {/* Expanded data view */}
+                        {isExpanded && run.data && (
+                          <div className="mt-3 relative">
+                            <div className="absolute top-2 right-2 z-10">
+                              <Button
+                                outline
+                                className="text-xs px-2 py-1 bg-white dark:bg-slate-800 shadow-sm"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  copyNodeData(nodeName, run.data)
+                                }}
+                              >
+                                {copiedNode === nodeName ? (
+                                  <span className="flex items-center space-x-1">
+                                    <CheckCircleIcon className="h-3 w-3 text-green-500" />
+                                    <span>Copied!</span>
+                                  </span>
+                                ) : (
+                                  <span className="flex items-center space-x-1">
+                                    <ClipboardDocumentIcon className="h-3 w-3" />
+                                    <span>Copy</span>
+                                  </span>
+                                )}
+                              </Button>
+                            </div>
+                            <div className="p-4 bg-gray-50 dark:bg-slate-900 rounded-lg border border-gray-200 dark:border-slate-700 overflow-x-auto">
+                              <pre className="text-xs text-gray-800 dark:text-gray-200 font-mono whitespace-pre-wrap">
+                                {JSON.stringify(run.data, null, 2)}
+                              </pre>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     </div>
-                  )}
-                </div>
-              )
-            })}
+                  </div>
+                )
+              })}
+            </div>
           </div>
         </div>
       )}
