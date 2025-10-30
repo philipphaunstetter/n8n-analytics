@@ -181,6 +181,10 @@ function ExecutionsContent() {
     window.open(executionUrl, '_blank')
   }
 
+  const viewExecutionDetails = (executionId: string) => {
+    router.push(`/executions/${executionId}`)
+  }
+
   if (error) {
     return (
       <div className="text-center py-12">
@@ -361,7 +365,7 @@ function ExecutionsContent() {
                   <TableRow 
                     key={execution.id}
                     className="hover:bg-gray-50 dark:hover:bg-slate-800 cursor-pointer"
-                    onClick={() => openN8nExecution(execution)}
+                    onClick={() => viewExecutionDetails(execution.id)}
                   >
                     <TableCell>
                       <Badge color={statusColors[execution.status]} className="flex items-center space-x-1">
@@ -448,7 +452,7 @@ function ExecutionsContent() {
                           openN8nExecution(execution)
                         }}
                       >
-                        View
+                        n8n
                       </Button>
                     </TableCell>
                   </TableRow>
