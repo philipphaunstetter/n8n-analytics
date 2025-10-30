@@ -393,7 +393,7 @@ function ExecutionDetailContent() {
                               <Button
                                 outline
                                 className="text-xs px-2 py-1 bg-white dark:bg-slate-800 shadow-sm"
-                                onClick={(e) => {
+                                onClick={(e: React.MouseEvent) => {
                                   e.stopPropagation()
                                   copyNodeData(nodeName, run.data)
                                 }}
