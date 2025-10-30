@@ -521,7 +521,7 @@ export class ExecutionSyncService {
       })
     }
     
-    // Check if execution exists
+    // Check if execution exists to determine if it's an insert or update
     const existing = await new Promise<{id: string} | null>((resolve, reject) => {
       db.get(
         'SELECT id FROM executions WHERE provider_id = ? AND provider_execution_id = ?',
@@ -556,9 +556,9 @@ export class ExecutionSyncService {
           else resolve({ updated: true, inserted: false })
         })
       } else {
-        // Insert new
+        // Insert new - use INSERT OR IGNORE to handle race conditions
         db.run(`
-          INSERT INTO executions (
+          INSERT OR IGNORE INTO executions (
             id, provider_id, workflow_id, provider_execution_id, provider_workflow_id,
             status, mode, started_at, stopped_at, duration, finished, retry_of,
             retry_success_id, metadata, execution_data, total_tokens, input_tokens,
@@ -574,7 +574,8 @@ export class ExecutionSyncService {
           executionData.output_tokens, executionData.ai_cost, executionData.ai_provider
         ], function(err) {
           if (err) reject(err)
-          else resolve({ inserted: true, updated: false })
+          // Check if row was actually inserted (this.changes > 0) or ignored (this.changes === 0)
+          else resolve({ inserted: this.changes > 0, updated: false })
         })
       }
     })
