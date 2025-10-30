@@ -315,7 +315,8 @@ export class ExecutionSyncService {
       type: 'executions',
       processed: totalProcessed,
       inserted: totalInserted,
-      updated: totalUpdated
+      updated: totalUpdated,
+      lastCursor: cursor
     }
   }
   
@@ -847,11 +848,11 @@ export class ExecutionSyncService {
         UPDATE sync_logs SET
           status = ?, completed_at = CURRENT_TIMESTAMP,
           records_processed = ?, records_inserted = ?, records_updated = ?,
-          error_message = ?, metadata = ?
+          error_message = ?, metadata = ?, last_cursor = ?
         WHERE id = ?
       `, [
         status, result.processed || 0, result.inserted || 0, result.updated || 0,
-        errorMessage, JSON.stringify(result), logId
+        errorMessage, JSON.stringify(result), result.lastCursor || null, logId
       ], function(err) {
         if (err) reject(err)
         else resolve()
