@@ -6,12 +6,24 @@
  * and extracts token usage and costs.
  * 
  * Usage:
+ *   # Set environment variables first:
+ *   export N8N_HOST="your-n8n-host"
+ *   export N8N_API_KEY="your-api-key"
+ *   export DATABASE_PATH="/path/to/elova.db"
+ *   
+ *   # Then run:
  *   npx tsx scripts/backfill-ai-metrics.ts
+ *   
+ *   # Or run directly against Docker container:
+ *   export DATABASE_PATH="/tmp/elova-backup.db"
+ *   docker cp elova:/app/data/elova.db /tmp/elova-backup.db
+ *   npx tsx scripts/backfill-ai-metrics.ts
+ *   docker cp /tmp/elova-backup.db elova:/app/data/elova.db
+ *   docker restart elova
  */
 
-import { getSQLiteClient } from '../src/lib/db/sqlite'
-import { extractAIMetrics } from '../src/lib/services/ai-metrics-extractor'
-import { getConfigManager } from '../src/lib/config/config-manager'
+import sqlite3 from 'sqlite3'
+import path from 'path'
 
 interface Execution {
   id: string

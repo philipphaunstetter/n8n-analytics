@@ -487,9 +487,19 @@ export class ExecutionSyncService {
     }
     
     // Extract AI metrics if execution has data
+    // Debug: Check if execution has data
+    if (n8nExecution.data) {
+      console.log(`🔍 Execution ${n8nExecution.id} has data, attempting AI metrics extraction...`)
+    }
     const aiMetrics = n8nExecution.data ? extractAIMetrics({ data: n8nExecution.data }) : null
-    if (aiMetrics && aiMetrics.totalTokens > 0) {
-      console.log(`🤖 AI metrics extracted for execution ${n8nExecution.id}: ${aiMetrics.totalTokens} tokens, $${aiMetrics.aiCost.toFixed(4)} (${aiMetrics.aiProvider})`)
+    if (aiMetrics) {
+      if (aiMetrics.totalTokens > 0) {
+        console.log(`🤖 AI metrics extracted for execution ${n8nExecution.id}: ${aiMetrics.totalTokens} tokens, $${aiMetrics.aiCost.toFixed(4)} (${aiMetrics.aiProvider})`)
+      } else {
+        console.log(`ℹ️ Execution ${n8nExecution.id} has data but no AI tokens found`)
+      }
+    } else {
+      console.log(`⚠️ Execution ${n8nExecution.id} has no execution data`)
     }
     
     const executionData = {
