@@ -135,40 +135,45 @@ function extractNodeMetrics(nodeName: string, nodeRun: any): NodeMetrics | null 
     nodeType: 'unknown'
   }
 
-  // Get node data
-  const mainData = nodeRun.data?.main?.[0] || []
+  // Get node data - check both main and ai_languageModel paths
+  const dataSources = [
+    nodeRun.data?.main?.[0] || [],
+    nodeRun.data?.ai_languageModel?.[0] || []
+  ]
   
-  for (const output of mainData) {
-    if (!output || !output.json) continue
-    
-    const json = output.json
-    
-    // Try different patterns for token usage
-    const tokenData = extractTokenData(json)
-    
-    if (tokenData) {
-      metrics.tokens = tokenData.total
-      metrics.inputTokens = tokenData.input
-      metrics.outputTokens = tokenData.output
-      metrics.provider = tokenData.provider
-      metrics.nodeType = tokenData.nodeType
+  for (const dataSource of dataSources) {
+    for (const output of dataSource) {
+      if (!output || !output.json) continue
       
-      // Calculate cost based on model
-      const model = tokenData.model
-      if (model && AI_PRICING[model]) {
-        const pricing = AI_PRICING[model]
-        metrics.cost = 
-          (metrics.inputTokens / 1000) * pricing.input +
-          (metrics.outputTokens / 1000) * pricing.output
-      } else {
-        // Use average pricing if model unknown
-        const avgPricing = { input: 0.002, output: 0.006 }
-        metrics.cost = 
-          (metrics.inputTokens / 1000) * avgPricing.input +
-          (metrics.outputTokens / 1000) * avgPricing.output
+      const json = output.json
+      
+      // Try different patterns for token usage
+      const tokenData = extractTokenData(json)
+      
+      if (tokenData) {
+        metrics.tokens = tokenData.total
+        metrics.inputTokens = tokenData.input
+        metrics.outputTokens = tokenData.output
+        metrics.provider = tokenData.provider
+        metrics.nodeType = tokenData.nodeType
+        
+        // Calculate cost based on model
+        const model = tokenData.model
+        if (model && AI_PRICING[model]) {
+          const pricing = AI_PRICING[model]
+          metrics.cost = 
+            (metrics.inputTokens / 1000) * pricing.input +
+            (metrics.outputTokens / 1000) * pricing.output
+        } else {
+          // Use average pricing if model unknown
+          const avgPricing = { input: 0.002, output: 0.006 }
+          metrics.cost = 
+            (metrics.inputTokens / 1000) * avgPricing.input +
+            (metrics.outputTokens / 1000) * avgPricing.output
+        }
+        
+        return metrics
       }
-      
-      return metrics
     }
   }
 
@@ -195,6 +200,32 @@ function extractTokenData(json: any): TokenData | null {
       total: usage.total_tokens || 0,
       input: usage.prompt_tokens || 0,
       output: usage.completion_tokens || 0,
+      model: normalizeModelName(json.model || null),
+      provider: 'openai',
+      nodeType: 'openai'
+    }
+  }
+
+  // LangChain/AI Agent format: response.tokenUsage
+  if (json.response?.tokenUsage) {
+    const usage = json.response.tokenUsage
+    return {
+      total: usage.totalTokens || 0,
+      input: usage.promptTokens || 0,
+      output: usage.completionTokens || 0,
+      model: normalizeModelName(json.model || json.response.model || null),
+      provider: 'openai', // LangChain typically uses OpenAI
+      nodeType: 'ai-agent'
+    }
+  }
+
+  // Direct tokenUsage format (some n8n AI nodes)
+  if (json.tokenUsage) {
+    const usage = json.tokenUsage
+    return {
+      total: usage.totalTokens || 0,
+      input: usage.promptTokens || 0,
+      output: usage.completionTokens || 0,
       model: normalizeModelName(json.model || null),
       provider: 'openai',
       nodeType: 'openai'
