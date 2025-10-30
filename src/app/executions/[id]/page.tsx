@@ -16,7 +16,8 @@ import {
   ArrowTopRightOnSquareIcon,
   CpuChipIcon,
   CurrencyDollarIcon,
-  ChartBarIcon
+  ChartBarIcon,
+  ClipboardDocumentIcon
 } from '@heroicons/react/24/outline'
 import { Badge } from '@/components/badge'
 import { Button } from '@/components/button'
@@ -93,6 +94,7 @@ function ExecutionDetailContent() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [selectedNode, setSelectedNode] = useState<string | null>(null)
+  const [copiedNode, setCopiedNode] = useState<string | null>(null)
 
   const fetchExecution = async () => {
     try {
@@ -142,6 +144,14 @@ function ExecutionDetailContent() {
       execution.providerExecutionId
     )
     window.open(url, '_blank')
+  }
+
+  const copyNodeData = (nodeName: string, data: any) => {
+    const jsonString = JSON.stringify(data, null, 2)
+    navigator.clipboard.writeText(jsonString).then(() => {
+      setCopiedNode(nodeName)
+      setTimeout(() => setCopiedNode(null), 2000)
+    })
   }
 
   if (loading) {
@@ -351,10 +361,31 @@ function ExecutionDetailContent() {
                   </div>
                   
                   {selectedNode === nodeName && run.data && (
-                    <div className="mt-4 p-4 bg-gray-50 dark:bg-slate-900 rounded-md overflow-x-auto">
-                      <pre className="text-xs text-gray-800 dark:text-gray-200 font-mono whitespace-pre-wrap">
-                        {JSON.stringify(run.data, null, 2)}
-                      </pre>
+                    <div className="mt-4 relative">
+                      <div className="absolute top-2 right-2 z-10">
+                        <Button
+                          outline
+                          className="text-xs px-2 py-1 bg-white dark:bg-slate-800 shadow-sm"
+                          onClick={() => copyNodeData(nodeName, run.data)}
+                        >
+                          {copiedNode === nodeName ? (
+                            <span className="flex items-center space-x-1">
+                              <CheckCircleIcon className="h-3 w-3 text-green-500" />
+                              <span>Copied!</span>
+                            </span>
+                          ) : (
+                            <span className="flex items-center space-x-1">
+                              <ClipboardDocumentIcon className="h-3 w-3" />
+                              <span>Copy</span>
+                            </span>
+                          )}
+                        </Button>
+                      </div>
+                      <div className="p-4 bg-gray-50 dark:bg-slate-900 rounded-md overflow-x-auto">
+                        <pre className="text-xs text-gray-800 dark:text-gray-200 font-mono whitespace-pre-wrap">
+                          {JSON.stringify(run.data, null, 2)}
+                        </pre>
+                      </div>
                     </div>
                   )}
                 </div>
