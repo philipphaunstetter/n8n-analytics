@@ -485,7 +485,7 @@ export class ExecutionSyncService {
     }
     
     // Extract AI metrics if execution has data
-    const aiMetrics = n8nExecution.data ? extractAIMetrics(n8nExecution) : null
+    const aiMetrics = n8nExecution.data ? extractAIMetrics({ data: n8nExecution.data }) : null
     if (aiMetrics && aiMetrics.totalTokens > 0) {
       console.log(`🤖 AI metrics extracted for execution ${n8nExecution.id}: ${aiMetrics.totalTokens} tokens, $${aiMetrics.aiCost.toFixed(4)} (${aiMetrics.aiProvider})`)
     }
