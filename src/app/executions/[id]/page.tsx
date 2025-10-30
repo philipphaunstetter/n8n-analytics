@@ -321,22 +321,22 @@ function ExecutionDetailContent() {
                   <div key={nodeName} className="relative">
                     {/* Timeline line */}
                     {!isLast && (
-                      <div className="absolute left-[15px] top-8 bottom-0 w-0.5 bg-gray-200 dark:bg-slate-700" />
+                      <div className="absolute left-[13px] top-7 bottom-0 w-0.5 bg-gray-200 dark:bg-slate-700" />
                     )}
                     
                     {/* Node item */}
                     <div className="flex items-start pb-6">
                       {/* Status icon */}
                       <div className="relative z-10 flex-shrink-0">
-                        <div className={`flex items-center justify-center w-8 h-8 rounded-full ${
+                        <div className={`flex items-center justify-center w-7 h-7 rounded-full ${
                           hasError 
                             ? 'bg-red-500 text-white' 
                             : 'bg-green-500 text-white'
                         }`}>
                           {hasError ? (
-                            <XCircleIcon className="h-5 w-5" />
+                            <XCircleIcon className="h-4 w-4" />
                           ) : (
-                            <CheckCircleIcon className="h-5 w-5" />
+                            <CheckCircleIcon className="h-4 w-4" />
                           )}
                         </div>
                       </div>
@@ -349,10 +349,10 @@ function ExecutionDetailContent() {
                         >
                           <div className="flex items-start justify-between">
                             <div className="flex-1 min-w-0">
-                              <h4 className="text-base font-semibold text-gray-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                              <h4 className="text-sm font-semibold text-gray-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
                                 {nodeName}
                               </h4>
-                              <p className="text-sm text-gray-500 dark:text-slate-400 mt-0.5">
+                              <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">
                                 {startTime && new Date(startTime).toLocaleString('en-US', {
                                   month: 'short',
                                   day: 'numeric',
