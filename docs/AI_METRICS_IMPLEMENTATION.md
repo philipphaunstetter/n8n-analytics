@@ -94,26 +94,82 @@ The extraction service (`ai-metrics-extractor.ts`) works by:
 4. **Calculating costs** using model-specific pricing tables
 5. **Aggregating metrics** across all AI nodes in the execution
 
-### Pricing Table (as of October 2024)
+### Pricing Table
 
-Includes pricing for:
-- GPT-4, GPT-4 Turbo, GPT-4o, GPT-4o-mini
-- GPT-3.5 Turbo variants
-- Claude 3 Opus, Sonnet, Haiku
-- Claude 2.1, Claude 2
-- Gemini Pro, Gemini 1.5 Pro/Flash
-- Azure OpenAI equivalents
+**Last Updated**: October 2025 (OpenAI Standard tier pricing from January 2025, Anthropic pricing from October 2025)
 
-**Note**: Prices are hardcoded and will need periodic updates as providers adjust pricing.
+**Location**: `src/lib/services/ai-metrics-extractor.ts` (lines 32-125)
+
+#### Supported Models
+
+**OpenAI (Standard Tier - January 2025)**
+- GPT-4o models: `gpt-4o`, `gpt-4o-2024-11-20`, `gpt-4o-2024-08-06`, `gpt-4o-audio-preview`
+- GPT-4o mini: `gpt-4o-mini`, `gpt-4o-mini-2024-07-18`
+- o1 reasoning models: `o1`, `o1-2024-12-17`, `o1-preview`, `o1-mini`
+- GPT-4 Turbo: `gpt-4-turbo`, `gpt-4-turbo-preview`, `gpt-4-vision-preview`
+- GPT-4: `gpt-4`, `gpt-4-32k`
+- GPT-3.5 Turbo: `gpt-3.5-turbo`, `gpt-3.5-turbo-instruct`
+
+**Anthropic Claude (October 2025)**
+- Claude 4.x: `opus-4.1`, `sonnet-4.5`, `haiku-4.5`
+- Claude 3.x: `claude-3-5-sonnet`, `claude-3-5-haiku`, `claude-3-opus`, `claude-3-sonnet`, `claude-3-haiku`
+- Claude 2: `claude-2.1`, `claude-2`, `claude-instant`
+
+**Google Gemini**
+- Gemini 2.0: `gemini-2.0-flash-exp` (free during preview)
+- Gemini 1.5: `gemini-1.5-pro`, `gemini-1.5-flash`
+- Gemini 1.0: `gemini-1.0-pro`, `gemini-pro`
+
+**Azure OpenAI**
+- `azure-gpt-4o`, `azure-gpt-4`, `azure-gpt-35-turbo`
+
+#### Pricing Structure
+
+Prices are stored as cost per 1,000 tokens (MTok) in USD:
+
+```typescript
+const AI_PRICING: PricingTable = {
+  'model-name': { input: 0.XXX, output: 0.YYY }
+}
+```
+
+**Example entries**:
+```typescript
+'gpt-4o': { input: 0.0025, output: 0.010 },           // $2.50 / $10 per MTok
+'claude-sonnet-4.5': { input: 0.003, output: 0.015 }, // $3 / $15 per MTok
+'gemini-1.5-flash': { input: 0.000075, output: 0.0003 } // $0.075 / $0.30 per MTok
+```
+
+#### Fallback Pricing
+
+When a model is not found in the pricing table:
+- **Fallback rates**: $0.002/1K input, $0.006/1K output
+- Prevents errors but may be inaccurate
+- Consider adding logging to detect missing models
 
 ### Model Name Normalization
 
-The system normalizes versioned model names to standard names:
+**Location**: `src/lib/services/ai-metrics-extractor.ts` (lines 363-384)
+
+The system normalizes versioned model names to match pricing table keys. This handles cases where n8n uses different naming conventions than the pricing table.
+
+**Function**: `normalizeModelName(model: string | null): string | null`
+
+**Example mappings**:
 ```typescript
-'gpt-4o-2024-08-06' → 'gpt-4o'
-'claude-3-opus-20240229' → 'claude-3-opus'
-'gemini-1.5-pro-latest' → 'gemini-1.5-pro'
+const modelMappings: { [key: string]: string } = {
+  'gpt-4o-2024-08-06': 'gpt-4o',
+  'gpt-4o-mini-2024-07-18': 'gpt-4o-mini',
+  'claude-3-opus-20240229': 'claude-3-opus',
+  'gemini-1.5-pro-latest': 'gemini-1.5-pro'
+}
 ```
+
+**How it works**:
+1. Converts model name to lowercase
+2. Checks if it exists in `modelMappings`
+3. Returns mapped name or original name if no mapping exists
+4. Model is then looked up in pricing table
 
 ### Database Migration
 
@@ -278,20 +334,113 @@ To remove columns (optional):
 
 ## Maintenance
 
-### Regular Tasks
-1. **Update Pricing** (quarterly):
-   - Edit `src/lib/services/ai-metrics-extractor.ts`
-   - Update `AI_PRICING` table
-   - Redeploy
+### How to Update Pricing
 
-2. **Add New Models**:
-   - Add to `AI_PRICING` table
-   - Add to `modelMappings` if needed
+**File**: `src/lib/services/ai-metrics-extractor.ts`
+
+#### 1. Update Existing Model Prices
+
+Find the model in the `AI_PRICING` object (lines 32-125) and update the values:
+
+```typescript
+// Before
+'gpt-4o': { input: 0.0025, output: 0.010 },
+
+// After (if price changes)
+'gpt-4o': { input: 0.0030, output: 0.012 },
+```
+
+#### 2. Add New Models
+
+Add a new entry to the pricing table:
+
+```typescript
+// Add to appropriate section (OpenAI, Anthropic, etc.)
+'gpt-5': { input: 0.020, output: 0.080 },
+'claude-opus-5': { input: 0.030, output: 0.150 },
+```
+
+#### 3. Add Model Name Variations
+
+If n8n uses different names for the same model, add a mapping (lines 369-381):
+
+```typescript
+const modelMappings: { [key: string]: string } = {
+  // ... existing mappings
+  'gpt-5-preview': 'gpt-5',           // Map preview to standard
+  'gpt5': 'gpt-5',                    // Map alternate format
+  'claude-opus-5-20250301': 'claude-opus-5'  // Map versioned to standard
+}
+```
+
+#### 4. Where to Find Official Pricing
+
+**OpenAI**: https://openai.com/api/pricing/
+- Look for "Standard" tier pricing
+- Note: Batch/Cached pricing is different
+
+**Anthropic**: https://www.claude.com/pricing#api
+- Standard tier API pricing
+- Check for prompt caching differences
+
+**Google AI**: https://ai.google.dev/pricing
+- Gemini API pricing
+- Note free tier limits
+
+#### 5. Testing Price Updates
+
+After updating prices:
+
+```bash
+# 1. Rebuild the code
+npm run build
+
+# 2. Rebuild Docker image
+docker compose build app
+
+# 3. Restart container
+docker compose down
+docker compose up -d
+
+# 4. Trigger re-sync to recalculate costs
+curl -X POST http://localhost:3000/api/sync/executions
+
+# 5. Verify updated costs in UI
+# Navigate to /executions and check AI Cost column
+```
+
+#### 6. Commit Changes
+
+```bash
+git add src/lib/services/ai-metrics-extractor.ts
+git commit -m "Update AI pricing: [Provider] [Month Year]"
+git push
+```
+
+### Regular Tasks
+
+1. **Update Pricing** (recommended: quarterly or when providers announce changes):
+   - Check provider pricing pages
+   - Update `AI_PRICING` table
+   - Update model mappings if needed
+   - Test and deploy
+   - Update this documentation with new date
+
+2. **Add New Models** (as they're released):
+   - Add to `AI_PRICING` table in appropriate section
+   - Add model name variations to `modelMappings`
+   - Test with real execution data
    - Update documentation
 
-3. **Monitor Storage**:
+3. **Monitor Unknown Models**:
+   - Add logging for fallback pricing usage (recommended enhancement)
+   - Review logs to identify models needing pricing entries
+   - Add missing models to pricing table
+
+4. **Monitor Storage**:
    - Check `execution_data` column size
    - Implement retention policy if needed
+   - Consider data compression for old executions
 
 ## Support
 
