@@ -693,11 +693,11 @@ export class ExecutionSyncService {
         // Update existing workflow with new data
         db.run(`
           UPDATE workflows SET
-            name = ?, is_active = ?, is_archived = ?, tags = ?, node_count = ?, workflow_data = ?, updated_at = ?
+            name = ?, is_active = ?, is_archived = ?, tags = ?, node_count = ?, workflow_data = ?, workflow_json = ?, updated_at = ?
           WHERE id = ?
         `, [
           workflowData.name, workflowData.is_active, workflowData.is_archived, workflowData.tags,
-          workflowData.node_count, workflowData.workflow_data, n8nWorkflow.updatedAt || new Date().toISOString(), existing.id
+          workflowData.node_count, workflowData.workflow_data, workflowData.workflow_data, n8nWorkflow.updatedAt || new Date().toISOString(), existing.id
         ], function(err) {
           if (err) reject(err)
           else resolve({ updated: true, inserted: false })
@@ -706,11 +706,11 @@ export class ExecutionSyncService {
         // Insert new workflow
         db.run(`
           INSERT INTO workflows (
-            id, provider_id, provider_workflow_id, name, is_active, is_archived, tags, node_count, workflow_data, created_at, updated_at
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            id, provider_id, provider_workflow_id, name, is_active, is_archived, tags, node_count, workflow_data, workflow_json, created_at, updated_at
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `, [
           workflowData.id, workflowData.provider_id, workflowData.provider_workflow_id,
-          workflowData.name, workflowData.is_active, workflowData.is_archived, workflowData.tags, workflowData.node_count, workflowData.workflow_data,
+          workflowData.name, workflowData.is_active, workflowData.is_archived, workflowData.tags, workflowData.node_count, workflowData.workflow_data, workflowData.workflow_data,
           n8nWorkflow.createdAt || new Date().toISOString(), n8nWorkflow.updatedAt || new Date().toISOString()
         ], function(err) {
           if (err) reject(err)

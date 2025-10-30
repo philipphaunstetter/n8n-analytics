@@ -14,7 +14,8 @@ function migrateAIMetrics(database: Database) {
       'ALTER TABLE executions ADD COLUMN input_tokens INTEGER DEFAULT 0',
       'ALTER TABLE executions ADD COLUMN output_tokens INTEGER DEFAULT 0',
       'ALTER TABLE executions ADD COLUMN ai_cost REAL DEFAULT 0.0',
-      'ALTER TABLE executions ADD COLUMN ai_provider TEXT DEFAULT NULL'
+      'ALTER TABLE executions ADD COLUMN ai_provider TEXT DEFAULT NULL',
+      'ALTER TABLE workflows ADD COLUMN workflow_json TEXT'
     ]
 
     migrations.forEach(sql => {
