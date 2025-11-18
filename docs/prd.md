@@ -111,6 +111,7 @@ Teams running automations across tools lack a single, actionable view to monitor
 7.5 Flowchart Viewer (Key Differentiator)
 **Core Features:**
 - **Provider-Agnostic Graph Rendering**: Unified visualization across n8n, Zapier, Make using standardized node/edge schema.
+  - *Implementation Note:* MVP utilizes the native `@n8n_io/n8n-demo-component` for high-fidelity rendering of n8n workflows. Generic graph rendering will be developed alongside the second provider adapter.
 - **Failure Highlighting**: Visual indicators for failed nodes with error annotations and step-level context.
 - **Interactive Node Inspection**: Click to view step properties, execution data, error messages, and timing information.
 - **Execution Context Overlay**: Show execution path, data flow, and bottleneck identification.
@@ -130,6 +131,7 @@ Teams running automations across tools lack a single, actionable view to monitor
 - Checks: Perform periodic HTTP requests from the server; store recent results in memory or lightweight storage.
 - Display: Uptime percentage over selected period, last latency, last error reason.
 - Manual recheck button.
+- *Status:* UI/Frontend prototype implemented. Backend scheduling and persistence pending.
 
 7.7 Instance Status
 - Connection probe to active provider instance (e.g., n8n base URL).
@@ -144,7 +146,7 @@ Teams running automations across tools lack a single, actionable view to monitor
 8. Data Model (Provider-Agnostic)
 - Provider: { id, type: "n8n" | "zapier" | "make", displayName }
 - Workflow: { id, providerId, name, active, createdAt?, updatedAt? }
-- Execution: { id, providerId, workflowId, status: success|failed|error|canceled|running|waiting, startedAt, stoppedAt?, durationMs?, errorMessage? }
+- Execution: { id, providerId, workflowId, status: success|failed|error|canceled|running|waiting, startedAt, stoppedAt?, durationMs?, errorMessage?, totalTokens?, inputTokens?, outputTokens?, aiCost?, aiProvider? }
 - Graph: { nodes: [{ id, label, type, meta }], edges: [{ from, to, label?, meta }] }
 - EndpointCheck: { id, name, url, method, headers?, intervalSec, timeoutMs, expectedStatus: [min,max] }
 - EndpointResult: { checkId, timestamp, statusCode, latencyMs, ok, error? }
@@ -234,6 +236,7 @@ Teams running automations across tools lack a single, actionable view to monitor
 **17.2 Analytics Features**
 - Per-workflow success rate calculation
 - Execution duration tracking
+- AI Token usage and cost tracking (input/output tokens, provider)
 - Basic filtering and search
 - Export executions (CSV/JSON) [POST-MVP]
 - Trend charts and time-series visualization [POST-MVP]
