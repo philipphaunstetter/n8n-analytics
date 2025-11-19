@@ -6,7 +6,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { AppLayout } from '@/components/app-layout'
 import { WithN8NConnection } from '@/components/with-n8n-connection'
 import { apiClient } from '@/lib/api-client'
-import { 
+import {
   ExecutionStatus,
   TimeRange,
   Execution,
@@ -20,7 +20,11 @@ import {
   ExclamationTriangleIcon,
   MagnifyingGlassIcon,
   FunnelIcon,
-  ArrowPathIcon
+  FunnelIcon,
+  ArrowPathIcon,
+  ChevronRightIcon,
+  ChevronDownIcon,
+  ListBulletIcon
 } from '@heroicons/react/24/outline'
 import { DEMO_WORKFLOWS } from '@/lib/demo-data'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/table'
@@ -42,12 +46,34 @@ const statusIcons = {
 
 const statusColors = {
   'success': 'green',
-  'error': 'red', 
+  'error': 'red',
   'running': 'blue',
   'waiting': 'yellow',
   'canceled': 'zinc',
   'unknown': 'zinc'
+  'unknown': 'zinc'
 } as const
+
+interface ExecutionGroup {
+  type: 'group'
+  id: string
+  executions: Execution[]
+  workflowId: string
+  status: ExecutionStatus
+  providerId: string
+  mode: string
+  startTime: Date
+  endTime: Date
+  avgDuration: number
+  totalTokens: number
+  totalCost: number
+}
+
+type ExecutionItem = Execution | ExecutionGroup
+
+function isExecutionGroup(item: ExecutionItem): item is ExecutionGroup {
+  return (item as any).type === 'group'
+}
 
 function ExecutionsContent() {
   const [executions, setExecutions] = useState<Execution[]>([])
@@ -60,6 +86,7 @@ function ExecutionsContent() {
   const [providerFilter, setProviderFilter] = useState<string>('all')
   const [timeRange, setTimeRange] = useState<TimeRange>('24h')
   const [n8nUrl, setN8nUrl] = useState<string>('')
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set())
   const router = useRouter()
 
   useEffect(() => {
@@ -90,7 +117,7 @@ function ExecutionsContent() {
         params.append('providerId', providerFilter)
       }
       params.append('timeRange', timeRange)
-      
+
       const response = await apiClient.get<{ data: { items: Execution[] } }>(`/executions?${params}`)
       setExecutions(response.data.items)
       setError(null)
@@ -109,7 +136,7 @@ function ExecutionsContent() {
       // After successful sync, refresh the data
       await fetchExecutions()
       setError(null)
-      
+
       showToast({
         type: 'success',
         title: 'Executions synced successfully',
@@ -119,7 +146,7 @@ function ExecutionsContent() {
       console.error('Failed to sync executions:', err)
       const errorMessage = 'Failed to sync executions. Please try again.'
       setError(errorMessage)
-      
+
       showToast({
         type: 'error',
         title: 'Sync failed',
@@ -134,9 +161,9 @@ function ExecutionsContent() {
     if (!searchTerm) return true
     const searchLower = searchTerm.toLowerCase()
     // Try to get workflow name from metadata (n8n data) or demo workflows
-    const workflowName = execution.metadata?.workflowName || 
-                         DEMO_WORKFLOWS.find(w => w.id === execution.workflowId)?.name || 
-                         ''
+    const workflowName = execution.metadata?.workflowName ||
+      DEMO_WORKFLOWS.find(w => w.id === execution.workflowId)?.name ||
+      ''
     return (
       execution.id.toLowerCase().includes(searchLower) ||
       execution.workflowId.toLowerCase().includes(searchLower) ||
@@ -144,6 +171,80 @@ function ExecutionsContent() {
       execution.error?.message?.toLowerCase().includes(searchLower)
     )
   })
+
+  const groupedExecutions = (() => {
+    const groups: ExecutionItem[] = []
+    let currentGroup: Execution[] = []
+
+    const flushGroup = () => {
+      if (currentGroup.length === 0) return
+
+      // Only group if we have 3 or more consecutive executions
+      // AND they are automated runs (trigger/webhook/cron)
+      // AND they have the same status
+      const first = currentGroup[0]
+      const isAutomated = ['trigger', 'webhook', 'cron'].includes(first.mode) ||
+        (first.metadata as any)?.firstNode?.name?.toLowerCase().includes('schedule')
+
+      if (currentGroup.length >= 5 && isAutomated) {
+        const totalDuration = currentGroup.reduce((acc, curr) => acc + (curr.duration || 0), 0)
+        const totalTokens = currentGroup.reduce((acc, curr) => acc + (curr.totalTokens || 0), 0)
+        const totalCost = currentGroup.reduce((acc, curr) => acc + (curr.aiCost || 0), 0)
+
+        groups.push({
+          type: 'group',
+          id: `group-${first.workflowId}-${first.id}-${currentGroup.length}`,
+          executions: [...currentGroup],
+          workflowId: first.workflowId,
+          status: first.status,
+          providerId: first.providerId,
+          mode: first.mode,
+          startTime: new Date(currentGroup[currentGroup.length - 1].startedAt), // Last one in list is actually first in time usually? Wait, list is usually desc.
+          endTime: new Date(first.startedAt),
+          avgDuration: totalDuration / currentGroup.length,
+          totalTokens,
+          totalCost
+        })
+      } else {
+        groups.push(...currentGroup)
+      }
+      currentGroup = []
+    }
+
+    filteredExecutions.forEach((execution) => {
+      if (currentGroup.length === 0) {
+        currentGroup.push(execution)
+        return
+      }
+
+      const prev = currentGroup[0]
+      const matches =
+        prev.workflowId === execution.workflowId &&
+        prev.status === execution.status &&
+        prev.mode === execution.mode
+
+      if (matches) {
+        currentGroup.push(execution)
+      } else {
+        flushGroup()
+        currentGroup.push(execution)
+      }
+    })
+
+    flushGroup()
+    return groups
+  })()
+
+  const toggleGroup = (groupId: string, e: React.MouseEvent) => {
+    e.stopPropagation()
+    const newExpanded = new Set(expandedGroups)
+    if (newExpanded.has(groupId)) {
+      newExpanded.delete(groupId)
+    } else {
+      newExpanded.add(groupId)
+    }
+    setExpandedGroups(newExpanded)
+  }
 
   const formatDuration = (duration?: number) => {
     if (!duration) return '-'
@@ -169,14 +270,14 @@ function ExecutionsContent() {
       console.error('Provider not found for execution')
       return
     }
-    
+
     // Create properly formatted execution URL
     const executionUrl = createN8nExecutionUrl(
       provider.baseUrl,
       execution.providerWorkflowId,
       execution.providerExecutionId
     )
-    
+
     // Open in new tab
     window.open(executionUrl, '_blank')
   }
@@ -209,9 +310,9 @@ function ExecutionsContent() {
           </p>
         </div>
         <div className="flex space-x-3">
-          <Button 
+          <Button
             outline
-            onClick={syncExecutions} 
+            onClick={syncExecutions}
             disabled={syncing || loading}
             className="flex items-center space-x-2"
           >
@@ -230,8 +331,8 @@ function ExecutionsContent() {
           <label htmlFor="provider" className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
             n8n Instance
           </label>
-          <Select 
-            value={providerFilter} 
+          <Select
+            value={providerFilter}
             onChange={(e) => setProviderFilter(e.target.value)}
           >
             <option value="all">All instances</option>
@@ -264,8 +365,8 @@ function ExecutionsContent() {
           <label htmlFor="status" className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
             Status
           </label>
-          <Select 
-            value={statusFilter} 
+          <Select
+            value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value as ExecutionStatus | 'all')}
           >
             <option value="all">All statuses</option>
@@ -281,8 +382,8 @@ function ExecutionsContent() {
           <label htmlFor="timeRange" className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
             Time Range
           </label>
-          <Select 
-            value={timeRange} 
+          <Select
+            value={timeRange}
             onChange={(e) => setTimeRange(e.target.value as TimeRange)}
           >
             <option value="1h">Last hour</option>
@@ -304,10 +405,17 @@ function ExecutionsContent() {
       <div className="bg-white dark:bg-slate-800 px-4 py-3 border border-gray-200 dark:border-slate-300 rounded-md">
         <div className="flex items-center justify-between text-sm text-gray-600 dark:text-slate-400">
           <span>
-            Showing {filteredExecutions.length} of {executions.length} executions
+            <span>
+              Showing {filteredExecutions.length} executions
+              {groupedExecutions.length !== filteredExecutions.length && (
+                <span className="ml-1 text-gray-500">
+                  (grouped into {groupedExecutions.length} rows)
+                </span>
+              )}
+            </span>
           </span>
           <span>
-            {timeRange === '1h' && 'Last hour'} 
+            {timeRange === '1h' && 'Last hour'}
             {timeRange === '24h' && 'Last 24 hours'}
             {timeRange === '7d' && 'Last 7 days'}
             {timeRange === '30d' && 'Last 30 days'}
@@ -351,102 +459,149 @@ function ExecutionsContent() {
             ) : filteredExecutions.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={10} className="text-center py-8 text-gray-500">
-                  {executions.length === 0 
+                  {executions.length === 0
                     ? 'No executions found for this time range'
                     : 'No executions match your search criteria'
                   }
                 </TableCell>
               </TableRow>
             ) : (
-              filteredExecutions.map((execution) => {
-                const StatusIcon = statusIcons[execution.status]
-                const provider = providers.find(p => p.id === execution.providerId)
+            ): (
+                groupedExecutions.map((item) => {
+                if (isExecutionGroup(item)) {
+                  const isExpanded = expandedGroups.has(item.id)
+            const StatusIcon = statusIcons[item.status]
+                  const provider = providers.find(p => p.id === item.providerId)
+            const workflowName = (typeof item.executions[0].metadata?.workflowName === 'string' ? item.executions[0].metadata.workflowName : null) || 
+                                       DEMO_WORKFLOWS.find(w => w.id === item.workflowId)?.name ||
+            item.workflowId
+
+            return (
+            <>
+              <TableRow
+                key={item.id}
+                className="hover:bg-gray-50 dark:hover:bg-slate-800 cursor-pointer bg-gray-50/50 dark:bg-slate-800/50"
+                onClick={(e) => toggleGroup(item.id, e)}
+              >
+                <TableCell>
+                  <div className="flex items-center space-x-2">
+                    <button
+                      className="p-1 hover:bg-gray-200 dark:hover:bg-slate-700 rounded"
+                    >
+                      {isExpanded ? (
+                        <ChevronDownIcon className="h-4 w-4 text-gray-500" />
+                      ) : (
+                        <ChevronRightIcon className="h-4 w-4 text-gray-500" />
+                      )}
+                    </button>
+                    <Badge color={statusColors[item.status]} className="flex items-center space-x-1">
+                      <StatusIcon className="h-3 w-3" />
+                      <span className="capitalize">{item.status}</span>
+                    </Badge>
+                  </div>
+                </TableCell>
+                <TableCell className="font-mono text-sm text-gray-500">
+                  <div className="flex items-center space-x-2">
+                    <ListBulletIcon className="h-4 w-4" />
+                    <span>{item.executions.length} runs</span>
+                  </div>
+                </TableCell>
+                <TableCell>
+                  {provider ? (
+                    <Badge color="zinc" className="text-xs">
+                      {provider.name}
+                    </Badge>
+                  ) : (
+                    <span className="text-xs text-gray-400">Unknown</span>
+                  )}
+                </TableCell>
+                <TableCell>
+                  <div className="flex flex-col">
+                    <span className="font-medium text-gray-900 dark:text-white">
+                      {workflowName}
+                    </span>
+                    <span className="text-xs text-gray-500 font-mono">
+                      {item.executions[0].providerWorkflowId}
+                    </span>
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <div className="text-xs text-gray-500">
+                    <div>Last: {formatDate(item.executions[0].startedAt)}</div>
+                    <div>First: {formatDate(item.executions[item.executions.length - 1].startedAt)}</div>
+                  </div>
+                </TableCell>
+                <TableCell>
+                  ~{formatDuration(item.avgDuration)}
+                </TableCell>
+                <TableCell>
+                  <Badge color="blue" className="capitalize">
+                    {item.mode}
+                  </Badge>
+                </TableCell>
+                <TableCell>
+                  {item.totalTokens > 0 ? (
+                    <div className="text-sm font-medium">
+                      {item.totalTokens.toLocaleString()} total
+                    </div>
+                  ) : (
+                    <span className="text-gray-400 text-sm">-</span>
+                  )}
+                </TableCell>
+                <TableCell>
+                  {item.totalCost > 0 ? (
+                    <div className="text-sm font-medium">
+                      ${item.totalCost.toFixed(4)} total
+                    </div>
+                  ) : (
+                    <span className="text-gray-400 text-sm">-</span>
+                  )}
+                </TableCell>
+                <TableCell>
+                  <span className="text-xs text-gray-400">Group</span>
+                </TableCell>
+              </TableRow>
+              {isExpanded && item.executions.map((execution, idx) => {
+                const ExStatusIcon = statusIcons[execution.status]
                 return (
-                  <TableRow 
+                  <TableRow
                     key={execution.id}
-                    className="hover:bg-gray-50 dark:hover:bg-slate-800 cursor-pointer"
+                    className="hover:bg-gray-50 dark:hover:bg-slate-800 cursor-pointer bg-gray-50/30 dark:bg-slate-800/30"
                     onClick={() => viewExecutionDetails(execution.id)}
                   >
                     <TableCell>
-                      <Badge color={statusColors[execution.status]} className="flex items-center space-x-1">
-                        <StatusIcon className="h-3 w-3" />
-                        <span className="capitalize">{execution.status}</span>
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="font-mono text-sm">
-                      {formatExecutionId(execution.providerExecutionId)}
-                    </TableCell>
-                    <TableCell>
-                      {provider ? (
-                        <Badge color="zinc" className="text-xs">
-                          {provider.name}
+                      <div className="pl-8">
+                        <Badge color={statusColors[execution.status]} className="flex items-center space-x-1 scale-90 origin-left">
+                          <ExStatusIcon className="h-3 w-3" />
                         </Badge>
-                      ) : (
-                        <span className="text-xs text-gray-400">Unknown</span>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex flex-col">
-                        <span className="font-medium text-gray-900 dark:text-white">
-                          {(typeof execution.metadata?.workflowName === 'string' ? execution.metadata.workflowName : null) || 
-                           DEMO_WORKFLOWS.find(w => w.id === execution.workflowId)?.name || 
-                           execution.workflowId}
-                        </span>
-                        <span className="text-xs text-gray-500 font-mono">
-                          {execution.providerWorkflowId}
-                        </span>
-                        {execution.error && (
-                          <span className="text-sm text-red-600 truncate max-w-xs">
-                            {execution.error.message}
-                          </span>
-                        )}
                       </div>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="font-mono text-xs text-gray-500">
+                      {formatExecutionId(execution.providerExecutionId)}
+                    </TableCell>
+                    <TableCell></TableCell>
+                    <TableCell></TableCell>
+                    <TableCell className="text-xs">
                       {formatDate(execution.startedAt)}
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="text-xs">
                       {formatDuration(execution.duration)}
                     </TableCell>
-                    <TableCell>
-                      <Badge color="blue" className="capitalize">
-                        {(execution.metadata as any)?.firstNode?.name || execution.mode}
-                      </Badge>
-                    </TableCell>
+                    <TableCell></TableCell>
                     <TableCell>
                       {execution.totalTokens && execution.totalTokens > 0 ? (
-                        <div className="text-sm">
-                          <div className="font-medium text-gray-900 dark:text-white">
-                            {execution.totalTokens.toLocaleString()}
-                          </div>
-                          <div className="text-xs text-gray-500">
-                            {execution.inputTokens?.toLocaleString() || 0} in / {execution.outputTokens?.toLocaleString() || 0} out
-                          </div>
-                        </div>
-                      ) : (
-                        <span className="text-gray-400 text-sm">-</span>
-                      )}
+                        <span className="text-xs text-gray-500">{execution.totalTokens.toLocaleString()}</span>
+                      ) : null}
                     </TableCell>
                     <TableCell>
                       {execution.aiCost && execution.aiCost > 0 ? (
-                        <div className="text-sm">
-                          <div className="font-medium text-gray-900 dark:text-white">
-                            ${execution.aiCost.toFixed(4)}
-                          </div>
-                          {execution.aiProvider && (
-                            <div className="text-xs text-gray-500 capitalize">
-                              {execution.aiProvider}
-                            </div>
-                          )}
-                        </div>
-                      ) : (
-                        <span className="text-gray-400 text-sm">-</span>
-                      )}
+                        <span className="text-xs text-gray-500">${execution.aiCost.toFixed(4)}</span>
+                      ) : null}
                     </TableCell>
                     <TableCell>
-                      <Button 
+                      <Button
                         outline
-                        className="text-sm px-2 py-1"
+                        className="text-xs px-2 py-0.5"
                         onClick={(e: React.MouseEvent) => {
                           e.stopPropagation()
                           openN8nExecution(execution)
@@ -457,6 +612,111 @@ function ExecutionsContent() {
                     </TableCell>
                   </TableRow>
                 )
+              })}
+            </>
+            )
+                }
+
+            // Regular execution row
+            const execution = item as Execution
+            const StatusIcon = statusIcons[execution.status]
+                const provider = providers.find(p => p.id === execution.providerId)
+            return (
+            <TableRow
+              key={execution.id}
+              className="hover:bg-gray-50 dark:hover:bg-slate-800 cursor-pointer"
+              onClick={() => viewExecutionDetails(execution.id)}
+            >
+              <TableCell>
+                <Badge color={statusColors[execution.status]} className="flex items-center space-x-1">
+                  <StatusIcon className="h-3 w-3" />
+                  <span className="capitalize">{execution.status}</span>
+                </Badge>
+              </TableCell>
+              <TableCell className="font-mono text-sm">
+                {formatExecutionId(execution.providerExecutionId)}
+              </TableCell>
+              <TableCell>
+                {provider ? (
+                  <Badge color="zinc" className="text-xs">
+                    {provider.name}
+                  </Badge>
+                ) : (
+                  <span className="text-xs text-gray-400">Unknown</span>
+                )}
+              </TableCell>
+              <TableCell>
+                <div className="flex flex-col">
+                  <span className="font-medium text-gray-900 dark:text-white">
+                    {(typeof execution.metadata?.workflowName === 'string' ? execution.metadata.workflowName : null) ||
+                      DEMO_WORKFLOWS.find(w => w.id === execution.workflowId)?.name ||
+                      execution.workflowId}
+                  </span>
+                  <span className="text-xs text-gray-500 font-mono">
+                    {execution.providerWorkflowId}
+                  </span>
+                  {execution.error && (
+                    <span className="text-sm text-red-600 truncate max-w-xs">
+                      {execution.error.message}
+                    </span>
+                  )}
+                </div>
+              </TableCell>
+              <TableCell>
+                {formatDate(execution.startedAt)}
+              </TableCell>
+              <TableCell>
+                {formatDuration(execution.duration)}
+              </TableCell>
+              <TableCell>
+                <Badge color="blue" className="capitalize">
+                  {(execution.metadata as any)?.firstNode?.name || execution.mode}
+                </Badge>
+              </TableCell>
+              <TableCell>
+                {execution.totalTokens && execution.totalTokens > 0 ? (
+                  <div className="text-sm">
+                    <div className="font-medium text-gray-900 dark:text-white">
+                      {execution.totalTokens.toLocaleString()}
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      {execution.inputTokens?.toLocaleString() || 0} in / {execution.outputTokens?.toLocaleString() || 0} out
+                    </div>
+                  </div>
+                ) : (
+                  <span className="text-gray-400 text-sm">-</span>
+                )}
+              </TableCell>
+              <TableCell>
+                {execution.aiCost && execution.aiCost > 0 ? (
+                  <div className="text-sm">
+                    <div className="font-medium text-gray-900 dark:text-white">
+                      ${execution.aiCost.toFixed(4)}
+                    </div>
+                    {execution.aiProvider && (
+                      <div className="text-xs text-gray-500 capitalize">
+                        {execution.aiProvider}
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <span className="text-gray-400 text-sm">-</span>
+                )}
+              </TableCell>
+              <TableCell>
+                <Button
+                  outline
+                  className="text-sm px-2 py-1"
+                  onClick={(e: React.MouseEvent) => {
+                    e.stopPropagation()
+                    openN8nExecution(execution)
+                  }}
+                >
+                  n8n
+                </Button>
+              </TableCell>
+            </TableRow>
+            )
               })
             )}
           </TableBody>
