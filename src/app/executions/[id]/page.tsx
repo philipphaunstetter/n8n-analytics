@@ -17,7 +17,7 @@ import {
   CpuChipIcon,
   CurrencyDollarIcon,
   ChartBarIcon,
-  ClipboardDocumentIcon
+  ClipboardDocumentIcon,
   ChevronRightIcon,
   ChevronDownIcon
 } from '@heroicons/react/24/outline'
@@ -331,8 +331,8 @@ function ExecutionDetailContent() {
                       {/* Status icon */}
                       <div className="relative z-10 flex-shrink-0">
                         <div className={`flex items-center justify-center w-7 h-7 rounded-full ${hasError
-                            ? 'bg-red-500 text-white'
-                            : 'bg-green-500 text-white'
+                          ? 'bg-red-500 text-white'
+                          : 'bg-green-500 text-white'
                           }`}>
                           {hasError ? (
                             <XCircleIcon className="h-4 w-4" />
