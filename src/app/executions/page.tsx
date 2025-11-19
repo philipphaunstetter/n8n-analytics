@@ -216,10 +216,19 @@ function ExecutionsContent() {
       }
 
       const prev = currentGroup[0]
+
+      // Check if execution is within 1 hour of the first execution in the group
+      const timeDiff = Math.abs(
+        new Date(prev.startedAt).getTime() - new Date(execution.startedAt).getTime()
+      )
+      const ONE_HOUR = 60 * 60 * 1000
+      const withinTimeWindow = timeDiff <= ONE_HOUR
+
       const matches =
         prev.workflowId === execution.workflowId &&
         prev.status === execution.status &&
-        prev.mode === execution.mode
+        prev.mode === execution.mode &&
+        withinTimeWindow
 
       if (matches) {
         currentGroup.push(execution)
