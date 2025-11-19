@@ -18,6 +18,8 @@ import {
   CurrencyDollarIcon,
   ChartBarIcon,
   ClipboardDocumentIcon
+  ChevronRightIcon,
+  ChevronDownIcon
 } from '@heroicons/react/24/outline'
 import { Badge } from '@/components/badge'
 import { Button } from '@/components/button'
@@ -89,7 +91,7 @@ function ExecutionDetailContent() {
   const params = useParams()
   const router = useRouter()
   const executionId = params?.id as string
-  
+
   const [execution, setExecution] = useState<ExecutionData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -189,8 +191,8 @@ function ExecutionDetailContent() {
       {/* Header */}
       <div className="flex items-start justify-between">
         <div className="flex items-start space-x-4">
-          <Button 
-            outline 
+          <Button
+            outline
             onClick={() => router.back()}
             className="flex items-center"
           >
@@ -200,7 +202,7 @@ function ExecutionDetailContent() {
           <div>
             <div className="flex items-center space-x-3 mb-2">
               <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{execution.workflow.name}</h1>
-              <Badge 
+              <Badge
                 color={statusColors[execution.status]}
                 className="flex items-center space-x-1"
               >
@@ -309,30 +311,29 @@ function ExecutionDetailContent() {
               {nodeNames.map((nodeName, index) => {
                 const nodeData = execution.executionData?.resultData?.runData?.[nodeName]
                 if (!nodeData || nodeData.length === 0) return null
-                
+
                 const run = nodeData[0]
                 const startTime = run.startTime
                 const executionTime = run.executionTime
                 const hasError = run.error
                 const isLast = index === nodeNames.length - 1
                 const isExpanded = selectedNode === nodeName
-                
+
                 return (
                   <div key={nodeName} className="relative">
                     {/* Timeline line */}
                     {!isLast && (
                       <div className="absolute left-[13px] top-7 bottom-0 w-0.5 bg-gray-200 dark:bg-slate-700" />
                     )}
-                    
+
                     {/* Node item */}
                     <div className="flex items-start pb-6">
                       {/* Status icon */}
                       <div className="relative z-10 flex-shrink-0">
-                        <div className={`flex items-center justify-center w-7 h-7 rounded-full ${
-                          hasError 
-                            ? 'bg-red-500 text-white' 
+                        <div className={`flex items-center justify-center w-7 h-7 rounded-full ${hasError
+                            ? 'bg-red-500 text-white'
                             : 'bg-green-500 text-white'
-                        }`}>
+                          }`}>
                           {hasError ? (
                             <XCircleIcon className="h-4 w-4" />
                           ) : (
@@ -340,7 +341,7 @@ function ExecutionDetailContent() {
                           )}
                         </div>
                       </div>
-                      
+
                       {/* Node content */}
                       <div className="ml-4 flex-1 min-w-0">
                         <button
@@ -349,9 +350,16 @@ function ExecutionDetailContent() {
                         >
                           <div className="flex items-start justify-between">
                             <div className="flex-1 min-w-0">
-                              <h4 className="text-sm font-semibold text-gray-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
-                                {nodeName}
-                              </h4>
+                              <div className="flex items-center">
+                                {isExpanded ? (
+                                  <ChevronDownIcon className="h-4 w-4 mr-2 text-gray-400" />
+                                ) : (
+                                  <ChevronRightIcon className="h-4 w-4 mr-2 text-gray-400" />
+                                )}
+                                <h4 className="text-sm font-semibold text-gray-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                                  {nodeName}
+                                </h4>
+                              </div>
                               <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">
                                 {startTime && new Date(startTime).toLocaleString('en-US', {
                                   month: 'short',
@@ -376,7 +384,7 @@ function ExecutionDetailContent() {
                             </div>
                           </div>
                         </button>
-                        
+
                         {/* Error message */}
                         {hasError && (
                           <div className="mt-2 p-3 bg-red-50 dark:bg-red-900/20 rounded-md border border-red-200 dark:border-red-800">
@@ -385,7 +393,7 @@ function ExecutionDetailContent() {
                             </p>
                           </div>
                         )}
-                        
+
                         {/* Expanded data view */}
                         {isExpanded && run.data && (
                           <div className="mt-3 relative">
