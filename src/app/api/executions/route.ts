@@ -16,25 +16,25 @@ export async function GET(request: NextRequest) {
   try {
     // Authenticate the request (handles both dev and Supabase auth)
     const { user, error: authError } = await authenticateRequest(request)
-    
+
     if (authError || !user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
     // Parse query parameters
     const searchParams = request.nextUrl.searchParams
-    let limit = parseInt(searchParams.get('limit') || '500') // Increased default from 100 to 500
+    let limit = parseInt(searchParams.get('limit') || '2000') // Increased default to show more executions
     const cursor = searchParams.get('cursor') || undefined
-    
+
     // Validate and cap the limit to prevent performance issues
-    if (limit > 2000) {
-      console.warn(`Execution limit ${limit} exceeds maximum of 2000, capping to 2000`)
-      limit = 2000
+    if (limit > 5000) {
+      console.warn(`Execution limit ${limit} exceeds maximum of 5000, capping to 5000`)
+      limit = 5000
     }
     if (limit < 1) {
-      limit = 500 // Reset to default if invalid
+      limit = 2000 // Reset to default if invalid
     }
-    
+
     const filters: ExecutionFilters = {
       providerId: searchParams.get('providerId') || undefined,
       workflowId: searchParams.get('workflowId') || undefined,
@@ -61,9 +61,9 @@ export async function GET(request: NextRequest) {
 
     try {
       console.log(`Fetching executions from SQLite database (limit: ${limit})...`)
-      
+
       const db = getDb()
-      
+
       // Build SQL query with filters
       let sql = `
         SELECT 
@@ -93,26 +93,26 @@ export async function GET(request: NextRequest) {
         LEFT JOIN providers p ON e.provider_id = p.id
         WHERE 1=1
       `
-      
+
       const params: any[] = []
-      
+
       // Add filters
       if (filters.providerId) {
         sql += ' AND e.provider_id = ?'
         params.push(filters.providerId)
       }
-      
+
       if (filters.workflowId) {
         sql += ' AND w.provider_workflow_id = ?'
         params.push(filters.workflowId)
       }
-      
+
       if (filters.status && filters.status.length > 0) {
         const placeholders = filters.status.map(() => '?').join(',')
         sql += ` AND e.status IN (${placeholders})`
         params.push(...filters.status)
       }
-      
+
       // Add time range filter
       if (filters.timeRange && filters.timeRange !== 'custom') {
         const now = new Date()
@@ -139,7 +139,7 @@ export async function GET(request: NextRequest) {
         sql += ' AND e.started_at >= ?'
         params.push(startDate.toISOString())
       }
-      
+
       // Custom time range
       if (filters.timeRange === 'custom' && filters.customTimeRange) {
         sql += ' AND e.started_at >= ? AND e.started_at <= ?'
@@ -148,7 +148,7 @@ export async function GET(request: NextRequest) {
           filters.customTimeRange.end.toISOString()
         )
       }
-      
+
       // Add search filter
       if (filters.search) {
         sql += ` AND (
@@ -159,11 +159,11 @@ export async function GET(request: NextRequest) {
         const searchTerm = `%${filters.search}%`
         params.push(searchTerm, searchTerm, searchTerm)
       }
-      
+
       // Order by most recent first and add limit
       sql += ' ORDER BY e.started_at DESC LIMIT ?'
       params.push(limit)
-      
+
       // Execute query
       const rows = await new Promise<any[]>((resolve, reject) => {
         db.all(sql, params, (err, rows) => {
@@ -175,8 +175,8 @@ export async function GET(request: NextRequest) {
           }
         })
       })
-      
-      
+
+
       // Convert database results to internal Execution format
       allExecutions = rows.map(row => {
         let parsedMeta: any = {}
@@ -217,16 +217,16 @@ export async function GET(request: NextRequest) {
           }
         } as Execution
       })
-      
+
       totalCount = allExecutions.length
-      
+
       console.log(`Fetched ${allExecutions.length} executions from SQLite database`)
-      
+
       // If no executions found, suggest running sync
       if (allExecutions.length === 0) {
         console.log('⚠️  No executions found in database. Consider running sync to fetch from n8n.')
       }
-      
+
     } catch (error) {
       console.error('Failed to fetch executions from database:', error)
       // If schema isn't initialized yet, return an empty result set gracefully
@@ -278,17 +278,17 @@ export async function GET(request: NextRequest) {
 // Helper function to apply filters to executions
 function applyExecutionFilters(executions: Execution[], filters: ExecutionFilters): Execution[] {
   let filtered = executions
-  
+
   // Filter by status
   if (filters.status && filters.status.length > 0) {
     filtered = filtered.filter(exec => filters.status!.includes(exec.status))
   }
-  
+
   // Filter by time range
   if (filters.timeRange && filters.timeRange !== 'custom') {
     const now = new Date()
     let startDate: Date
-    
+
     switch (filters.timeRange) {
       case '1h':
         startDate = new Date(now.getTime() - 60 * 60 * 1000)
@@ -308,53 +308,53 @@ function applyExecutionFilters(executions: Execution[], filters: ExecutionFilter
       default:
         startDate = new Date(now.getTime() - 24 * 60 * 60 * 1000)
     }
-    
+
     filtered = filtered.filter(exec => exec.startedAt >= startDate)
   }
-  
+
   // Filter by custom time range
   if (filters.timeRange === 'custom' && filters.customTimeRange) {
     const { start, end } = filters.customTimeRange
-    filtered = filtered.filter(exec => 
+    filtered = filtered.filter(exec =>
       exec.startedAt >= start && exec.startedAt <= end
     )
   }
-  
+
   // Filter by provider ID
   if (filters.providerId) {
     filtered = filtered.filter(exec => exec.providerId === filters.providerId)
   }
-  
+
   // Filter by workflow ID
   if (filters.workflowId) {
     filtered = filtered.filter(exec => exec.workflowId === filters.workflowId)
   }
-  
+
   // Filter by search query (search in execution ID, workflow name, or error message)
   if (filters.search) {
     const searchTerm = filters.search.toLowerCase()
     filtered = filtered.filter(exec => {
       // Search in execution ID
-      if (exec.id.toLowerCase().includes(searchTerm) || 
-          exec.providerExecutionId.toLowerCase().includes(searchTerm)) {
+      if (exec.id.toLowerCase().includes(searchTerm) ||
+        exec.providerExecutionId.toLowerCase().includes(searchTerm)) {
         return true
       }
-      
+
       // Search in workflow name from metadata
       const workflowName = exec.metadata?.workflowName || ''
       if (typeof workflowName === 'string' && workflowName.toLowerCase().includes(searchTerm)) {
         return true
       }
-      
+
       // Search in error message
       if (exec.error && exec.error.message.toLowerCase().includes(searchTerm)) {
         return true
       }
-      
+
       return false
     })
   }
-  
+
   return filtered
 }
 
@@ -364,9 +364,9 @@ function applyExecutionFilters(executions: Execution[], filters: ExecutionFilter
  */
 function getFirstNodeInfo(nodes: any[]): { type?: string; name?: string } | undefined {
   if (!nodes || nodes.length === 0) return undefined;
-  
+
   // Find trigger nodes - prioritize scheduled triggers
-  const scheduledTriggerNode = nodes.find(node => 
+  const scheduledTriggerNode = nodes.find(node =>
     node.type && (
       node.type.includes('cronTrigger') ||
       node.type.includes('intervalTrigger') ||
@@ -374,23 +374,23 @@ function getFirstNodeInfo(nodes: any[]): { type?: string; name?: string } | unde
       (node.type.includes('trigger') && node.parameters?.rule?.interval) // Some triggers have interval in parameters
     )
   );
-  
+
   // Find other trigger types
-  const triggerNode = scheduledTriggerNode || nodes.find(node => 
+  const triggerNode = scheduledTriggerNode || nodes.find(node =>
     node.type && (
       node.type.includes('trigger') ||
       node.type.includes('webhook') ||
       node.type.includes('manual')
     )
   );
-  
+
   const firstNode = triggerNode || nodes[0];
   if (!firstNode) return undefined;
-  
+
   // Extract the node type and create a friendly display name
   const nodeType = firstNode.type || 'Unknown';
   const displayName = getScheduledTriggerDisplayName(nodeType, firstNode.parameters);
-  
+
   return {
     type: nodeType,
     name: displayName
@@ -405,24 +405,24 @@ function getScheduledTriggerDisplayName(nodeType: string, parameters?: any): str
   if (nodeType.includes('cronTrigger') || nodeType.includes('cron')) {
     return 'Scheduled (Cron)';
   }
-  
+
   if (nodeType.includes('intervalTrigger')) {
     // Try to extract interval details from parameters
     if (parameters?.interval) {
       const interval = parameters.interval;
       if (typeof interval === 'number') {
         if (interval < 60) return `Scheduled (${interval}s)`;
-        if (interval < 3600) return `Scheduled (${Math.round(interval/60)}m)`;
-        return `Scheduled (${Math.round(interval/3600)}h)`;
+        if (interval < 3600) return `Scheduled (${Math.round(interval / 60)}m)`;
+        return `Scheduled (${Math.round(interval / 3600)}h)`;
       }
     }
     return 'Scheduled (Interval)';
   }
-  
+
   if (nodeType.includes('scheduleTrigger') || nodeType.includes('schedule')) {
     return 'Scheduled';
   }
-  
+
   // Check if it's a generic trigger with scheduling parameters
   if (nodeType.includes('trigger') && parameters) {
     if (parameters.rule?.interval || parameters.interval) {
@@ -432,7 +432,7 @@ function getScheduledTriggerDisplayName(nodeType: string, parameters?: any): str
       return 'Scheduled (Cron)';
     }
   }
-  
+
   // Fall back to the original node display name logic
   return getNodeDisplayName(nodeType);
 }
@@ -443,7 +443,7 @@ function getScheduledTriggerDisplayName(nodeType: string, parameters?: any): str
 function getNodeDisplayName(nodeType: string): string {
   // Extract meaningful name from node type
   // e.g., 'n8n-nodes-base.googleGmail' -> 'Google Gmail'
-  
+
   if (nodeType.includes('googleGmail')) return 'Google Gmail';
   if (nodeType.includes('googleSheets')) return 'Google Sheets';
   if (nodeType.includes('googleDrive')) return 'Google Drive';
@@ -459,17 +459,17 @@ function getNodeDisplayName(nodeType: string): string {
   if (nodeType.includes('trello')) return 'Trello';
   if (nodeType.includes('github')) return 'GitHub';
   if (nodeType.includes('gitlab')) return 'GitLab';
-  
+
   // Try to extract from the base name
   const parts = nodeType.split('.');
   const baseName = parts[parts.length - 1];
-  
+
   // Convert camelCase to Title Case
   const titleCase = baseName
     .replace(/([A-Z])/g, ' $1')
     .replace(/^./, str => str.toUpperCase())
     .trim();
-  
+
   return titleCase || 'Unknown';
 }
 
@@ -479,13 +479,13 @@ function getNodeDisplayName(nodeType: string): string {
 function convertN8nExecutions(n8nExecutions: N8nExecution[], workflows: N8nWorkflow[]): Execution[] {
   // Create workflow lookup map for faster access
   const workflowMap = new Map(workflows.map(w => [w.id, w]))
-  
+
   return n8nExecutions.map(n8nExec => {
     const workflow = workflowMap.get(n8nExec.workflowId)
     const startedAt = new Date(n8nExec.startedAt)
     const stoppedAt = n8nExec.stoppedAt ? new Date(n8nExec.stoppedAt) : undefined
     const duration = stoppedAt ? stoppedAt.getTime() - startedAt.getTime() : undefined
-    
+
     // Map n8n status to our internal status format
     let status: ExecutionStatus = 'unknown'
     switch (n8nExec.status) {
@@ -512,17 +512,17 @@ function convertN8nExecutions(n8nExecutions: N8nExecution[], workflows: N8nWorkf
       default:
         status = 'unknown'
     }
-    
+
     // Map n8n mode to our internal mode format with enhanced scheduled detection
     let mode: 'manual' | 'trigger' | 'webhook' | 'cron' | 'unknown' = 'unknown'
-    
+
     // First check if it's a scheduled trigger based on workflow nodes
     const firstNodeInfo = getFirstNodeInfo(workflow?.nodes || [])
-    const isScheduledTrigger = firstNodeInfo?.name?.includes('Scheduled') || 
-                              firstNodeInfo?.type?.includes('cron') ||
-                              firstNodeInfo?.type?.includes('interval') ||
-                              firstNodeInfo?.type?.includes('schedule')
-    
+    const isScheduledTrigger = firstNodeInfo?.name?.includes('Scheduled') ||
+      firstNodeInfo?.type?.includes('cron') ||
+      firstNodeInfo?.type?.includes('interval') ||
+      firstNodeInfo?.type?.includes('schedule')
+
     if (isScheduledTrigger) {
       mode = 'cron' // Use 'cron' for all scheduled triggers
     } else {
@@ -544,7 +544,7 @@ function convertN8nExecutions(n8nExecutions: N8nExecution[], workflows: N8nWorkf
           mode = 'unknown'
       }
     }
-    
+
     const execution: Execution = {
       id: n8nExec.id, // Use execution ID directly
       providerId: 'n8n-main', // Static provider ID for n8n instance
@@ -571,7 +571,7 @@ function convertN8nExecutions(n8nExecutions: N8nExecution[], workflows: N8nWorkf
         firstNode: getFirstNodeInfo(workflow?.nodes || [])
       }
     }
-    
+
     return execution
   })
 }
