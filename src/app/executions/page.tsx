@@ -20,7 +20,6 @@ import {
   ExclamationTriangleIcon,
   MagnifyingGlassIcon,
   FunnelIcon,
-  FunnelIcon,
   ArrowPathIcon,
   ChevronRightIcon,
   ChevronDownIcon,
@@ -50,7 +49,6 @@ const statusColors = {
   'running': 'blue',
   'waiting': 'yellow',
   'canceled': 'zinc',
-  'unknown': 'zinc'
   'unknown': 'zinc'
 } as const
 
@@ -466,142 +464,246 @@ function ExecutionsContent() {
                 </TableCell>
               </TableRow>
             ) : (
-            ): (
-                groupedExecutions.map((item) => {
+              groupedExecutions.map((item) => {
                 if (isExecutionGroup(item)) {
                   const isExpanded = expandedGroups.has(item.id)
-            const StatusIcon = statusIcons[item.status]
+                  const StatusIcon = statusIcons[item.status]
                   const provider = providers.find(p => p.id === item.providerId)
-            const workflowName = (typeof item.executions[0].metadata?.workflowName === 'string' ? item.executions[0].metadata.workflowName : null) || 
-                                       DEMO_WORKFLOWS.find(w => w.id === item.workflowId)?.name ||
-            item.workflowId
+                  const workflowName = (typeof item.executions[0].metadata?.workflowName === 'string' ? item.executions[0].metadata.workflowName : null) ||
+                    DEMO_WORKFLOWS.find(w => w.id === item.workflowId)?.name ||
+                    item.workflowId
 
-            return (
-            <>
-              <TableRow
-                key={item.id}
-                className="hover:bg-gray-50 dark:hover:bg-slate-800 cursor-pointer bg-gray-50/50 dark:bg-slate-800/50"
-                onClick={(e) => toggleGroup(item.id, e)}
-              >
-                <TableCell>
-                  <div className="flex items-center space-x-2">
-                    <button
-                      className="p-1 hover:bg-gray-200 dark:hover:bg-slate-700 rounded"
-                    >
-                      {isExpanded ? (
-                        <ChevronDownIcon className="h-4 w-4 text-gray-500" />
-                      ) : (
-                        <ChevronRightIcon className="h-4 w-4 text-gray-500" />
-                      )}
-                    </button>
-                    <Badge color={statusColors[item.status]} className="flex items-center space-x-1">
-                      <StatusIcon className="h-3 w-3" />
-                      <span className="capitalize">{item.status}</span>
-                    </Badge>
-                  </div>
-                </TableCell>
-                <TableCell className="font-mono text-sm text-gray-500">
-                  <div className="flex items-center space-x-2">
-                    <ListBulletIcon className="h-4 w-4" />
-                    <span>{item.executions.length} runs</span>
-                  </div>
-                </TableCell>
-                <TableCell>
-                  {provider ? (
-                    <Badge color="zinc" className="text-xs">
-                      {provider.name}
-                    </Badge>
-                  ) : (
-                    <span className="text-xs text-gray-400">Unknown</span>
-                  )}
-                </TableCell>
-                <TableCell>
-                  <div className="flex flex-col">
-                    <span className="font-medium text-gray-900 dark:text-white">
-                      {workflowName}
-                    </span>
-                    <span className="text-xs text-gray-500 font-mono">
-                      {item.executions[0].providerWorkflowId}
-                    </span>
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <div className="text-xs text-gray-500">
-                    <div>Last: {formatDate(item.executions[0].startedAt)}</div>
-                    <div>First: {formatDate(item.executions[item.executions.length - 1].startedAt)}</div>
-                  </div>
-                </TableCell>
-                <TableCell>
-                  ~{formatDuration(item.avgDuration)}
-                </TableCell>
-                <TableCell>
-                  <Badge color="blue" className="capitalize">
-                    {item.mode}
-                  </Badge>
-                </TableCell>
-                <TableCell>
-                  {item.totalTokens > 0 ? (
-                    <div className="text-sm font-medium">
-                      {item.totalTokens.toLocaleString()} total
-                    </div>
-                  ) : (
-                    <span className="text-gray-400 text-sm">-</span>
-                  )}
-                </TableCell>
-                <TableCell>
-                  {item.totalCost > 0 ? (
-                    <div className="text-sm font-medium">
-                      ${item.totalCost.toFixed(4)} total
-                    </div>
-                  ) : (
-                    <span className="text-gray-400 text-sm">-</span>
-                  )}
-                </TableCell>
-                <TableCell>
-                  <span className="text-xs text-gray-400">Group</span>
-                </TableCell>
-              </TableRow>
-              {isExpanded && item.executions.map((execution, idx) => {
-                const ExStatusIcon = statusIcons[execution.status]
+                  return (
+                    <>
+                      <TableRow
+                        key={item.id}
+                        className="hover:bg-gray-50 dark:hover:bg-slate-800 cursor-pointer bg-gray-50/50 dark:bg-slate-800/50"
+                        onClick={(e) => toggleGroup(item.id, e)}
+                      >
+                        <TableCell>
+                          <div className="flex items-center space-x-2">
+                            <button
+                              className="p-1 hover:bg-gray-200 dark:hover:bg-slate-700 rounded"
+                            >
+                              {isExpanded ? (
+                                <ChevronDownIcon className="h-4 w-4 text-gray-500" />
+                              ) : (
+                                <ChevronRightIcon className="h-4 w-4 text-gray-500" />
+                              )}
+                            </button>
+                            <Badge color={statusColors[item.status]} className="flex items-center space-x-1">
+                              <StatusIcon className="h-3 w-3" />
+                              <span className="capitalize">{item.status}</span>
+                            </Badge>
+                          </div>
+                        </TableCell>
+                        <TableCell className="font-mono text-sm text-gray-500">
+                          <div className="flex items-center space-x-2">
+                            <ListBulletIcon className="h-4 w-4" />
+                            <span>{item.executions.length} runs</span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          {provider ? (
+                            <Badge color="zinc" className="text-xs">
+                              {provider.name}
+                            </Badge>
+                          ) : (
+                            <span className="text-xs text-gray-400">Unknown</span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex flex-col">
+                            <span className="font-medium text-gray-900 dark:text-white">
+                              {workflowName}
+                            </span>
+                            <span className="text-xs text-gray-500 font-mono">
+                              {item.executions[0].providerWorkflowId}
+                            </span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="text-xs text-gray-500">
+                            <div>Last: {formatDate(item.executions[0].startedAt)}</div>
+                            <div>First: {formatDate(item.executions[item.executions.length - 1].startedAt)}</div>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          ~{formatDuration(item.avgDuration)}
+                        </TableCell>
+                        <TableCell>
+                          <Badge color="blue" className="capitalize">
+                            {item.mode}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          {item.totalTokens > 0 ? (
+                            <div className="text-sm font-medium">
+                              {item.totalTokens.toLocaleString()} total
+                            </div>
+                          ) : (
+                            <span className="text-gray-400 text-sm">-</span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {item.totalCost > 0 ? (
+                            <div className="text-sm font-medium">
+                              ${item.totalCost.toFixed(4)} total
+                            </div>
+                          ) : (
+                            <span className="text-gray-400 text-sm">-</span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <span className="text-xs text-gray-400">Group</span>
+                        </TableCell>
+                      </TableRow>
+                      {isExpanded && item.executions.map((execution, idx) => {
+                        const ExStatusIcon = statusIcons[execution.status]
+                        return (
+                          <TableRow
+                            key={execution.id}
+                            className="hover:bg-gray-50 dark:hover:bg-slate-800 cursor-pointer bg-gray-50/30 dark:bg-slate-800/30"
+                            onClick={() => viewExecutionDetails(execution.id)}
+                          >
+                            <TableCell>
+                              <div className="pl-8">
+                                <Badge color={statusColors[execution.status]} className="flex items-center space-x-1 scale-90 origin-left">
+                                  <ExStatusIcon className="h-3 w-3" />
+                                </Badge>
+                              </div>
+                            </TableCell>
+                            <TableCell className="font-mono text-xs text-gray-500">
+                              {formatExecutionId(execution.providerExecutionId)}
+                            </TableCell>
+                            <TableCell></TableCell>
+                            <TableCell></TableCell>
+                            <TableCell className="text-xs">
+                              {formatDate(execution.startedAt)}
+                            </TableCell>
+                            <TableCell className="text-xs">
+                              {formatDuration(execution.duration)}
+                            </TableCell>
+                            <TableCell></TableCell>
+                            <TableCell>
+                              {execution.totalTokens && execution.totalTokens > 0 ? (
+                                <span className="text-xs text-gray-500">{execution.totalTokens.toLocaleString()}</span>
+                              ) : null}
+                            </TableCell>
+                            <TableCell>
+                              {execution.aiCost && execution.aiCost > 0 ? (
+                                <span className="text-xs text-gray-500">${execution.aiCost.toFixed(4)}</span>
+                              ) : null}
+                            </TableCell>
+                            <TableCell>
+                              <Button
+                                outline
+                                className="text-xs px-2 py-0.5"
+                                onClick={(e: React.MouseEvent) => {
+                                  e.stopPropagation()
+                                  openN8nExecution(execution)
+                                }}
+                              >
+                                n8n
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        )
+                      })}
+                    </>
+                  )
+                }
+
+                // Regular execution row
+                const execution = item as Execution
+                const StatusIcon = statusIcons[execution.status]
+                const provider = providers.find(p => p.id === execution.providerId)
                 return (
                   <TableRow
                     key={execution.id}
-                    className="hover:bg-gray-50 dark:hover:bg-slate-800 cursor-pointer bg-gray-50/30 dark:bg-slate-800/30"
+                    className="hover:bg-gray-50 dark:hover:bg-slate-800 cursor-pointer"
                     onClick={() => viewExecutionDetails(execution.id)}
                   >
                     <TableCell>
-                      <div className="pl-8">
-                        <Badge color={statusColors[execution.status]} className="flex items-center space-x-1 scale-90 origin-left">
-                          <ExStatusIcon className="h-3 w-3" />
-                        </Badge>
-                      </div>
+                      <Badge color={statusColors[execution.status]} className="flex items-center space-x-1">
+                        <StatusIcon className="h-3 w-3" />
+                        <span className="capitalize">{execution.status}</span>
+                      </Badge>
                     </TableCell>
-                    <TableCell className="font-mono text-xs text-gray-500">
+                    <TableCell className="font-mono text-sm">
                       {formatExecutionId(execution.providerExecutionId)}
                     </TableCell>
-                    <TableCell></TableCell>
-                    <TableCell></TableCell>
-                    <TableCell className="text-xs">
+                    <TableCell>
+                      {provider ? (
+                        <Badge color="zinc" className="text-xs">
+                          {provider.name}
+                        </Badge>
+                      ) : (
+                        <span className="text-xs text-gray-400">Unknown</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex flex-col">
+                        <span className="font-medium text-gray-900 dark:text-white">
+                          {(typeof execution.metadata?.workflowName === 'string' ? execution.metadata.workflowName : null) ||
+                            DEMO_WORKFLOWS.find(w => w.id === execution.workflowId)?.name ||
+                            execution.workflowId}
+                        </span>
+                        <span className="text-xs text-gray-500 font-mono">
+                          {execution.providerWorkflowId}
+                        </span>
+                        {execution.error && (
+                          <span className="text-sm text-red-600 truncate max-w-xs">
+                            {execution.error.message}
+                          </span>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell>
                       {formatDate(execution.startedAt)}
                     </TableCell>
-                    <TableCell className="text-xs">
+                    <TableCell>
                       {formatDuration(execution.duration)}
                     </TableCell>
-                    <TableCell></TableCell>
+                    <TableCell>
+                      <Badge color="blue" className="capitalize">
+                        {(execution.metadata as any)?.firstNode?.name || execution.mode}
+                      </Badge>
+                    </TableCell>
                     <TableCell>
                       {execution.totalTokens && execution.totalTokens > 0 ? (
-                        <span className="text-xs text-gray-500">{execution.totalTokens.toLocaleString()}</span>
-                      ) : null}
+                        <div className="text-sm">
+                          <div className="font-medium text-gray-900 dark:text-white">
+                            {execution.totalTokens.toLocaleString()}
+                          </div>
+                          <div className="text-xs text-gray-500">
+                            {execution.inputTokens?.toLocaleString() || 0} in / {execution.outputTokens?.toLocaleString() || 0} out
+                          </div>
+                        </div>
+                      ) : (
+                        <span className="text-gray-400 text-sm">-</span>
+                      )}
                     </TableCell>
                     <TableCell>
                       {execution.aiCost && execution.aiCost > 0 ? (
-                        <span className="text-xs text-gray-500">${execution.aiCost.toFixed(4)}</span>
-                      ) : null}
+                        <div className="text-sm">
+                          <div className="font-medium text-gray-900 dark:text-white">
+                            ${execution.aiCost.toFixed(4)}
+                          </div>
+                          {execution.aiProvider && (
+                            <div className="text-xs text-gray-500 capitalize">
+                              {execution.aiProvider}
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-gray-400 text-sm">-</span>
+                      )}
                     </TableCell>
                     <TableCell>
                       <Button
                         outline
-                        className="text-xs px-2 py-0.5"
+                        className="text-sm px-2 py-1"
                         onClick={(e: React.MouseEvent) => {
                           e.stopPropagation()
                           openN8nExecution(execution)
@@ -612,111 +714,6 @@ function ExecutionsContent() {
                     </TableCell>
                   </TableRow>
                 )
-              })}
-            </>
-            )
-                }
-
-            // Regular execution row
-            const execution = item as Execution
-            const StatusIcon = statusIcons[execution.status]
-                const provider = providers.find(p => p.id === execution.providerId)
-            return (
-            <TableRow
-              key={execution.id}
-              className="hover:bg-gray-50 dark:hover:bg-slate-800 cursor-pointer"
-              onClick={() => viewExecutionDetails(execution.id)}
-            >
-              <TableCell>
-                <Badge color={statusColors[execution.status]} className="flex items-center space-x-1">
-                  <StatusIcon className="h-3 w-3" />
-                  <span className="capitalize">{execution.status}</span>
-                </Badge>
-              </TableCell>
-              <TableCell className="font-mono text-sm">
-                {formatExecutionId(execution.providerExecutionId)}
-              </TableCell>
-              <TableCell>
-                {provider ? (
-                  <Badge color="zinc" className="text-xs">
-                    {provider.name}
-                  </Badge>
-                ) : (
-                  <span className="text-xs text-gray-400">Unknown</span>
-                )}
-              </TableCell>
-              <TableCell>
-                <div className="flex flex-col">
-                  <span className="font-medium text-gray-900 dark:text-white">
-                    {(typeof execution.metadata?.workflowName === 'string' ? execution.metadata.workflowName : null) ||
-                      DEMO_WORKFLOWS.find(w => w.id === execution.workflowId)?.name ||
-                      execution.workflowId}
-                  </span>
-                  <span className="text-xs text-gray-500 font-mono">
-                    {execution.providerWorkflowId}
-                  </span>
-                  {execution.error && (
-                    <span className="text-sm text-red-600 truncate max-w-xs">
-                      {execution.error.message}
-                    </span>
-                  )}
-                </div>
-              </TableCell>
-              <TableCell>
-                {formatDate(execution.startedAt)}
-              </TableCell>
-              <TableCell>
-                {formatDuration(execution.duration)}
-              </TableCell>
-              <TableCell>
-                <Badge color="blue" className="capitalize">
-                  {(execution.metadata as any)?.firstNode?.name || execution.mode}
-                </Badge>
-              </TableCell>
-              <TableCell>
-                {execution.totalTokens && execution.totalTokens > 0 ? (
-                  <div className="text-sm">
-                    <div className="font-medium text-gray-900 dark:text-white">
-                      {execution.totalTokens.toLocaleString()}
-                    </div>
-                    <div className="text-xs text-gray-500">
-                      {execution.inputTokens?.toLocaleString() || 0} in / {execution.outputTokens?.toLocaleString() || 0} out
-                    </div>
-                  </div>
-                ) : (
-                  <span className="text-gray-400 text-sm">-</span>
-                )}
-              </TableCell>
-              <TableCell>
-                {execution.aiCost && execution.aiCost > 0 ? (
-                  <div className="text-sm">
-                    <div className="font-medium text-gray-900 dark:text-white">
-                      ${execution.aiCost.toFixed(4)}
-                    </div>
-                    {execution.aiProvider && (
-                      <div className="text-xs text-gray-500 capitalize">
-                        {execution.aiProvider}
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  <span className="text-gray-400 text-sm">-</span>
-                )}
-              </TableCell>
-              <TableCell>
-                <Button
-                  outline
-                  className="text-sm px-2 py-1"
-                  onClick={(e: React.MouseEvent) => {
-                    e.stopPropagation()
-                    openN8nExecution(execution)
-                  }}
-                >
-                  n8n
-                </Button>
-              </TableCell>
-            </TableRow>
-            )
               })
             )}
           </TableBody>
