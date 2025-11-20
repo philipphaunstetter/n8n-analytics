@@ -389,6 +389,7 @@ function ExecutionsContent() {
             <option value="24h">Last 24 hours</option>
             <option value="7d">Last 7 days</option>
             <option value="30d">Last 30 days</option>
+            <option value="all">All Time</option>
           </Select>
         </div>
 

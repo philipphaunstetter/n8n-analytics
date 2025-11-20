@@ -114,7 +114,7 @@ export async function GET(request: NextRequest) {
       }
 
       // Add time range filter
-      if (filters.timeRange && filters.timeRange !== 'custom') {
+      if (filters.timeRange && filters.timeRange !== 'custom' && filters.timeRange !== 'all') {
         const now = new Date()
         let startDate: Date
         switch (filters.timeRange) {

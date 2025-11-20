@@ -27,17 +27,17 @@ export interface Workflow {
   createdAt: Date
   updatedAt: Date
   lastExecutedAt?: Date
-  
+
   // Stats (computed from executions)
   totalExecutions: number
   successCount: number
   failureCount: number
   successRate: number // Percentage
   avgDuration?: number // In milliseconds
-  
+
   // Graph/Flow data
   graph?: WorkflowGraph
-  
+
   // Provider-specific metadata
   metadata?: Record<string, unknown>
 }
@@ -48,12 +48,12 @@ export interface Execution {
   workflowId: string // Our internal workflow ID
   providerExecutionId: string // Original ID from provider
   providerWorkflowId: string // Original workflow ID from provider
-  
+
   status: ExecutionStatus
   startedAt: Date
   stoppedAt?: Date
   duration?: number // In milliseconds
-  
+
   // Error information
   error?: {
     message: string
@@ -61,31 +61,31 @@ export interface Execution {
     nodeId?: string // If error occurred at specific node
     timestamp: Date
   }
-  
+
   // Execution data (limited for privacy/size)
   inputData?: Record<string, unknown>
   outputData?: Record<string, unknown>
-  
+
   // Mode info
   mode: 'manual' | 'trigger' | 'webhook' | 'cron' | 'unknown'
-  
+
   // AI Metrics (token usage and costs)
   totalTokens?: number
   inputTokens?: number
   outputTokens?: number
   aiCost?: number
   aiProvider?: string | null
-  
+
   // Provider-specific metadata
   metadata?: Record<string, unknown>
 }
 
-export type ExecutionStatus = 
-  | 'running' 
-  | 'success' 
-  | 'error' 
-  | 'canceled' 
-  | 'waiting' 
+export type ExecutionStatus =
+  | 'running'
+  | 'success'
+  | 'error'
+  | 'canceled'
+  | 'waiting'
   | 'unknown'
 
 export interface WorkflowGraph {
@@ -103,10 +103,10 @@ export interface GraphNode {
   name: string
   type: string // e.g., 'n8n-nodes-base.httpRequest', 'webhook', etc.
   position: { x: number; y: number }
-  
+
   // Node configuration (simplified)
   parameters?: Record<string, unknown>
-  
+
   // Execution context
   executionData?: {
     status?: ExecutionStatus
@@ -116,7 +116,7 @@ export interface GraphNode {
     error?: string
     outputData?: Record<string, unknown>
   }
-  
+
   // UI metadata
   disabled?: boolean
   notes?: string
@@ -139,11 +139,11 @@ export interface EndpointCheck {
   expectedStatus?: number
   timeout: number // In milliseconds
   interval: number // Check interval in minutes
-  
+
   isEnabled: boolean
   createdAt: Date
   updatedAt: Date
-  
+
   // Latest result
   lastResult?: EndpointResult
 }
@@ -152,12 +152,12 @@ export interface EndpointResult {
   id: string
   endpointCheckId: string
   timestamp: Date
-  
+
   success: boolean
   responseTime?: number // In milliseconds
   statusCode?: number
   error?: string
-  
+
   // Response data (limited)
   responseHeaders?: Record<string, string>
   responseBody?: string // Truncated
@@ -167,17 +167,17 @@ export interface EndpointResult {
 export interface DashboardStats {
   providerId?: string // If null, stats across all providers
   timeRange: TimeRange
-  
+
   totalExecutions: number
   successfulExecutions: number
   failedExecutions: number
   successRate: number
   avgResponseTime?: number
-  
+
   // Time series data for charts
   executionsTrend?: TimeSeriesPoint[]
   successRateTrend?: TimeSeriesPoint[]
-  
+
   // Top workflows by executions
   topWorkflows?: Array<{
     workflowId: string
@@ -185,7 +185,7 @@ export interface DashboardStats {
     executions: number
     successRate: number
   }>
-  
+
   // Recent failures
   recentFailures?: Array<{
     executionId: string
@@ -201,12 +201,13 @@ export interface TimeSeriesPoint {
   label?: string
 }
 
-export type TimeRange = 
-  | '1h' 
-  | '24h' 
-  | '7d' 
-  | '30d' 
-  | '90d' 
+export type TimeRange =
+  | '1h'
+  | '24h'
+  | '7d'
+  | '30d'
+  | '90d'
+  | 'all'
   | 'custom'
 
 export interface CustomTimeRange {
