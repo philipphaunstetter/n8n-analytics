@@ -268,11 +268,12 @@ export class ExecutionSyncService {
 
     do {
       try {
-        // Fetch batch of executions with data for AI metrics extraction
+        // OPTIMIZATION: Fetch batch WITHOUT data first to check what we actually need
+        // This saves massive bandwidth by not downloading JSON data for existing finished executions
         const response = await n8nClient.getExecutions({
           limit: options.batchSize || this.DEFAULT_BATCH_SIZE,
           cursor,
-          includeData: true
+          includeData: false // Fetch summary only first
         })
 
         if (!response.data || response.data.length === 0) {
@@ -280,17 +281,65 @@ export class ExecutionSyncService {
           break
         }
 
-        console.log(`📊 Processing ${response.data.length} executions for ${provider.name}`)
+        // Filter out executions that we don't need to update
+        // We need to fetch full data ONLY if:
+        // 1. The execution is NOT in our DB (new)
+        // 2. The execution IS in our DB but is NOT finished (update)
+        const executionIds = response.data.map((e: N8nExecution) => e.id)
+        const existingStatusMap = await this.getExistingExecutionsStatus(provider.id, executionIds)
 
-        // Process batch
-        const batchResult = await this.processExecutionBatch(
-          provider.id,
-          response.data
-        )
+        const executionsToFetch = response.data.filter((e: N8nExecution) => {
+          const existingStatus = existingStatusMap.get(e.id)
+          if (!existingStatus) return true // New execution
+          if (existingStatus !== 'success' && existingStatus !== 'error' && existingStatus !== 'canceled') return true // Not finished
+          return false // Already finished and in DB
+        })
+
+        console.log(`📊 Batch: ${response.data.length} items. Need to fetch data for: ${executionsToFetch.length}`)
+
+        // If we have executions to update, we need their full data
+        // There are two strategies:
+        // 1. If many items need update (> 50%), re-fetch the whole batch with includeData=true
+        // 2. If few items need update, fetch them individually
+
+        let executionsWithData: N8nExecution[] = []
+
+        if (executionsToFetch.length > 0) {
+          if (executionsToFetch.length > (response.data.length * 0.5)) {
+            // Strategy 1: Re-fetch batch with data
+            console.log(`🔄 Re-fetching batch with full data (${executionsToFetch.length}/${response.data.length} needed)...`)
+            const fullResponse = await n8nClient.getExecutions({
+              limit: options.batchSize || this.DEFAULT_BATCH_SIZE,
+              cursor, // Same cursor
+              includeData: true
+            })
+            // Filter again to be safe (though order should be same)
+            executionsWithData = fullResponse.data.filter((e: N8nExecution) =>
+              executionsToFetch.some((needed: N8nExecution) => needed.id === e.id)
+            )
+          } else {
+            // Strategy 2: Fetch individually (parallelized)
+            console.log(`⬇️ Fetching ${executionsToFetch.length} individual executions...`)
+            const results = await Promise.allSettled(
+              executionsToFetch.map((e: N8nExecution) => n8nClient.getExecution(e.id))
+            )
+            executionsWithData = results
+              .filter((r): r is PromiseFulfilledResult<N8nExecution> => r.status === 'fulfilled')
+              .map(r => r.value)
+          }
+        }
+
+        // Process the batch
+        if (executionsWithData.length > 0) {
+          const batchResult = await this.processExecutionBatch(
+            provider.id,
+            executionsWithData
+          )
+          totalInserted += batchResult.inserted
+          totalUpdated += batchResult.updated
+        }
 
         totalProcessed += response.data.length
-        totalInserted += batchResult.inserted
-        totalUpdated += batchResult.updated
         cursor = response.nextCursor
 
         // Store cursor for next sync
@@ -299,11 +348,9 @@ export class ExecutionSyncService {
         }
 
       } catch (error) {
-        console.error(`❌ Batch processing failed for ${provider.name}:`, error)
-        // Continue with next batch instead of failing entire sync
+        console.error(`❌ Error processing execution batch for ${provider.name}:`, error)
         break
       }
-
     } while (cursor)
 
     // Fix execution-workflow relationships
@@ -317,6 +364,34 @@ export class ExecutionSyncService {
       updated: totalUpdated,
       lastCursor: cursor
     }
+  }
+
+  /**
+   * Get status of existing executions to determine if update is needed
+   */
+  private async getExistingExecutionsStatus(providerId: string, executionIds: string[]): Promise<Map<string, string>> {
+    const db = getSQLiteClient()
+    if (executionIds.length === 0) return new Map()
+
+    const placeholders = executionIds.map(() => '?').join(',')
+
+    return new Promise((resolve, reject) => {
+      db.all(
+        `SELECT provider_execution_id, status FROM executions 
+         WHERE provider_id = ? AND provider_execution_id IN (${placeholders})`,
+        [providerId, ...executionIds],
+        (err, rows: { provider_execution_id: string, status: string }[]) => {
+          if (err) reject(err)
+          else {
+            const map = new Map<string, string>()
+            if (rows) {
+              rows.forEach(r => map.set(r.provider_execution_id, r.status))
+            }
+            resolve(map)
+          }
+        }
+      )
+    })
   }
 
   /**
@@ -443,42 +518,86 @@ export class ExecutionSyncService {
     const workflowIds = [...new Set(executions.map(e => e.workflowId))]
     await this.ensureWorkflowsExist(providerId, workflowIds)
 
-    // Process executions
-    for (const n8nExecution of executions) {
-      try {
-        const result = await this.upsertExecution(providerId, n8nExecution)
-        if (result.inserted) inserted++
-        if (result.updated) updated++
-      } catch (error) {
-        console.error(`❌ Failed to process execution ${n8nExecution.id}:`, error)
+    // Pre-fetch workflow mapping for this batch to avoid N+1 queries
+    const workflowMap = await this.getWorkflowMap(providerId, workflowIds)
+
+    const db = getSQLiteClient()
+
+    // Use transaction for batch processing
+    await new Promise<void>((resolve, reject) => {
+      db.run('BEGIN TRANSACTION', (err) => {
+        if (err) reject(err)
+        else resolve()
+      })
+    })
+
+    try {
+      // Process executions
+      for (const n8nExecution of executions) {
+        try {
+          const workflow = workflowMap.get(n8nExecution.workflowId)
+          if (!workflow) {
+            console.error(`⚠️ Workflow not found for execution ${n8nExecution.id}: ${n8nExecution.workflowId}`)
+            continue
+          }
+
+          const result = await this.upsertExecution(providerId, n8nExecution, workflow)
+          if (result.inserted) inserted++
+          if (result.updated) updated++
+        } catch (error) {
+          console.error(`❌ Failed to process execution ${n8nExecution.id}:`, error)
+        }
       }
+
+      await new Promise<void>((resolve, reject) => {
+        db.run('COMMIT', (err) => {
+          if (err) reject(err)
+          else resolve()
+        })
+      })
+    } catch (error) {
+      await new Promise<void>((resolve) => {
+        db.run('ROLLBACK', () => resolve())
+      })
+      throw error
     }
 
     return { inserted, updated }
   }
 
   /**
-   * Upsert execution into database
+   * Get map of provider_workflow_id -> { id, name }
    */
-  private async upsertExecution(providerId: string, n8nExecution: N8nExecution) {
-    // Get workflow UUID from provider workflow ID
+  private async getWorkflowMap(providerId: string, workflowIds: string[]): Promise<Map<string, { id: string, name: string }>> {
     const db = getSQLiteClient()
-    const workflow = await new Promise<{ id: string, name: string } | null>((resolve, reject) => {
-      db.get(
-        'SELECT id, name FROM workflows WHERE provider_id = ? AND provider_workflow_id = ?',
-        [providerId, n8nExecution.workflowId],
-        (err, row: { id: string, name: string }) => {
+    if (workflowIds.length === 0) return new Map()
+
+    const placeholders = workflowIds.map(() => '?').join(',')
+
+    return new Promise((resolve, reject) => {
+      db.all(
+        `SELECT id, name, provider_workflow_id FROM workflows 
+         WHERE provider_id = ? AND provider_workflow_id IN (${placeholders})`,
+        [providerId, ...workflowIds],
+        (err, rows: { id: string, name: string, provider_workflow_id: string }[]) => {
           if (err) reject(err)
-          else resolve(row || null)
+          else {
+            const map = new Map<string, { id: string, name: string }>()
+            if (rows) {
+              rows.forEach(r => map.set(r.provider_workflow_id, { id: r.id, name: r.name }))
+            }
+            resolve(map)
+          }
         }
       )
     })
+  }
 
-    if (!workflow) {
-      // This should not happen since ensureWorkflowsExist is called before
-      console.error(`⚠️ Workflow not found for execution ${n8nExecution.id}: ${n8nExecution.workflowId}`)
-      throw new Error(`Workflow not found: ${n8nExecution.workflowId}`)
-    }
+  /**
+   * Upsert execution into database
+   */
+  private async upsertExecution(providerId: string, n8nExecution: N8nExecution, workflow: { id: string, name: string }) {
+    const db = getSQLiteClient()
 
     // Extract AI metrics if execution has data
     // Debug: Check if execution has data
@@ -1108,8 +1227,8 @@ export class ExecutionSyncService {
         const searchParams = new URLSearchParams()
         if (params.limit) searchParams.append('limit', params.limit.toString())
         if (params.cursor) searchParams.append('cursor', params.cursor)
-        // IMPORTANT: Include full execution data for AI metrics extraction
-        searchParams.append('includeData', 'true')
+        // Include data only if requested (defaults to false in API, but we control it here)
+        if (params.includeData) searchParams.append('includeData', 'true')
 
         const response = await fetch(`${baseUrl}/api/v1/executions?${searchParams}`, {
           headers: {
@@ -1137,6 +1256,18 @@ export class ExecutionSyncService {
 
       async getWorkflow(id: string) {
         const response = await fetch(`${baseUrl}/api/v1/workflows/${id}`, {
+          headers: {
+            'X-N8N-API-KEY': apiKey,
+            'Accept': 'application/json'
+          }
+        })
+
+        if (!response.ok) throw new Error(`n8n API error: ${response.statusText}`)
+        return response.json()
+      },
+
+      async getExecution(id: string) {
+        const response = await fetch(`${baseUrl}/api/v1/executions/${id}?includeData=true`, {
           headers: {
             'X-N8N-API-KEY': apiKey,
             'Accept': 'application/json'
