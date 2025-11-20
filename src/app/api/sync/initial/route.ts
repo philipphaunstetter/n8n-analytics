@@ -60,9 +60,12 @@ export async function POST(request: NextRequest) {
                 console.log(`⚡ Syncing executions for ${provider.name}...`)
                 const executionResult = await executionSync.syncProvider({
                     id: providerWithKey.id,
+                    user_id: actualUser.id,
                     name: providerWithKey.name,
-                    baseUrl: providerWithKey.baseUrl,
-                    apiKey: providerWithKey.apiKey
+                    base_url: providerWithKey.baseUrl,
+                    api_key_encrypted: providerWithKey.apiKey,
+                    is_connected: true,
+                    status: 'healthy'
                 })
                 const executionCount = 'processed' in executionResult ? executionResult.processed : 0
                 console.log(`✅ Executions synced: ${executionCount} executions`)
