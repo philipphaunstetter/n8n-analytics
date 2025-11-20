@@ -1,5 +1,5 @@
 import { getProviderService } from './services/provider-service';
-import { workflowSync } from './sync/workflow-sync';
+import crypto from 'crypto';
 
 export interface N8nExecution {
   id: string;
@@ -145,7 +145,6 @@ class N8nApiClient {
             // (matching `workflow-sync.ts` logic) to solve the immediate "how does it work" question.
 
             const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || 'elova-default-encryption-key-change-me';
-            const crypto = require('crypto');
 
             let apiKey = '';
             if (row.api_key_encrypted) {
