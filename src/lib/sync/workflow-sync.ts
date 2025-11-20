@@ -628,33 +628,38 @@ export class WorkflowSyncService {
           continue
         }
 
+        let scheduleString = ''
         const interval = rule.interval?.[0]
 
-        if (!interval) {
-          console.log(`⚠️ No interval found in rule for schedule trigger: ${node.name}`, JSON.stringify(rule, null, 2))
-          continue
+        // Handle interval-based schedules
+        if (interval && interval.field) {
+          if (interval.field === 'cronExpression') {
+            scheduleString = interval.expression || ''
+          } else if (interval.field === 'seconds') {
+            scheduleString = `Every ${interval.secondsInterval || 30} seconds`
+          } else if (interval.field === 'minutes') {
+            scheduleString = `Every ${interval.minutesInterval || 1} minutes`
+          } else if (interval.field === 'hours') {
+            scheduleString = `Every ${interval.hoursInterval || 1} hours`
+          } else if (interval.field === 'days') {
+            scheduleString = `Every ${interval.daysInterval || 1} days`
+          } else if (interval.field === 'weeks') {
+            scheduleString = `Every ${interval.weeksInterval || 1} weeks`
+          } else if (interval.field === 'months') {
+            scheduleString = `Every ${interval.monthsInterval || 1} months`
+          }
         }
 
-        let scheduleString = ''
+        // Handle specific time schedules (e.g. "Every Day at 6:00")
+        if (!scheduleString && (rule.days || rule.hours || rule.minutes)) {
+          const days = rule.days && rule.days.length ? rule.days.join(', ') : 'Daily'
+          const hours = rule.hours && rule.hours.length ? rule.hours.join(',') : '*'
+          const minutes = rule.minutes && rule.minutes.length ? rule.minutes.join(',') : '0'
+          scheduleString = `${days} @ ${hours}:${minutes}`
+        }
 
-        // Handle different schedule types
-        if (interval.field === 'cronExpression') {
-          // Cron expression mode
-          scheduleString = interval.expression || ''
-        } else if (interval.field === 'seconds') {
-          scheduleString = `Every ${interval.secondsInterval || 30} seconds`
-        } else if (interval.field === 'minutes') {
-          scheduleString = `Every ${interval.minutesInterval || 1} minutes`
-        } else if (interval.field === 'hours') {
-          scheduleString = `Every ${interval.hoursInterval || 1} hours`
-        } else if (interval.field === 'days') {
-          scheduleString = `Every ${interval.daysInterval || 1} days`
-        } else if (interval.field === 'weeks') {
-          scheduleString = `Every ${interval.weeksInterval || 1} weeks`
-        } else if (interval.field === 'months') {
-          scheduleString = `Every ${interval.monthsInterval || 1} months`
-        } else {
-          // Fallback for unknown types
+        // Fallback for unknown interval types
+        if (!scheduleString && interval) {
           if (interval.field) {
             scheduleString = `${interval.field}: ${JSON.stringify(interval)}`
           } else {
