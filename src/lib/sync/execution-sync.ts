@@ -353,6 +353,12 @@ export class ExecutionSyncService {
       }
     } while (cursor)
 
+    // If sync completed successfully (no cursor remaining), clear the stored cursor
+    // so the next sync starts from scratch (to pick up new items)
+    if (!cursor) {
+      await this.updateSyncCursor(provider.id, 'executions', null)
+    }
+
     // Fix execution-workflow relationships
     console.log('🔗 Fixing execution-workflow relationships...')
     await this.fixExecutionWorkflowRelationships(provider.id)
@@ -1026,7 +1032,7 @@ export class ExecutionSyncService {
     })
   }
 
-  private async updateSyncCursor(providerId: string, syncType: string, cursor: string) {
+  private async updateSyncCursor(providerId: string, syncType: string, cursor: string | null) {
     // Store cursor in provider metadata
     const db = getSQLiteClient()
 
@@ -1044,7 +1050,11 @@ export class ExecutionSyncService {
 
     // Update metadata with cursor
     const metadata = JSON.parse(currentMetadata)
-    metadata[`last_${syncType}_cursor`] = cursor
+    if (cursor) {
+      metadata[`last_${syncType}_cursor`] = cursor
+    } else {
+      delete metadata[`last_${syncType}_cursor`]
+    }
 
     return new Promise<void>((resolve, reject) => {
       db.run(
