@@ -260,11 +260,13 @@ export class ExecutionSyncService {
     let totalUpdated = 0
     let cursor: string | undefined
 
-    // Get the last sync cursor for incremental sync
-    const lastSync = await this.getLastSyncCursor(provider.id, 'executions')
-    cursor = lastSync?.last_cursor
+    // IMPORTANT: Always start from the beginning (newest executions) to ensure we don't miss recent data
+    // The n8n API returns executions in reverse chronological order (newest first)
+    // Using a saved cursor can cause us to miss new executions if the previous sync didn't complete
+    // We'll rely on the "already finished" check to skip unchanged executions
+    cursor = undefined
 
-    console.log(`📥 Fetching executions for ${provider.name}${cursor ? ` (cursor: ${cursor})` : ' (full sync)'}`)
+    console.log(`📥 Fetching executions for ${provider.name} (starting from newest)`)
 
     do {
       try {
@@ -296,6 +298,13 @@ export class ExecutionSyncService {
         })
 
         console.log(`📊 Batch: ${response.data.length} items. Need to fetch data for: ${executionsToFetch.length}`)
+
+        // If ALL executions in this batch are already in DB and finished, we can stop
+        // This means we've reached executions we've already synced
+        if (executionsToFetch.length === 0) {
+          console.log(`✅ Reached already-synced executions, stopping sync for ${provider.name}`)
+          break
+        }
 
         // If we have executions to update, we need their full data
         // There are two strategies:
@@ -342,22 +351,11 @@ export class ExecutionSyncService {
         totalProcessed += response.data.length
         cursor = response.nextCursor
 
-        // Store cursor for next sync
-        if (cursor) {
-          await this.updateSyncCursor(provider.id, 'executions', cursor)
-        }
-
       } catch (error) {
         console.error(`❌ Error processing execution batch for ${provider.name}:`, error)
         break
       }
     } while (cursor)
-
-    // If sync completed successfully (no cursor remaining), clear the stored cursor
-    // so the next sync starts from scratch (to pick up new items)
-    if (!cursor) {
-      await this.updateSyncCursor(provider.id, 'executions', null)
-    }
 
     // Fix execution-workflow relationships
     console.log('🔗 Fixing execution-workflow relationships...')
