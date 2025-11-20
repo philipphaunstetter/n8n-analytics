@@ -613,6 +613,11 @@ export class WorkflowSyncService {
     const nodes = n8nWorkflow.nodes || []
 
     for (const node of nodes) {
+      // Skip disabled nodes
+      if (node.disabled) {
+        continue
+      }
+
       // Check for Schedule Trigger nodes
       if (node.type === 'n8n-nodes-base.scheduleTrigger') {
         // console.log(`🔍 Inspecting Schedule Trigger node: ${node.name}`, JSON.stringify(node.parameters, null, 2))
@@ -665,6 +670,7 @@ export class WorkflowSyncService {
           } else {
             scheduleString = 'Unknown Schedule'
             console.log(`⚠️ Unknown interval format for ${node.name}:`, JSON.stringify(interval))
+            console.log(`🔍 Full parameters for ${node.name}:`, JSON.stringify(node.parameters))
           }
         }
 
