@@ -32,17 +32,17 @@ export class WorkflowSyncService {
   private decryptApiKey(encryptedData: string): string {
     try {
       const [ivHex, authTagHex, encrypted] = encryptedData.split(':')
-      
+
       const key = crypto.scryptSync(ENCRYPTION_KEY, 'salt', 32)
       const iv = Buffer.from(ivHex, 'hex')
       const authTag = Buffer.from(authTagHex, 'hex')
-      
+
       const decipher = crypto.createDecipheriv(ALGORITHM, key, iv)
       decipher.setAuthTag(authTag)
-      
+
       let decrypted = decipher.update(encrypted, 'hex', 'utf8')
       decrypted += decipher.final('utf8')
-      
+
       return decrypted
     } catch (error) {
       console.error('Decryption error:', error)
@@ -61,7 +61,7 @@ export class WorkflowSyncService {
     results: PromiseSettledResult<any>[]
   }> {
     console.log('🔄 Starting multi-provider workflow sync...')
-    
+
     try {
       // Get all active providers
       const db = this.getSQLiteClient()
@@ -75,21 +75,27 @@ export class WorkflowSyncService {
           }
         )
       })
-      
+
       db.close()
-      
+
       if (providers.length === 0) {
         console.log('ℹ️ No active providers found')
         return { success: true, providers: 0, successful: 0, failed: 0, results: [] }
       }
-      
+
       console.log(`📡 Found ${providers.length} active providers to sync`)
-      
+
       // Process all providers concurrently (with error isolation)
       const results = await Promise.allSettled(
         providers.map(provider => {
           try {
-            const decryptedApiKey = this.decryptApiKey(provider.api_key_encrypted)
+            let decryptedApiKey = ''
+            if (provider.api_key_encrypted) {
+              decryptedApiKey = this.decryptApiKey(provider.api_key_encrypted)
+            } else {
+              console.warn(`⚠️ Provider ${provider.name} has no API key`)
+            }
+
             return this.syncProvider({
               id: provider.id,
               name: provider.name,
@@ -97,18 +103,18 @@ export class WorkflowSyncService {
               apiKey: decryptedApiKey
             })
           } catch (error) {
-            console.error(`Failed to decrypt API key for provider ${provider.name}:`, error)
-            return Promise.reject(new Error(`Failed to decrypt API key for ${provider.name}`))
+            console.error(`Failed to process provider ${provider.name}:`, error)
+            return Promise.reject(error)
           }
         })
       )
-      
+
       // Log results
       const successful = results.filter(r => r.status === 'fulfilled').length
       const failed = results.filter(r => r.status === 'rejected').length
-      
+
       console.log(`✅ Workflow sync completed: ${successful} successful, ${failed} failed`)
-      
+
       return {
         success: true,
         providers: providers.length,
@@ -159,7 +165,7 @@ export class WorkflowSyncService {
       const data = await response.json()
       const n8nWorkflows = data.data || []
       const n8nWorkflowIds = new Set<string>(n8nWorkflows.map((w: any) => String(w.id)))
-      
+
       console.log(`📡 Found ${n8nWorkflows.length} workflows in ${provider.name}`)
 
       // Process each workflow
@@ -177,7 +183,7 @@ export class WorkflowSyncService {
           errors.push(message)
         }
       }
-      
+
       if (skipped > 0) {
         console.log(`⏭️ Skipped ${skipped} unchanged workflows (smart sync)`)
       }
@@ -229,7 +235,7 @@ export class WorkflowSyncService {
       // Get current workflows from n8n
       const n8nWorkflows = await n8nApi.getWorkflows()
       const n8nWorkflowIds = new Set(n8nWorkflows.map(w => w.id))
-      
+
       console.log(`📡 Found ${n8nWorkflows.length} workflows in n8n`)
 
       // Ensure default provider exists
@@ -250,7 +256,7 @@ export class WorkflowSyncService {
           errors.push(message)
         }
       }
-      
+
       if (skipped > 0) {
         console.log(`⏭️ Skipped ${skipped} unchanged workflows (smart sync)`)
       }
@@ -319,7 +325,7 @@ export class WorkflowSyncService {
         if (!existing) {
           // Create new workflow
           const workflowId = `wf_${Date.now()}_${n8nWorkflow.id}`
-          
+
           db.run(`
             INSERT INTO workflows (
               id, provider_id, provider_workflow_id, name, is_active,
@@ -347,10 +353,10 @@ export class WorkflowSyncService {
           })
         } else {
           const existingUpdatedAt = new Date(existing.updated_at)
-          
+
           // SMART CHANGE DETECTION: Compare n8n's updatedAt with our stored updatedAt
           const hasTimestampChanged = n8nUpdatedAt.getTime() !== existingUpdatedAt.getTime()
-          
+
           if (!hasTimestampChanged) {
             // Workflow hasn't changed since last sync - just update active status
             db.run(`
@@ -367,12 +373,12 @@ export class WorkflowSyncService {
             })
             return
           }
-          
+
           // Workflow has changed - check content for version bump
           const existingData = existing.workflow_data ? JSON.parse(existing.workflow_data) : {}
           const hasContentChanged = JSON.stringify(existingData.nodes) !== JSON.stringify(workflowData.nodes) ||
-                                  JSON.stringify(existingData.connections) !== JSON.stringify(workflowData.connections)
-          
+            JSON.stringify(existingData.connections) !== JSON.stringify(workflowData.connections)
+
           if (hasContentChanged) {
             console.log(`📝 Workflow content changed: ${n8nWorkflow.name}`)
           } else {
@@ -446,7 +452,7 @@ export class WorkflowSyncService {
               WHERE id = ?
             `, [new Date().toISOString(), workflow.id], (err) => {
               processed++
-              
+
               if (err) {
                 console.error(`❌ Failed to archive workflow ${workflow.name}:`, err)
               } else {
@@ -507,7 +513,7 @@ export class WorkflowSyncService {
               WHERE id = ?
             `, [new Date().toISOString(), workflow.id], (err) => {
               processed++
-              
+
               if (err) {
                 console.error(`❌ Failed to archive workflow ${workflow.name}:`, err)
               } else {
@@ -604,18 +610,32 @@ export class WorkflowSyncService {
     }> = []
 
     const nodes = n8nWorkflow.nodes || []
-    
+
     for (const node of nodes) {
       // Check for Schedule Trigger nodes
       if (node.type === 'n8n-nodes-base.scheduleTrigger') {
+        // console.log(`🔍 Inspecting Schedule Trigger node: ${node.name}`, JSON.stringify(node.parameters, null, 2))
         const params = node.parameters || {}
         const rule = params.rule as any
-        const interval = rule?.interval?.[0]
-        
-        if (!interval) continue
-        
+
+        // Handle case where rule might be directly on params (older versions?) or structured differently
+        // In some versions, it might be params.rule.interval
+
+        // Check if rule exists
+        if (!rule) {
+          console.log(`⚠️ No rule found for schedule trigger: ${node.name}`)
+          continue
+        }
+
+        const interval = rule.interval?.[0]
+
+        if (!interval) {
+          console.log(`⚠️ No interval found in rule for schedule trigger: ${node.name}`, JSON.stringify(rule, null, 2))
+          continue
+        }
+
         let scheduleString = ''
-        
+
         // Handle different schedule types
         if (interval.field === 'cronExpression') {
           // Cron expression mode
@@ -636,7 +656,7 @@ export class WorkflowSyncService {
           // Fallback for unknown types
           scheduleString = `${interval.field}: ${JSON.stringify(interval)}`
         }
-        
+
         if (scheduleString) {
           schedules.push({
             nodeName: node.name,
@@ -645,12 +665,14 @@ export class WorkflowSyncService {
           })
         }
       }
-      
+
       // Check for Cron nodes
       if (node.type === 'n8n-nodes-base.cron') {
         const params = node.parameters || {}
         const cronExpression = params.cronExpression as string
-        
+
+        // console.log(`🔍 Inspecting Cron node: ${node.name}`, cronExpression)
+
         if (cronExpression) {
           schedules.push({
             nodeName: node.name,
@@ -659,6 +681,10 @@ export class WorkflowSyncService {
           })
         }
       }
+    }
+
+    if (schedules.length > 0) {
+      console.log(`✅ Extracted ${schedules.length} schedules for workflow ${n8nWorkflow.name}`)
     }
 
     return schedules

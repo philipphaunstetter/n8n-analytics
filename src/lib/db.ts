@@ -114,7 +114,7 @@ function configureDatabase(database: Database) {
     if (typeof anyDb.configure === 'function') {
       anyDb.configure('busyTimeout', 5000)
     }
-  } catch {}
+  } catch { }
 
   database.exec(`
     PRAGMA journal_mode=WAL;
@@ -129,9 +129,64 @@ export function getDb(): Database {
     db = new Database(dbPath)
     configureDatabase(db)
     ensureSchema(db)
+    migrateLegacySchema(db)
     migrateAIMetrics(db)
   }
   return db
+}
+
+// Migration for legacy schema (host_url -> base_url, missing columns)
+function migrateLegacySchema(database: Database) {
+  database.serialize(() => {
+    // Check if providers table needs migration
+    database.all("PRAGMA table_info(providers)", (err, rows: any[]) => {
+      if (err) return;
+      const columns = rows.map(r => r.name);
+
+      if (columns.includes('host_url') && !columns.includes('base_url')) {
+        console.log('Migrating providers table: renaming host_url to base_url');
+        database.run("ALTER TABLE providers RENAME COLUMN host_url TO base_url", (err) => {
+          if (err) console.error('Error renaming column:', err);
+        });
+      }
+
+      if (!columns.includes('is_connected')) {
+        console.log('Migrating providers table: adding is_connected');
+        database.run("ALTER TABLE providers ADD COLUMN is_connected BOOLEAN DEFAULT 1");
+      }
+
+      if (!columns.includes('status')) {
+        console.log('Migrating providers table: adding status');
+        database.run("ALTER TABLE providers ADD COLUMN status TEXT DEFAULT 'healthy'");
+      }
+
+      if (!columns.includes('user_id')) {
+        console.log('Migrating providers table: adding user_id');
+        database.run("ALTER TABLE providers ADD COLUMN user_id TEXT");
+      }
+
+      if (!columns.includes('metadata')) {
+        console.log('Migrating providers table: adding metadata');
+        database.run("ALTER TABLE providers ADD COLUMN metadata TEXT DEFAULT '{}'");
+      }
+    });
+
+    // Check if workflows table needs migration
+    database.all("PRAGMA table_info(workflows)", (err, rows: any[]) => {
+      if (err) return;
+      const columns = rows.map(r => r.name);
+
+      if (!columns.includes('cron_schedules')) {
+        console.log('Migrating workflows table: adding cron_schedules');
+        database.run("ALTER TABLE workflows ADD COLUMN cron_schedules TEXT DEFAULT '[]'");
+      }
+
+      if (!columns.includes('is_archived')) {
+        console.log('Migrating workflows table: adding is_archived');
+        database.run("ALTER TABLE workflows ADD COLUMN is_archived BOOLEAN DEFAULT 0");
+      }
+    });
+  });
 }
 
 export function isMissingTableError(err: unknown): boolean {
