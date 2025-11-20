@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react'
 import { OnboardingModal } from '@/components/onboarding/onboarding-modal'
-import { N8NConnectionStatus } from './n8n-connection-status'
 
 interface WithN8NConnectionProps {
   children: React.ReactNode
@@ -93,16 +92,11 @@ export function WithN8NConnection({
     )
   }
 
-  // If not connected, show fallback (if provided) or empty state + Modal
+  // If not connected, show only the modal (no background content)
   if (!connectionState.isConfigured || !connectionState.isConnected) {
     return (
       <>
-        {fallback || (
-          <div className="flex items-center justify-center min-h-96 opacity-50 pointer-events-none">
-            {/* Show the old status component in background but disabled/dimmed */}
-            <N8NConnectionStatus showRetry={false} />
-          </div>
-        )}
+        {fallback}
         <OnboardingModal
           isOpen={showOnboarding}
           onComplete={handleConnectionRestored}
