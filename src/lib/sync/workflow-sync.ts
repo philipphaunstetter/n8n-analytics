@@ -1,5 +1,6 @@
 import { Database } from 'sqlite3'
 import { ConfigManager } from '@/lib/config/config-manager'
+import { getDb } from '@/lib/db'
 import { n8nApi, N8nWorkflow } from '@/lib/n8n-api'
 import crypto from 'crypto'
 
@@ -21,9 +22,9 @@ interface Provider {
 
 export class WorkflowSyncService {
   private getSQLiteClient(): Database {
-    const dbPath = ConfigManager.getDefaultDatabasePath()
-    console.log('🔍 Using database path:', dbPath)
-    return new Database(dbPath)
+    // Use the shared database connection to ensure we're using the same database file
+    // as the rest of the application
+    return getDb()
   }
 
   /**
@@ -76,7 +77,7 @@ export class WorkflowSyncService {
         )
       })
 
-      db.close()
+      // db.close() // Using shared connection, don't close
 
       if (providers.length === 0) {
         console.log('ℹ️ No active providers found')
@@ -192,7 +193,7 @@ export class WorkflowSyncService {
       const archivedCount = await this.archiveDeletedWorkflowsForProvider(db, provider.id, n8nWorkflowIds)
       archived = archivedCount
 
-      db.close()
+      // db.close() // Using shared connection, don't close
 
       console.log(`✅ Workflow sync completed for ${provider.name}: ${synced} synced, ${created} created, ${updated} updated, ${archived} archived`)
 
@@ -206,7 +207,7 @@ export class WorkflowSyncService {
       }
     } catch (error) {
       console.error(`❌ Workflow sync failed for ${provider.name}:`, error)
-      db.close()
+      // db.close() // Using shared connection, don't close
       throw error
     }
   }
@@ -265,7 +266,7 @@ export class WorkflowSyncService {
       const archivedCount = await this.archiveDeletedWorkflows(db, n8nWorkflowIds)
       archived = archivedCount
 
-      db.close()
+      // db.close() // Using shared connection, don't close
 
       console.log(`✅ Workflow sync completed: ${synced} synced, ${created} created, ${updated} updated, ${archived} archived`)
 
@@ -279,7 +280,7 @@ export class WorkflowSyncService {
       }
     } catch (error) {
       console.error('❌ Workflow sync failed:', error)
-      db.close()
+      // db.close() // Using shared connection, don't close
       throw error
     }
   }
@@ -552,7 +553,7 @@ export class WorkflowSyncService {
           updated_at = ?
         WHERE id = ?
       `, [new Date().toISOString(), workflowId], (err) => {
-        db.close()
+        // db.close() // Using shared connection, don't close
         if (err) {
           reject(err)
         } else {
@@ -571,7 +572,7 @@ export class WorkflowSyncService {
 
     return new Promise((resolve, reject) => {
       db.run('DELETE FROM workflows WHERE id = ?', [workflowId], (err) => {
-        db.close()
+        // db.close() // Using shared connection, don't close
         if (err) {
           reject(err)
         } else {
