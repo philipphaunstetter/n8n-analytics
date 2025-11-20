@@ -17,7 +17,7 @@ function getSQLiteClient(): Database {
   if (!db) {
     const dbPath = ConfigManager.getDefaultDatabasePath()
     db = new Database(dbPath)
-    
+
     // Initialize execution tables if they don't exist
     db.serialize(() => {
       db!.run(`
@@ -33,7 +33,7 @@ function getSQLiteClient(): Database {
           metadata TEXT DEFAULT '{}'
         )
       `)
-      
+
       db!.run(`
         CREATE TABLE IF NOT EXISTS workflows (
           id TEXT PRIMARY KEY,
@@ -50,7 +50,7 @@ function getSQLiteClient(): Database {
           FOREIGN KEY (provider_id) REFERENCES providers (id)
         )
       `)
-      
+
       db!.run(`
         CREATE TABLE IF NOT EXISTS executions (
           id TEXT PRIMARY KEY,
@@ -73,7 +73,7 @@ function getSQLiteClient(): Database {
           FOREIGN KEY (workflow_id) REFERENCES workflows (id)
         )
       `)
-      
+
       db!.run(`
         CREATE TABLE IF NOT EXISTS sync_logs (
           id TEXT PRIMARY KEY,
@@ -118,13 +118,13 @@ export interface SyncOptions {
 export class ExecutionSyncService {
   private readonly DEFAULT_BATCH_SIZE = 100
   private readonly MAX_RETRIES = 3
-  
+
   /**
    * Sync executions from all active providers
    */
   async syncAllProviders(options: SyncOptions = {}) {
     console.log('🔄 Starting multi-client execution sync...')
-    
+
     try {
       // Get all active providers across all users
       const db = getSQLiteClient()
@@ -138,14 +138,14 @@ export class ExecutionSyncService {
           }
         )
       })
-      
+
       if (providers.length === 0) {
         console.log('ℹ️ No active providers found')
         return { success: true, providers: 0 }
       }
-      
+
       console.log(`📡 Found ${providers.length} active providers to sync`)
-      
+
       // Process all providers concurrently (with error isolation)
       // Decrypt API keys before passing to syncProvider
       const results = await Promise.allSettled(
@@ -162,13 +162,13 @@ export class ExecutionSyncService {
           }
         })
       )
-      
+
       // Log results
       const successful = results.filter(r => r.status === 'fulfilled').length
       const failed = results.filter(r => r.status === 'rejected').length
-      
+
       console.log(`✅ Sync completed: ${successful} successful, ${failed} failed`)
-      
+
       return {
         success: true,
         providers: providers.length,
@@ -181,19 +181,19 @@ export class ExecutionSyncService {
       throw error
     }
   }
-  
+
   /**
    * Sync a single provider's data
    */
   async syncProvider(provider: Provider, options: SyncOptions = {}) {
     const syncType = options.syncType || 'executions'
-    
+
     // Create sync log entry
     const syncLog = await this.createSyncLog(provider.id, syncType)
-    
+
     try {
       console.log(`🔄 Syncing ${syncType} for provider: ${provider.name}`)
-      
+
       let result
       switch (syncType) {
         case 'executions':
@@ -211,32 +211,32 @@ export class ExecutionSyncService {
         default:
           throw new Error(`Unknown sync type: ${syncType}`)
       }
-      
+
       // Update sync log as successful
       if (syncLog) {
         await this.completeSyncLog(syncLog.id, 'success', result)
       }
-      
+
       console.log(`✅ ${syncType} sync completed for ${provider.name}:`, result)
       return result
-      
+
     } catch (error) {
       console.error(`❌ ${syncType} sync failed for ${provider.name}:`, error)
-      
+
       const errorMessage = error instanceof Error ? error.message : 'Unknown error'
-      
+
       // Update sync log as failed
       if (syncLog) {
         await this.completeSyncLog(syncLog.id, 'error', {}, errorMessage)
       }
-      
+
       // Update provider health status
       await this.updateProviderHealth(provider.id, 'error', errorMessage)
-      
+
       throw error
     }
   }
-  
+
   /**
    * Sync executions for a provider
    */
@@ -248,26 +248,24 @@ export class ExecutionSyncService {
     } catch (error) {
       console.warn('⚠️ Workflow pre-sync failed, continuing with execution sync:', error)
     }
-    
-    // Get n8n configuration from ConfigManager instead of provider table
-    const configManager = getConfigManager()
-    await configManager.initialize()
-    const host = await configManager.get('integrations.n8n.url') || provider.base_url
-    const apiKey = await configManager.get('integrations.n8n.api_key') || provider.api_key_encrypted
-    
+
+    // Use provider configuration directly
+    const host = provider.base_url
+    const apiKey = provider.api_key_encrypted
+
     const n8nClient = this.createN8nClient(host, apiKey)
-    
+
     let totalProcessed = 0
     let totalInserted = 0
     let totalUpdated = 0
     let cursor: string | undefined
-    
+
     // Get the last sync cursor for incremental sync
     const lastSync = await this.getLastSyncCursor(provider.id, 'executions')
     cursor = lastSync?.last_cursor
-    
+
     console.log(`📥 Fetching executions for ${provider.name}${cursor ? ` (cursor: ${cursor})` : ' (full sync)'}`)
-    
+
     do {
       try {
         // Fetch batch of executions with data for AI metrics extraction
@@ -276,42 +274,42 @@ export class ExecutionSyncService {
           cursor,
           includeData: true
         })
-        
+
         if (!response.data || response.data.length === 0) {
           console.log(`✅ No more executions for ${provider.name}`)
           break
         }
-        
+
         console.log(`📊 Processing ${response.data.length} executions for ${provider.name}`)
-        
+
         // Process batch
         const batchResult = await this.processExecutionBatch(
           provider.id,
           response.data
         )
-        
+
         totalProcessed += response.data.length
         totalInserted += batchResult.inserted
         totalUpdated += batchResult.updated
         cursor = response.nextCursor
-        
+
         // Store cursor for next sync
         if (cursor) {
           await this.updateSyncCursor(provider.id, 'executions', cursor)
         }
-        
+
       } catch (error) {
         console.error(`❌ Batch processing failed for ${provider.name}:`, error)
         // Continue with next batch instead of failing entire sync
         break
       }
-      
+
     } while (cursor)
-    
+
     // Fix execution-workflow relationships
     console.log('🔗 Fixing execution-workflow relationships...')
     await this.fixExecutionWorkflowRelationships(provider.id)
-    
+
     return {
       type: 'executions',
       processed: totalProcessed,
@@ -320,34 +318,32 @@ export class ExecutionSyncService {
       lastCursor: cursor
     }
   }
-  
+
   /**
    * Sync workflows and their metadata with full workflow data
    */
   private async syncWorkflows(provider: Provider, options: SyncOptions & { silent?: boolean }) {
-    // Get n8n configuration from ConfigManager instead of provider table
-    const configManager = getConfigManager()
-    await configManager.initialize()
-    const host = await configManager.get('integrations.n8n.url') || provider.base_url
-    const apiKey = await configManager.get('integrations.n8n.api_key') || provider.api_key_encrypted
-    
+    // Use provider configuration directly
+    const host = provider.base_url
+    const apiKey = provider.api_key_encrypted
+
     const n8nClient = this.createN8nClient(host, apiKey)
-    
+
     if (!options.silent) {
       console.log(`📄 Fetching workflows for ${provider.name}`)
     }
-    
+
     // Get basic workflow list first
     const workflows = await n8nClient.getWorkflows()
     let inserted = 0
     let updated = 0
     let skipped = 0
-    
+
     for (const n8nWorkflow of workflows) {
       try {
         // Check if we need to fetch full workflow data
         const needsFullData = await this.shouldFetchFullWorkflowData(provider.id, n8nWorkflow)
-        
+
         let fullWorkflowData = n8nWorkflow
         if (needsFullData) {
           if (!options.silent) {
@@ -356,7 +352,7 @@ export class ExecutionSyncService {
           // Fetch full workflow definition with nodes and connections
           fullWorkflowData = await n8nClient.getWorkflow(n8nWorkflow.id)
         }
-        
+
         const result = await this.upsertWorkflow(provider.id, fullWorkflowData)
         if (result.inserted) inserted++
         if (result.updated) updated++
@@ -365,11 +361,11 @@ export class ExecutionSyncService {
         console.error(`❌ Failed to sync workflow ${n8nWorkflow.name}:`, error)
       }
     }
-    
+
     if (!options.silent && skipped > 0) {
       console.log(`⏭️ Skipped ${skipped} unchanged workflows`)
     }
-    
+
     return {
       type: 'workflows',
       processed: workflows.length,
@@ -378,58 +374,56 @@ export class ExecutionSyncService {
       skipped
     }
   }
-  
+
   /**
    * Sync full workflow definitions for backup
    */
   private async syncWorkflowBackups(provider: Provider, options: SyncOptions) {
-    // Get n8n configuration from ConfigManager instead of provider table
-    const configManager = getConfigManager()
-    await configManager.initialize()
-    const host = await configManager.get('integrations.n8n.url') || provider.base_url
-    const apiKey = await configManager.get('integrations.n8n.api_key') || provider.api_key_encrypted
-    
+    // Use provider configuration directly
+    const host = provider.base_url
+    const apiKey = provider.api_key_encrypted
+
     const n8nClient = this.createN8nClient(host, apiKey)
-    
+
     console.log(`💾 Creating workflow backups for ${provider.name}`)
-    
+
     // Get workflow list first
     const workflows = await n8nClient.getWorkflows()
     let backedUp = 0
-    
+
     for (const workflow of workflows) {
       try {
         // Fetch full workflow definition
         const fullWorkflow = await n8nClient.getWorkflow(workflow.id)
-        
+
         // Store full backup with versioning
         await this.createWorkflowBackup(provider.id, fullWorkflow)
         backedUp++
-        
+
       } catch (error) {
         console.error(`❌ Failed to backup workflow ${workflow.name}:`, error)
       }
     }
-    
+
     return {
       type: 'backups',
       processed: workflows.length,
       backedUp
     }
   }
-  
+
   /**
    * Full sync: executions + workflows + backups
    */
   private async syncFull(provider: Provider, options: SyncOptions) {
     console.log(`🔄 Performing full sync for ${provider.name}`)
-    
+
     const [executions, workflows, backups] = await Promise.allSettled([
       this.syncExecutions(provider, options),
       this.syncWorkflows(provider, options),
       this.syncWorkflowBackups(provider, options)
     ])
-    
+
     return {
       type: 'full',
       executions: executions.status === 'fulfilled' ? executions.value : { error: executions.reason },
@@ -437,18 +431,18 @@ export class ExecutionSyncService {
       backups: backups.status === 'fulfilled' ? backups.value : { error: backups.reason }
     }
   }
-  
+
   /**
    * Process a batch of executions
    */
   private async processExecutionBatch(providerId: string, executions: N8nExecution[]) {
     let inserted = 0
     let updated = 0
-    
+
     // First, ensure all workflows exist
     const workflowIds = [...new Set(executions.map(e => e.workflowId))]
     await this.ensureWorkflowsExist(providerId, workflowIds)
-    
+
     // Process executions
     for (const n8nExecution of executions) {
       try {
@@ -459,33 +453,33 @@ export class ExecutionSyncService {
         console.error(`❌ Failed to process execution ${n8nExecution.id}:`, error)
       }
     }
-    
+
     return { inserted, updated }
   }
-  
+
   /**
    * Upsert execution into database
    */
   private async upsertExecution(providerId: string, n8nExecution: N8nExecution) {
     // Get workflow UUID from provider workflow ID
     const db = getSQLiteClient()
-    const workflow = await new Promise<{id: string, name: string} | null>((resolve, reject) => {
+    const workflow = await new Promise<{ id: string, name: string } | null>((resolve, reject) => {
       db.get(
         'SELECT id, name FROM workflows WHERE provider_id = ? AND provider_workflow_id = ?',
         [providerId, n8nExecution.workflowId],
-        (err, row: {id: string, name: string}) => {
+        (err, row: { id: string, name: string }) => {
           if (err) reject(err)
           else resolve(row || null)
         }
       )
     })
-    
+
     if (!workflow) {
       // This should not happen since ensureWorkflowsExist is called before
       console.error(`⚠️ Workflow not found for execution ${n8nExecution.id}: ${n8nExecution.workflowId}`)
       throw new Error(`Workflow not found: ${n8nExecution.workflowId}`)
     }
-    
+
     // Extract AI metrics if execution has data
     // Debug: Check if execution has data
     if (n8nExecution.data) {
@@ -501,7 +495,7 @@ export class ExecutionSyncService {
     } else {
       console.log(`⚠️ Execution ${n8nExecution.id} has no execution data`)
     }
-    
+
     const executionData = {
       id: `exec_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       provider_id: providerId,
@@ -512,7 +506,7 @@ export class ExecutionSyncService {
       mode: await this.getWorkflowMode(providerId, n8nExecution),
       started_at: n8nExecution.startedAt,
       stopped_at: n8nExecution.stoppedAt,
-      duration: n8nExecution.stoppedAt 
+      duration: n8nExecution.stoppedAt
         ? new Date(n8nExecution.stoppedAt).getTime() - new Date(n8nExecution.startedAt).getTime()
         : null,
       finished: n8nExecution.finished ? 1 : 0,
@@ -531,20 +525,20 @@ export class ExecutionSyncService {
         originalData: n8nExecution
       })
     }
-    
+
     // Check if execution exists to determine if it's an insert or update
-    const existing = await new Promise<{id: string} | null>((resolve, reject) => {
+    const existing = await new Promise<{ id: string } | null>((resolve, reject) => {
       db.get(
         'SELECT id FROM executions WHERE provider_id = ? AND provider_execution_id = ?',
         [providerId, n8nExecution.id],
-        (err, row: {id: string}) => {
+        (err, row: { id: string }) => {
           if (err) reject(err)
           else resolve(row || null)
         }
       )
     })
-    
-    return new Promise<{updated: boolean, inserted: boolean}>((resolve, reject) => {
+
+    return new Promise<{ updated: boolean, inserted: boolean }>((resolve, reject) => {
       if (existing) {
         // Update existing
         db.run(`
@@ -562,7 +556,7 @@ export class ExecutionSyncService {
           executionData.metadata, executionData.execution_data, executionData.total_tokens,
           executionData.input_tokens, executionData.output_tokens, executionData.ai_cost,
           executionData.ai_provider, existing.id
-        ], function(err) {
+        ], function (err) {
           if (err) reject(err)
           else resolve({ updated: true, inserted: false })
         })
@@ -583,7 +577,7 @@ export class ExecutionSyncService {
           executionData.retry_of, executionData.retry_success_id, executionData.metadata,
           executionData.execution_data, executionData.total_tokens, executionData.input_tokens,
           executionData.output_tokens, executionData.ai_cost, executionData.ai_provider
-        ], function(err) {
+        ], function (err) {
           if (err) reject(err)
           // Check if row was actually inserted (this.changes > 0) or ignored (this.changes === 0)
           else resolve({ inserted: this.changes > 0, updated: false })
@@ -591,13 +585,13 @@ export class ExecutionSyncService {
       }
     })
   }
-  
+
   /**
    * Determine if we need to fetch full workflow data based on change detection
    */
   private async shouldFetchFullWorkflowData(providerId: string, n8nWorkflow: N8nWorkflow): Promise<boolean> {
     const db = getSQLiteClient()
-    
+
     return new Promise((resolve, reject) => {
       // Check if workflow exists and get last known updated timestamp
       db.get(`
@@ -609,37 +603,37 @@ export class ExecutionSyncService {
           reject(err)
           return
         }
-        
+
         if (!existing) {
           // New workflow - always fetch full data
           resolve(true)
           return
         }
-        
+
         // Check if n8n's updatedAt is different from our stored version
         const n8nUpdatedAt = new Date(n8nWorkflow.updatedAt)
         const existingUpdatedAt = new Date(existing.updated_at)
         const hasTimestampChanged = n8nUpdatedAt.getTime() !== existingUpdatedAt.getTime()
-        
+
         if (!hasTimestampChanged) {
           // No timestamp change - workflow likely unchanged, skip full fetch
           resolve(false)
           return
         }
-        
+
         // Timestamp changed - likely has updates, fetch full data
         console.log(`📝 Workflow updated: ${n8nWorkflow.name} (${existingUpdatedAt.toISOString()} -> ${n8nUpdatedAt.toISOString()})`)
         resolve(true)
       })
     })
   }
-  
+
   /**
    * Upsert workflow into database
    */
   private async upsertWorkflow(providerId: string, n8nWorkflow: N8nWorkflow) {
     const db = getSQLiteClient()
-    
+
     // Create full workflow JSON data for backup
     const workflowJsonData = {
       ...n8nWorkflow,
@@ -652,7 +646,7 @@ export class ExecutionSyncService {
       connections: n8nWorkflow.connections || {},
       tags: n8nWorkflow.tags || []
     }
-    
+
     const workflowData = {
       id: `wf_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       provider_id: providerId,
@@ -664,32 +658,32 @@ export class ExecutionSyncService {
       node_count: n8nWorkflow.nodes?.length || 0,
       workflow_data: JSON.stringify(workflowJsonData)
     }
-    
+
     // Check if workflow exists and get existing data for change detection
-    const existing = await new Promise<{id: string, updated_at: string, workflow_data: string} | null>((resolve, reject) => {
+    const existing = await new Promise<{ id: string, updated_at: string, workflow_data: string } | null>((resolve, reject) => {
       db.get(
         'SELECT id, updated_at, workflow_data FROM workflows WHERE provider_id = ? AND provider_workflow_id = ?',
         [providerId, n8nWorkflow.id],
-        (err, row: {id: string, updated_at: string, workflow_data: string}) => {
+        (err, row: { id: string, updated_at: string, workflow_data: string }) => {
           if (err) reject(err)
           else resolve(row || null)
         }
       )
     })
-    
-    return new Promise<{updated: boolean, inserted: boolean}>((resolve, reject) => {
+
+    return new Promise<{ updated: boolean, inserted: boolean }>((resolve, reject) => {
       if (existing) {
         // Check if anything actually changed
         const n8nUpdatedAt = new Date(n8nWorkflow.updatedAt || new Date())
         const existingUpdatedAt = new Date(existing.updated_at)
         const hasTimestampChanged = n8nUpdatedAt.getTime() !== existingUpdatedAt.getTime()
-        
+
         if (!hasTimestampChanged) {
           // No changes detected, skip update
           resolve({ updated: false, inserted: false })
           return
         }
-        
+
         // Update existing workflow with new data
         db.run(`
           UPDATE workflows SET
@@ -698,7 +692,7 @@ export class ExecutionSyncService {
         `, [
           workflowData.name, workflowData.is_active, workflowData.is_archived, workflowData.tags,
           workflowData.node_count, workflowData.workflow_data, workflowData.workflow_data, n8nWorkflow.updatedAt || new Date().toISOString(), existing.id
-        ], function(err) {
+        ], function (err) {
           if (err) reject(err)
           else resolve({ updated: true, inserted: false })
         })
@@ -712,14 +706,14 @@ export class ExecutionSyncService {
           workflowData.id, workflowData.provider_id, workflowData.provider_workflow_id,
           workflowData.name, workflowData.is_active, workflowData.is_archived, workflowData.tags, workflowData.node_count, workflowData.workflow_data, workflowData.workflow_data,
           n8nWorkflow.createdAt || new Date().toISOString(), n8nWorkflow.updatedAt || new Date().toISOString()
-        ], function(err) {
+        ], function (err) {
           if (err) reject(err)
           else resolve({ inserted: true, updated: false })
         })
       }
     })
   }
-  
+
   /**
    * Create workflow backup with versioning
    */
@@ -732,19 +726,19 @@ export class ExecutionSyncService {
       nodes: fullWorkflow.nodes,
       connections: fullWorkflow.connections
     })
-    
+
     return new Promise<void>((resolve, reject) => {
       db.run(`
         UPDATE workflows SET 
           workflow_data = ?, updated_at = CURRENT_TIMESTAMP
         WHERE provider_id = ? AND provider_workflow_id = ?
-      `, [backupData, providerId, fullWorkflow.id], function(err) {
+      `, [backupData, providerId, fullWorkflow.id], function (err) {
         if (err) reject(err)
         else resolve()
       })
     })
   }
-  
+
   /**
    * Ensure workflows exist before processing executions
    * Fetches actual workflow data from n8n if not present
@@ -752,45 +746,54 @@ export class ExecutionSyncService {
   private async ensureWorkflowsExist(providerId: string, workflowIds: string[]) {
     const db = getSQLiteClient()
     const missingWorkflowIds: string[] = []
-    
+
     // Check which workflows don't exist
     for (const workflowId of workflowIds) {
-      const existing = await new Promise<{id: string} | null>((resolve, reject) => {
+      const existing = await new Promise<{ id: string } | null>((resolve, reject) => {
         db.get(
           'SELECT id FROM workflows WHERE provider_id = ? AND provider_workflow_id = ?',
           [providerId, workflowId],
-          (err, row: {id: string}) => {
+          (err, row: { id: string }) => {
             if (err) reject(err)
             else resolve(row || null)
           }
         )
       })
-      
+
       if (!existing) {
         missingWorkflowIds.push(workflowId)
       }
     }
-    
+
     // If we have missing workflows, fetch them from n8n
     if (missingWorkflowIds.length > 0) {
       console.log(`📥 Fetching ${missingWorkflowIds.length} missing workflows from n8n...`)
-      
-      // Get n8n configuration
-      const configManager = getConfigManager()
-      await configManager.initialize()
-      const host = await configManager.get('integrations.n8n.url') || 'http://localhost:5678'
-      const apiKey = await configManager.get('integrations.n8n.api_key') || ''
-      
+
+      // Get provider configuration
+      const provider = await new Promise<Provider>((resolve, reject) => {
+        db.get('SELECT * FROM providers WHERE id = ?', [providerId], (err, row: Provider) => {
+          if (err) reject(err)
+          else resolve(row)
+        })
+      })
+
+      if (!provider) {
+        throw new Error(`Provider ${providerId} not found`)
+      }
+
+      const host = provider.base_url
+      const apiKey = this.decryptApiKey(provider.api_key_encrypted)
+
       const n8nClient = this.createN8nClient(host, apiKey)
-      
+
       try {
         // Get all workflows from n8n
         const allWorkflows = await n8nClient.getWorkflows()
-        
+
         // Process missing workflows
         for (const workflowId of missingWorkflowIds) {
           const n8nWorkflow = allWorkflows.find((w: N8nWorkflow) => w.id === workflowId)
-          
+
           if (n8nWorkflow) {
             // Insert workflow with real data
             await this.upsertWorkflow(providerId, n8nWorkflow)
@@ -804,7 +807,7 @@ export class ExecutionSyncService {
                 INSERT INTO workflows (
                   id, provider_id, provider_workflow_id, name, is_active
                 ) VALUES (?, ?, ?, ?, ?)
-              `, [id, providerId, workflowId, `[Deleted] Workflow ${workflowId}`, 0], function(err) {
+              `, [id, providerId, workflowId, `[Deleted] Workflow ${workflowId}`, 0], function (err) {
                 if (err) reject(err)
                 else resolve()
               })
@@ -821,7 +824,7 @@ export class ExecutionSyncService {
               INSERT INTO workflows (
                 id, provider_id, provider_workflow_id, name, is_active
               ) VALUES (?, ?, ?, ?, ?)
-            `, [id, providerId, workflowId, `[Unknown] Workflow ${workflowId}`, 1], function(err) {
+            `, [id, providerId, workflowId, `[Unknown] Workflow ${workflowId}`, 1], function (err) {
               if (err) reject(err)
               else resolve()
             })
@@ -830,18 +833,18 @@ export class ExecutionSyncService {
       }
     }
   }
-  
+
   // Helper methods
   private async createSyncLog(providerId: string, syncType: string): Promise<{ id: string } | null> {
     const db = getSQLiteClient()
     const id = `log_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-    
+
     try {
       await new Promise<void>((resolve, reject) => {
         db.run(`
           INSERT INTO sync_logs (id, provider_id, sync_type, status)
           VALUES (?, ?, ?, ?)
-        `, [id, providerId, syncType, 'running'], function(err) {
+        `, [id, providerId, syncType, 'running'], function (err) {
           if (err) reject(err)
           else resolve()
         })
@@ -852,7 +855,7 @@ export class ExecutionSyncService {
       return null
     }
   }
-  
+
   private async completeSyncLog(logId: string, status: string, result: any, errorMessage?: string) {
     const db = getSQLiteClient()
     return new Promise<void>((resolve, reject) => {
@@ -865,32 +868,32 @@ export class ExecutionSyncService {
       `, [
         status, result.processed || 0, result.inserted || 0, result.updated || 0,
         errorMessage, JSON.stringify(result), result.lastCursor || null, logId
-      ], function(err) {
+      ], function (err) {
         if (err) reject(err)
         else resolve()
       })
     })
   }
-  
+
   private async updateProviderHealth(providerId: string, status: string, errorMessage?: string) {
     const db = getSQLiteClient()
     const metadata = errorMessage ? JSON.stringify({ last_error: errorMessage }) : '{}'
-    
+
     return new Promise<void>((resolve, reject) => {
       db.run(`
         UPDATE providers SET
           status = ?, last_checked_at = CURRENT_TIMESTAMP, metadata = ?
         WHERE id = ?
-      `, [status, metadata, providerId], function(err) {
+      `, [status, metadata, providerId], function (err) {
         if (err) reject(err)
         else resolve()
       })
     })
   }
-  
+
   private async getLastSyncCursor(providerId: string, syncType: string): Promise<{ last_cursor: string } | null> {
     const db = getSQLiteClient()
-    
+
     return new Promise((resolve, reject) => {
       db.get(`
         SELECT last_cursor FROM sync_logs
@@ -903,11 +906,11 @@ export class ExecutionSyncService {
       })
     })
   }
-  
+
   private async updateSyncCursor(providerId: string, syncType: string, cursor: string) {
     // Store cursor in provider metadata
     const db = getSQLiteClient()
-    
+
     // First get current metadata
     const currentMetadata = await new Promise<string>((resolve, reject) => {
       db.get(
@@ -919,30 +922,30 @@ export class ExecutionSyncService {
         }
       )
     })
-    
+
     // Update metadata with cursor
     const metadata = JSON.parse(currentMetadata)
     metadata[`last_${syncType}_cursor`] = cursor
-    
+
     return new Promise<void>((resolve, reject) => {
       db.run(
         'UPDATE providers SET metadata = ? WHERE id = ?',
         [JSON.stringify(metadata), providerId],
-        function(err) {
+        function (err) {
           if (err) reject(err)
           else resolve()
         }
       )
     })
   }
-  
+
   /**
    * Fix execution-workflow relationships based on provider_workflow_id
    * This ensures executions are linked to the correct workflow records
    */
   private async fixExecutionWorkflowRelationships(providerId: string): Promise<void> {
     const db = getSQLiteClient()
-    
+
     return new Promise((resolve, reject) => {
       // Update all executions to link to the correct workflow based on provider_workflow_id
       // This SQL finds the correct workflow.id based on matching provider_workflow_id
@@ -961,7 +964,7 @@ export class ExecutionSyncService {
           WHERE w2.provider_id = executions.provider_id
           AND w2.provider_workflow_id = executions.provider_workflow_id
         )
-      `, [providerId], function(err) {
+      `, [providerId], function (err) {
         if (err) {
           console.error('❌ Failed to fix execution-workflow relationships:', err)
           reject(err)
@@ -975,7 +978,7 @@ export class ExecutionSyncService {
       })
     })
   }
-  
+
   private mapN8nStatus(n8nStatus: string): string {
     switch (n8nStatus) {
       case 'success': return 'success'
@@ -989,7 +992,7 @@ export class ExecutionSyncService {
       default: return 'unknown'
     }
   }
-  
+
   /**
    * Get workflow mode with enhanced detection
    */
@@ -997,17 +1000,17 @@ export class ExecutionSyncService {
     try {
       // Try to get workflow details from database first
       const db = getSQLiteClient()
-      const workflowData = await new Promise<{workflow_data: string} | null>((resolve, reject) => {
+      const workflowData = await new Promise<{ workflow_data: string } | null>((resolve, reject) => {
         db.get(
           'SELECT workflow_data FROM workflows WHERE provider_id = ? AND provider_workflow_id = ?',
           [providerId, n8nExecution.workflowId],
-          (err, row: {workflow_data: string}) => {
+          (err, row: { workflow_data: string }) => {
             if (err) reject(err)
             else resolve(row || null)
           }
         )
       })
-      
+
       let workflowNodes: any[] = []
       if (workflowData?.workflow_data) {
         try {
@@ -1017,55 +1020,55 @@ export class ExecutionSyncService {
           console.warn('Failed to parse workflow data for mode detection')
         }
       }
-      
+
       return this.mapN8nMode(n8nExecution.mode, n8nExecution, workflowNodes)
     } catch (error) {
       console.warn(`Failed to get workflow mode for ${n8nExecution.workflowId}:`, error)
       return this.mapN8nMode(n8nExecution.mode)
     }
   }
-  
+
   private mapN8nMode(n8nMode: string, n8nExecution?: N8nExecution, workflowNodes?: any[]): string {
     // Enhanced trigger mode detection using workflow nodes
     if (workflowNodes && workflowNodes.length > 0) {
-      const triggerNode = workflowNodes.find(node => 
-        node.type?.includes('trigger') || 
+      const triggerNode = workflowNodes.find(node =>
+        node.type?.includes('trigger') ||
         node.type?.includes('webhook') ||
         node.type?.includes('manual') ||
         node.type?.includes('error')
       )
-      
+
       if (triggerNode) {
         // Detect error triggers
         if (triggerNode.type?.includes('errorTrigger') ||
-            triggerNode.type?.includes('Error Trigger') ||
-            triggerNode.type === '@n8n/n8n-nodes-base.errorTrigger' ||
-            triggerNode.type === 'n8n-nodes-base.errorTrigger' ||
-            triggerNode.name?.includes('Error Trigger') ||
-            triggerNode.displayName?.includes('Error Trigger')) {
+          triggerNode.type?.includes('Error Trigger') ||
+          triggerNode.type === '@n8n/n8n-nodes-base.errorTrigger' ||
+          triggerNode.type === 'n8n-nodes-base.errorTrigger' ||
+          triggerNode.name?.includes('Error Trigger') ||
+          triggerNode.displayName?.includes('Error Trigger')) {
           return 'error'
         }
-        
+
         // Detect scheduled triggers
-        if (triggerNode.type?.includes('schedule') || 
-            triggerNode.type?.includes('cron') ||
-            triggerNode.type?.includes('interval')) {
+        if (triggerNode.type?.includes('schedule') ||
+          triggerNode.type?.includes('cron') ||
+          triggerNode.type?.includes('interval')) {
           return 'cron'
         }
-        
+
         // Detect webhook triggers
         if (triggerNode.type?.includes('webhook') ||
-            triggerNode.type?.includes('httpRequest')) {
+          triggerNode.type?.includes('httpRequest')) {
           return 'webhook'
         }
-        
+
         // Detect manual triggers
         if (triggerNode.type?.includes('manual')) {
           return 'manual'
         }
       }
     }
-    
+
     // Fall back to n8n's mode classification
     switch (n8nMode) {
       case 'manual': return 'manual'
@@ -1076,28 +1079,28 @@ export class ExecutionSyncService {
       default: return 'unknown'
     }
   }
-  
+
   private decryptApiKey(encryptedData: string): string {
     try {
       const [ivHex, authTagHex, encrypted] = encryptedData.split(':')
-      
+
       const key = crypto.scryptSync(ENCRYPTION_KEY, 'salt', 32)
       const iv = Buffer.from(ivHex, 'hex')
       const authTag = Buffer.from(authTagHex, 'hex')
-      
+
       const decipher = crypto.createDecipheriv(ALGORITHM, key, iv)
       decipher.setAuthTag(authTag)
-      
+
       let decrypted = decipher.update(encrypted, 'hex', 'utf8')
       decrypted += decipher.final('utf8')
-      
+
       return decrypted
     } catch (error) {
       console.error('Decryption error:', error)
       throw new Error('Failed to decrypt API key')
     }
   }
-  
+
   private createN8nClient(baseUrl: string, apiKey: string) {
     // Create n8n client instance with custom credentials
     return {
@@ -1107,18 +1110,18 @@ export class ExecutionSyncService {
         if (params.cursor) searchParams.append('cursor', params.cursor)
         // IMPORTANT: Include full execution data for AI metrics extraction
         searchParams.append('includeData', 'true')
-        
+
         const response = await fetch(`${baseUrl}/api/v1/executions?${searchParams}`, {
           headers: {
             'X-N8N-API-KEY': apiKey,
             'Accept': 'application/json'
           }
         })
-        
+
         if (!response.ok) throw new Error(`n8n API error: ${response.statusText}`)
         return response.json()
       },
-      
+
       async getWorkflows() {
         const response = await fetch(`${baseUrl}/api/v1/workflows`, {
           headers: {
@@ -1126,12 +1129,12 @@ export class ExecutionSyncService {
             'Accept': 'application/json'
           }
         })
-        
+
         if (!response.ok) throw new Error(`n8n API error: ${response.statusText}`)
         const data = await response.json()
         return data.data || []
       },
-      
+
       async getWorkflow(id: string) {
         const response = await fetch(`${baseUrl}/api/v1/workflows/${id}`, {
           headers: {
@@ -1139,7 +1142,7 @@ export class ExecutionSyncService {
             'Accept': 'application/json'
           }
         })
-        
+
         if (!response.ok) throw new Error(`n8n API error: ${response.statusText}`)
         return response.json()
       }
