@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { OnboardingModal } from '@/components/onboarding/onboarding-modal'
 import { N8NConnectionStatus } from './n8n-connection-status'
 
 interface WithN8NConnectionProps {
@@ -16,16 +17,17 @@ interface ConnectionState {
   error?: string
 }
 
-export function WithN8NConnection({ 
-  children, 
-  fallback, 
-  showRetry = true 
+export function WithN8NConnection({
+  children,
+  fallback,
+  showRetry = true
 }: WithN8NConnectionProps) {
   const [connectionState, setConnectionState] = useState<ConnectionState>({
     isLoading: true,
     isConfigured: false,
     isConnected: false
   })
+  const [showOnboarding, setShowOnboarding] = useState(false)
 
   useEffect(() => {
     checkConnection()
@@ -34,16 +36,24 @@ export function WithN8NConnection({
   const checkConnection = async () => {
     try {
       setConnectionState(prev => ({ ...prev, isLoading: true }))
-      
+
       const response = await fetch('/api/n8n/connection-status')
       if (response.ok) {
         const data = await response.json()
+        const isConnected = data.isConnected
+        const isConfigured = data.isConfigured
+
         setConnectionState({
           isLoading: false,
-          isConfigured: data.isConfigured,
-          isConnected: data.isConnected,
+          isConfigured,
+          isConnected,
           error: data.error
         })
+
+        // Show onboarding if not configured or not connected
+        if (!isConfigured || !isConnected) {
+          setShowOnboarding(true)
+        }
       } else {
         setConnectionState({
           isLoading: false,
@@ -51,6 +61,7 @@ export function WithN8NConnection({
           isConnected: false,
           error: 'Failed to check connection status'
         })
+        setShowOnboarding(true)
       }
     } catch (error) {
       setConnectionState({
@@ -59,6 +70,7 @@ export function WithN8NConnection({
         isConnected: false,
         error: 'Network error while checking connection'
       })
+      setShowOnboarding(true)
     }
   }
 
@@ -69,6 +81,7 @@ export function WithN8NConnection({
       isConnected: true,
       error: undefined
     }))
+    setShowOnboarding(false)
   }
 
   // Show loading state
@@ -80,13 +93,21 @@ export function WithN8NConnection({
     )
   }
 
-  // Show connection status if not properly connected
+  // If not connected, show fallback (if provided) or empty state + Modal
   if (!connectionState.isConfigured || !connectionState.isConnected) {
-    return fallback || (
-      <N8NConnectionStatus
-        onConnectionRestored={handleConnectionRestored}
-        showRetry={showRetry}
-      />
+    return (
+      <>
+        {fallback || (
+          <div className="flex items-center justify-center min-h-96 opacity-50 pointer-events-none">
+            {/* Show the old status component in background but disabled/dimmed */}
+            <N8NConnectionStatus showRetry={false} />
+          </div>
+        )}
+        <OnboardingModal
+          isOpen={showOnboarding}
+          onComplete={handleConnectionRestored}
+        />
+      </>
     )
   }
 
@@ -109,7 +130,7 @@ export function useN8NConnection() {
   const checkConnection = async () => {
     try {
       setConnectionState(prev => ({ ...prev, isLoading: true }))
-      
+
       const response = await fetch('/api/n8n/connection-status')
       if (response.ok) {
         const data = await response.json()
