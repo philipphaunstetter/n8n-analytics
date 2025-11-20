@@ -95,13 +95,17 @@ export function OnboardingModal({ isOpen, onComplete }: OnboardingModalProps) {
         }, 500)
 
         try {
-            const response = await fetch('/api/sync/workflows', {
+            const response = await fetch('/api/sync/initial', {
                 method: 'POST'
             })
 
             if (!response.ok) {
-                throw new Error('Sync failed')
+                const data = await response.json()
+                throw new Error(data.error || 'Sync failed')
             }
+
+            const result = await response.json()
+            console.log('Sync result:', result)
 
             clearInterval(progressInterval)
             setSyncProgress(100)
@@ -112,7 +116,7 @@ export function OnboardingModal({ isOpen, onComplete }: OnboardingModalProps) {
             }, 500)
         } catch (err) {
             clearInterval(progressInterval)
-            setError('Failed to sync data. Please try again.')
+            setError(err instanceof Error ? err.message : 'Failed to sync data. Please try again.')
             setSyncProgress(0)
         } finally {
             setIsSyncing(false)
