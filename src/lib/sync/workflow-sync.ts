@@ -655,7 +655,12 @@ export class WorkflowSyncService {
           scheduleString = `Every ${interval.monthsInterval || 1} months`
         } else {
           // Fallback for unknown types
-          scheduleString = `${interval.field}: ${JSON.stringify(interval)}`
+          if (interval.field) {
+            scheduleString = `${interval.field}: ${JSON.stringify(interval)}`
+          } else {
+            scheduleString = 'Unknown Schedule'
+            console.log(`⚠️ Unknown interval format for ${node.name}:`, JSON.stringify(interval))
+          }
         }
 
         if (scheduleString) {
