@@ -150,21 +150,35 @@ export class WorkflowSyncService {
     console.log(`🔄 Starting workflow sync for provider: ${provider.name}...`)
 
     try {
-      // Fetch workflows from this specific n8n instance
+      // Fetch workflows from this specific n8n instance with pagination
       const n8nApiUrl = `${provider.baseUrl.replace(/\/$/, '')}/api/v1/workflows`
-      const response = await fetch(n8nApiUrl, {
-        headers: {
-          'Accept': 'application/json',
-          'X-N8N-API-KEY': provider.apiKey
+      let n8nWorkflows: any[] = []
+      let cursor: string | undefined
+
+      do {
+        const url = new URL(n8nApiUrl)
+        if (cursor) {
+          url.searchParams.append('cursor', cursor)
         }
-      })
+        url.searchParams.append('limit', '100')
 
-      if (!response.ok) {
-        throw new Error(`Failed to fetch workflows from ${provider.name}: ${response.statusText}`)
-      }
+        const response = await fetch(url.toString(), {
+          headers: {
+            'Accept': 'application/json',
+            'X-N8N-API-KEY': provider.apiKey
+          }
+        })
 
-      const data = await response.json()
-      const n8nWorkflows = data.data || []
+        if (!response.ok) {
+          throw new Error(`Failed to fetch workflows from ${provider.name}: ${response.statusText}`)
+        }
+
+        const data = await response.json()
+        if (data.data) {
+          n8nWorkflows = [...n8nWorkflows, ...data.data]
+        }
+        cursor = data.nextCursor
+      } while (cursor)
       const n8nWorkflowIds = new Set<string>(n8nWorkflows.map((w: any) => String(w.id)))
 
       console.log(`📡 Found ${n8nWorkflows.length} workflows in ${provider.name}`)

@@ -113,6 +113,7 @@ export interface SyncOptions {
   syncType?: 'executions' | 'workflows' | 'backups' | 'full'
   batchSize?: number
   maxRetries?: number
+  deepSync?: boolean
 }
 
 export class ExecutionSyncService {
@@ -301,7 +302,8 @@ export class ExecutionSyncService {
 
         // If ALL executions in this batch are already in DB and finished, we can stop
         // This means we've reached executions we've already synced
-        if (executionsToFetch.length === 0) {
+        // UNLESS we are doing a deep sync, in which case we continue
+        if (executionsToFetch.length === 0 && !options.deepSync) {
           console.log(`✅ Reached already-synced executions, stopping sync for ${provider.name}`)
           break
         }
@@ -1250,16 +1252,30 @@ export class ExecutionSyncService {
       },
 
       async getWorkflows() {
-        const response = await fetch(`${baseUrl}/api/v1/workflows`, {
-          headers: {
-            'X-N8N-API-KEY': apiKey,
-            'Accept': 'application/json'
-          }
-        })
+        let allWorkflows: any[] = []
+        let cursor: string | undefined
 
-        if (!response.ok) throw new Error(`n8n API error: ${response.statusText}`)
-        const data = await response.json()
-        return data.data || []
+        do {
+          const url = new URL(`${baseUrl}/api/v1/workflows`)
+          if (cursor) url.searchParams.append('cursor', cursor)
+          url.searchParams.append('limit', '100')
+
+          const response = await fetch(url.toString(), {
+            headers: {
+              'X-N8N-API-KEY': apiKey,
+              'Accept': 'application/json'
+            }
+          })
+
+          if (!response.ok) throw new Error(`n8n API error: ${response.statusText}`)
+          const data = await response.json()
+          if (data.data) {
+            allWorkflows = [...allWorkflows, ...data.data]
+          }
+          cursor = data.nextCursor
+        } while (cursor)
+
+        return allWorkflows
       },
 
       async getWorkflow(id: string) {

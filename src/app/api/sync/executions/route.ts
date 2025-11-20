@@ -9,7 +9,7 @@ export async function POST(request: NextRequest) {
   try {
     // Authenticate the request
     const { user } = await authenticateRequest(request)
-    
+
     // Temporary bypass for testing - create fallback user
     const _actualUser = user || {
       id: 'admin-001',
@@ -19,16 +19,18 @@ export async function POST(request: NextRequest) {
     }
 
     console.log('🚀 Triggering executions sync via API...')
-    
+
     const body = await request.json().catch(() => ({}))
-    const { 
+    const {
       providerId,
-      batchSize = 100
+      batchSize = 100,
+      deep = false
     } = body
 
     const options = {
       syncType: 'executions' as const,
-      batchSize
+      batchSize,
+      deepSync: deep
     }
 
     let result
@@ -36,20 +38,20 @@ export async function POST(request: NextRequest) {
       // Get the actual provider from database
       const dbPath = ConfigManager.getDefaultDatabasePath()
       const db = new Database(dbPath)
-      
+
       const provider = await new Promise<any>((resolve, reject) => {
         db.get('SELECT * FROM providers WHERE id = ?', [providerId], (err, row) => {
           if (err) reject(err)
           else resolve(row)
         })
       })
-      
+
       db.close()
-      
+
       if (!provider) {
         return NextResponse.json({ error: 'Provider not found' }, { status: 404 })
       }
-      
+
       result = await executionSync.syncProvider(provider, options)
     } else {
       // Sync all providers

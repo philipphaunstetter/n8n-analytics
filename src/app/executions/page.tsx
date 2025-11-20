@@ -127,10 +127,10 @@ function ExecutionsContent() {
     }
   }
 
-  const syncExecutions = async () => {
+  const syncExecutions = async (deep = false) => {
     try {
       setSyncing(true)
-      const response = await apiClient.post('/sync/executions')
+      const response = await apiClient.post('/sync/executions', { deep })
       // After successful sync, refresh the data
       await fetchExecutions()
       setError(null)
@@ -311,12 +311,22 @@ function ExecutionsContent() {
         <div className="flex space-x-3">
           <Button
             outline
-            onClick={syncExecutions}
+            onClick={() => syncExecutions(false)}
             disabled={syncing || loading}
             className="flex items-center space-x-2"
           >
             <ArrowPathIcon className={`h-4 w-4 ${syncing ? 'animate-spin' : ''}`} />
             <span>{syncing ? 'Syncing...' : 'Sync'}</span>
+          </Button>
+          <Button
+            outline
+            onClick={() => syncExecutions(true)}
+            disabled={syncing || loading}
+            className="flex items-center space-x-2"
+            title="Force a full sync of all executions (slower)"
+          >
+            <ArrowPathIcon className={`h-4 w-4 ${syncing ? 'animate-spin' : ''}`} />
+            <span>Full Sync</span>
           </Button>
           <Button onClick={fetchExecutions} disabled={loading}>
             {loading ? 'Loading...' : 'Refresh'}
