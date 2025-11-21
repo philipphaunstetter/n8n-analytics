@@ -6,15 +6,17 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
     const { adminData, n8nConfig, configuration, emailConfig } = body
-    
+
     const config = getConfigManager()
+    console.log('Setup Complete API called with body:', JSON.stringify(body, null, 2))
+
 
     // Create admin account
     if (adminData) {
       await config.set('setup.admin_account_created', 'true')
       await config.set('setup.admin_email', adminData.email || '')
       await config.set('setup.admin_name', adminData.name || 'Admin')
-      
+
       // Store admin password securely (hashed)
       if (adminData.password) {
         // For simplicity, we'll store a simple hash. In production, use proper password hashing

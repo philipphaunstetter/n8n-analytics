@@ -5,14 +5,16 @@ export async function GET() {
   try {
     const config = getConfigManager()
     await config.initialize()
-    
+
     // Check if admin account actually exists (not just flags)
     const adminEmail = await config.get('setup.admin_email')
     const adminPasswordHash = await config.get('setup.admin_password_hash')
     const adminUserId = await config.get('setup.admin_user_id')
-    
+
+    console.log('Setup Status Check:', { adminEmail, hasPassword: !!adminPasswordHash, adminUserId })
+
     const hasAdminData = Boolean(adminEmail && adminPasswordHash && adminUserId)
-    
+
     if (hasAdminData) {
       console.log(`Setup status: Admin account found (${adminEmail})`)
       // Setup is complete - redirect to sign in
@@ -34,7 +36,7 @@ export async function GET() {
     }
   } catch (error) {
     console.error('Failed to check setup status:', error)
-    
+
     // On error, assume setup is required
     return NextResponse.json({
       initDone: false,
