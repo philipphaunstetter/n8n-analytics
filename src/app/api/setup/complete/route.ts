@@ -42,7 +42,7 @@ export async function POST(request: NextRequest) {
         // Use the same admin ID as stored in config
         const userId = 'admin-001'
 
-        await providerService.createProvider(userId, {
+        const provider = await providerService.createProvider(userId, {
           name: 'Primary n8n',
           baseUrl: n8nConfig.url,
           apiKey: n8nConfig.apiKey,
@@ -51,6 +51,28 @@ export async function POST(request: NextRequest) {
           }
         })
         console.log('Created default provider from setup wizard')
+
+        // Test connection immediately and update status
+        try {
+          const connectionResult = await providerService.testConnection(n8nConfig.url, n8nConfig.apiKey)
+
+          await providerService.updateConnectionStatus(
+            provider.id,
+            userId,
+            connectionResult.success,
+            connectionResult.success ? 'healthy' : 'error',
+            connectionResult.version
+          )
+
+          if (connectionResult.success) {
+            console.log('Provider connection tested and marked as healthy')
+          } else {
+            console.warn('Provider connection test failed:', connectionResult.error)
+          }
+        } catch (testError) {
+          console.error('Failed to test provider connection during setup:', testError)
+          // Don't fail setup if connection test fails
+        }
       } catch (error) {
         console.error('Failed to create default provider:', error)
         // Don't fail setup if provider creation fails, but log it
