@@ -24,7 +24,8 @@ export async function GET(request: NextRequest) {
     // Parse query parameters
     const searchParams = request.nextUrl.searchParams
     let limit = parseInt(searchParams.get('limit') || '2000') // Increased default to show more executions
-    const cursor = searchParams.get('cursor') || undefined
+    let page = parseInt(searchParams.get('page') || '1')
+    if (page < 1) page = 1
 
     // Validate and cap the limit to prevent performance issues
     if (limit > 5000) {
@@ -34,6 +35,7 @@ export async function GET(request: NextRequest) {
     if (limit < 1) {
       limit = 2000 // Reset to default if invalid
     }
+    const offset = (page - 1) * limit
 
     const filters: ExecutionFilters = {
       providerId: searchParams.get('providerId') || undefined,
@@ -57,59 +59,30 @@ export async function GET(request: NextRequest) {
     // Fetch executions from local SQLite database for long-term storage
     let allExecutions: Execution[] = []
     let totalCount = 0
-    let nextCursor: string | null = null
 
     try {
-      console.log(`Fetching executions from SQLite database (limit: ${limit})...`)
+      console.log(`Fetching executions from SQLite database (page: ${page}, limit: ${limit})...`)
 
       const db = getDb()
 
-      // Build SQL query with filters
-      let sql = `
-        SELECT 
-          e.id,
-          e.provider_id,
-          e.workflow_id,
-          e.provider_execution_id,
-          e.provider_workflow_id,
-          e.status,
-          e.mode,
-          e.started_at,
-          e.stopped_at,
-          e.duration,
-          e.finished,
-          e.retry_of,
-          e.retry_success_id,
-          e.metadata,
-          e.total_tokens,
-          e.input_tokens,
-          e.output_tokens,
-          e.ai_cost,
-          e.ai_provider,
-          w.name as workflow_name,
-          p.name as provider_name
-        FROM executions e
-        LEFT JOIN workflows w ON e.workflow_id = w.id
-        LEFT JOIN providers p ON e.provider_id = p.id
-        WHERE 1=1
-      `
-
+      // Build WHERE clause and params for both queries
+      let whereClause = 'WHERE 1=1'
       const params: any[] = []
 
       // Add filters
       if (filters.providerId) {
-        sql += ' AND e.provider_id = ?'
+        whereClause += ' AND e.provider_id = ?'
         params.push(filters.providerId)
       }
 
       if (filters.workflowId) {
-        sql += ' AND w.provider_workflow_id = ?'
+        whereClause += ' AND w.provider_workflow_id = ?'
         params.push(filters.workflowId)
       }
 
       if (filters.status && filters.status.length > 0) {
         const placeholders = filters.status.map(() => '?').join(',')
-        sql += ` AND e.status IN (${placeholders})`
+        whereClause += ` AND e.status IN (${placeholders})`
         params.push(...filters.status)
       }
 
@@ -136,13 +109,13 @@ export async function GET(request: NextRequest) {
           default:
             startDate = new Date(now.getTime() - 24 * 60 * 60 * 1000)
         }
-        sql += ' AND e.started_at >= ?'
+        whereClause += ' AND e.started_at >= ?'
         params.push(startDate.toISOString())
       }
 
       // Custom time range
       if (filters.timeRange === 'custom' && filters.customTimeRange) {
-        sql += ' AND e.started_at >= ? AND e.started_at <= ?'
+        whereClause += ' AND e.started_at >= ? AND e.started_at <= ?'
         params.push(
           filters.customTimeRange.start.toISOString(),
           filters.customTimeRange.end.toISOString()
@@ -151,7 +124,7 @@ export async function GET(request: NextRequest) {
 
       // Add search filter
       if (filters.search) {
-        sql += ` AND (
+        whereClause += ` AND (
           e.id LIKE ? OR 
           e.provider_execution_id LIKE ? OR
           w.name LIKE ?
@@ -160,19 +133,57 @@ export async function GET(request: NextRequest) {
         params.push(searchTerm, searchTerm, searchTerm)
       }
 
-      // Add cursor filter for pagination
-      if (cursor) {
-        sql += ' AND e.started_at < ?'
-        params.push(cursor)
-      }
+      // Count query
+      const countSql = `
+        SELECT COUNT(*) as total
+        FROM executions e
+        LEFT JOIN workflows w ON e.workflow_id = w.id
+        LEFT JOIN providers p ON e.provider_id = p.id
+        ${whereClause}
+      `
 
-      // Order by most recent first and add limit
-      sql += ' ORDER BY e.started_at DESC LIMIT ?'
-      params.push(limit)
+      totalCount = await new Promise<number>((resolve, reject) => {
+        db.get(countSql, params, (err, row: any) => {
+          if (err) reject(err)
+          else resolve(row?.total || 0)
+        })
+      })
+
+      // Data query
+      const sql = `
+        SELECT 
+          e.id,
+          e.provider_id,
+          e.workflow_id,
+          e.provider_execution_id,
+          e.provider_workflow_id,
+          e.status,
+          e.mode,
+          e.started_at,
+          e.stopped_at,
+          e.duration,
+          e.finished,
+          e.retry_of,
+          e.retry_success_id,
+          e.metadata,
+          e.total_tokens,
+          e.input_tokens,
+          e.output_tokens,
+          e.ai_cost,
+          e.ai_provider,
+          w.name as workflow_name,
+          p.name as provider_name
+        FROM executions e
+        LEFT JOIN workflows w ON e.workflow_id = w.id
+        LEFT JOIN providers p ON e.provider_id = p.id
+        ${whereClause}
+        ORDER BY e.started_at DESC
+        LIMIT ? OFFSET ?
+      `
 
       // Execute query
       const rows = await new Promise<any[]>((resolve, reject) => {
-        db.all(sql, params, (err, rows) => {
+        db.all(sql, [...params, limit, offset], (err, rows) => {
           if (err) {
             console.error('Database query error:', err)
             reject(err)
@@ -224,8 +235,6 @@ export async function GET(request: NextRequest) {
         } as Execution
       })
 
-      totalCount = allExecutions.length
-
       console.log(`Fetched ${allExecutions.length} executions from SQLite database`)
 
       // If no executions found, suggest running sync
@@ -237,22 +246,14 @@ export async function GET(request: NextRequest) {
       console.error('Failed to fetch executions from database:', error)
       // If schema isn't initialized yet, return an empty result set gracefully
       if (isMissingTableError(error)) {
-        // Calculate next cursor
-        if (allExecutions.length === limit) {
-          const lastExecution = allExecutions[allExecutions.length - 1]
-          nextCursor = lastExecution.startedAt.toISOString()
-        }
-
         return NextResponse.json({
           success: true,
           data: {
-            items: allExecutions,
-            total: totalCount, // Note: This is 0 currently as we didn't count
+            items: [],
+            total: 0,
             limit: limit,
-            cursor: cursor,
-            nextCursor: nextCursor,
-            hasNextPage: !!nextCursor,
-            hasPreviousPage: !!cursor
+            page: page,
+            totalPages: 0
           },
           warning: 'Database schema not initialized yet. Run initial sync to populate data.'
         })
@@ -263,21 +264,17 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Executions are already filtered and sorted in the SQL query
-    const filteredExecutions = allExecutions
-
     return NextResponse.json({
       success: true,
       data: {
-        items: filteredExecutions,
+        items: allExecutions,
         total: totalCount,
-        limit: limit,
-        cursor: cursor,
-        nextCursor: nextCursor,
-        hasNextPage: !!nextCursor,
-        hasPreviousPage: !!cursor
+        page,
+        limit,
+        totalPages: Math.ceil(totalCount / limit)
       }
     })
+
   } catch (error) {
     console.error('Failed to fetch executions:', error)
     return NextResponse.json(
