@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getConfigManager } from '@/lib/config-manager'
+import { getConfigManager } from '@/lib/config/config-manager'
 import crypto from 'crypto'
 
 export async function POST(request: NextRequest) {
@@ -13,47 +13,47 @@ export async function POST(request: NextRequest) {
 
     // Create admin account
     if (adminData) {
-      await config.set('setup.admin_account_created', 'true')
-      await config.set('setup.admin_email', adminData.email || '')
-      await config.set('setup.admin_name', adminData.name || 'Admin')
+      await config.upsert('setup.admin_account_created', 'true', 'boolean', 'setup', 'Admin account created flag')
+      await config.upsert('setup.admin_email', adminData.email || '', 'string', 'setup', 'Admin email address')
+      await config.upsert('setup.admin_name', adminData.name || 'Admin', 'string', 'setup', 'Admin name')
 
       // Store admin password securely (hashed)
       if (adminData.password) {
         // For simplicity, we'll store a simple hash. In production, use proper password hashing
         const passwordHash = crypto.createHash('sha256').update(adminData.password).digest('hex')
-        await config.set('setup.admin_password_hash', passwordHash, 'auth', 'Admin password hash')
-        await config.set('setup.admin_user_id', 'admin-001', 'auth', 'Admin user ID')
+        await config.upsert('setup.admin_password_hash', passwordHash, 'encrypted', 'auth', 'Admin password hash', true)
+        await config.upsert('setup.admin_user_id', 'admin-001', 'string', 'auth', 'Admin user ID')
       }
     }
 
     // Configure n8n integration
     if (n8nConfig) {
-      await config.set('integrations.n8n.url', n8nConfig.url || '', 'integration', 'n8n instance URL')
-      await config.set('integrations.n8n.api_key', n8nConfig.apiKey || '', 'integration', 'n8n API key')
+      await config.upsert('integrations.n8n.url', n8nConfig.url || '', 'string', 'integration', 'n8n instance URL')
+      await config.upsert('integrations.n8n.api_key', n8nConfig.apiKey || '', 'encrypted', 'integration', 'n8n API key', true)
     }
 
     // Set configuration values
     if (configuration) {
-      await config.set('features.sync_interval_minutes', configuration.syncInterval || '15', 'features', 'Data sync interval')
-      await config.set('features.analytics_enabled', configuration.analyticsEnabled ? 'true' : 'false', 'features', 'Enable analytics')
+      await config.upsert('features.sync_interval_minutes', configuration.syncInterval || '15', 'number', 'features', 'Data sync interval')
+      await config.upsert('features.analytics_enabled', configuration.analyticsEnabled ? 'true' : 'false', 'boolean', 'features', 'Enable analytics')
     }
 
     // Set email configuration (placeholder for future functionality)
     if (emailConfig) {
-      await config.set('notifications.email.enabled', emailConfig.enabled ? 'true' : 'false', 'notifications', 'Email notifications enabled')
-      await config.set('notifications.email.smtp_host', emailConfig.smtpHost || '', 'notifications', 'SMTP host')
-      await config.set('notifications.email.smtp_port', emailConfig.smtpPort || '587', 'notifications', 'SMTP port')
-      await config.set('notifications.email.smtp_user', emailConfig.smtpUser || '', 'notifications', 'SMTP username')
-      await config.set('notifications.email.smtp_password', emailConfig.smtpPassword || '', 'notifications', 'SMTP password')
+      await config.upsert('notifications.email.enabled', emailConfig.enabled ? 'true' : 'false', 'boolean', 'notifications', 'Email notifications enabled')
+      await config.upsert('notifications.email.smtp_host', emailConfig.smtpHost || '', 'string', 'notifications', 'SMTP host')
+      await config.upsert('notifications.email.smtp_port', emailConfig.smtpPort || '587', 'number', 'notifications', 'SMTP port')
+      await config.upsert('notifications.email.smtp_user', emailConfig.smtpUser || '', 'string', 'notifications', 'SMTP username')
+      await config.upsert('notifications.email.smtp_password', emailConfig.smtpPassword || '', 'encrypted', 'notifications', 'SMTP password', true)
     }
 
     // Set default configuration values
-    await config.set('app.timezone', 'UTC')
-    await config.set('app.demoMode', 'false')
+    await config.upsert('app.timezone', 'UTC', 'string', 'system', 'Application timezone')
+    await config.upsert('app.demoMode', 'false', 'boolean', 'system', 'Demo mode flag')
 
     // Mark setup as complete by setting the initDone flag
-    await config.set('app.initDone', 'true')
-    await config.set('setup.completed_at', new Date().toISOString())
+    await config.upsert('app.initDone', 'true', 'boolean', 'system', 'Initialization complete flag')
+    await config.upsert('setup.completed_at', new Date().toISOString(), 'string', 'setup', 'Setup completion timestamp')
 
     return NextResponse.json({
       message: 'Setup completed successfully',

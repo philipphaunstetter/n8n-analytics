@@ -1,5 +1,5 @@
 import { getDb } from '@/lib/db'
-import { getConfigManager } from '@/lib/config-manager'
+import { getConfigManager } from '@/lib/config/config-manager'
 import { getProviderService } from '@/lib/services/provider-service'
 import { v4 as uuidv4 } from 'uuid'
 
@@ -51,7 +51,7 @@ export async function migrateToProviders(userId: string = 'default-user'): Promi
     // Test connection before migrating
     console.log('🔌 Testing connection to existing n8n instance...')
     const connectionTest = await providerService.testConnection(n8nUrl, n8nApiKey)
-    
+
     if (!connectionTest.success) {
       console.warn('⚠️  Connection test failed, but continuing with migration:', connectionTest.error)
     }
@@ -84,7 +84,7 @@ export async function migrateToProviders(userId: string = 'default-user'): Promi
       db.run(
         `UPDATE workflows SET provider_id = ? WHERE provider_id IS NULL OR provider_id = ''`,
         [provider.id],
-        function(err) {
+        function (err) {
           if (err) {
             reject(err)
           } else {
@@ -101,7 +101,7 @@ export async function migrateToProviders(userId: string = 'default-user'): Promi
       db.run(
         `UPDATE executions SET provider_id = ? WHERE provider_id IS NULL OR provider_id = ''`,
         [provider.id],
-        function(err) {
+        function (err) {
           if (err) {
             reject(err)
           } else {
@@ -114,9 +114,10 @@ export async function migrateToProviders(userId: string = 'default-user'): Promi
     console.log(`✅ Updated ${updateExecutionsResult.changes} executions`)
 
     // Mark old config keys as deprecated (optional - keep them for now for backward compatibility)
-    await configManager.set(
+    await configManager.upsert(
       'integrations.n8n._migrated',
       'true',
+      'boolean',
       'integration',
       'Migration to providers table completed'
     )
@@ -169,11 +170,11 @@ export async function checkMigrationNeeded(userId: string = 'default-user'): Pro
 export async function autoMigrate(userId: string = 'default-user'): Promise<void> {
   try {
     const migrationNeeded = await checkMigrationNeeded(userId)
-    
+
     if (migrationNeeded) {
       console.log('🚀 Auto-running provider migration...')
       const result = await migrateToProviders(userId)
-      
+
       if (result.success) {
         console.log('✅ Auto-migration completed:', result.message)
       } else {
