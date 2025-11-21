@@ -12,10 +12,10 @@ export default function RootPage() {
       try {
         const response = await fetch('/api/setup/status')
         const status = await response.json()
-        
+
         if (!status.initDone) {
           // Setup not complete, redirect to admin setup (skip welcome screen)
-          router.replace('/setup/admin')
+          router.replace('/setup/wizard')
         } else {
           // Setup complete, redirect to dashboard
           router.replace('/dashboard')
@@ -23,10 +23,10 @@ export default function RootPage() {
       } catch (error) {
         console.error('Failed to check setup status:', error)
         // On error, assume setup is needed - go directly to admin setup
-        router.replace('/setup/admin')
+        router.replace('/setup/wizard')
       }
     }
-    
+
     checkSetup()
   }, [router])
 

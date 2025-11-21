@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { OnboardingModal } from '@/components/onboarding/onboarding-modal'
+import { useRouter } from 'next/navigation'
 
 interface WithN8NConnectionProps {
   children: React.ReactNode
@@ -26,7 +26,7 @@ export function WithN8NConnection({
     isConfigured: false,
     isConnected: false
   })
-  const [showOnboarding, setShowOnboarding] = useState(false)
+  const router = useRouter()
 
   useEffect(() => {
     checkConnection()
@@ -49,9 +49,9 @@ export function WithN8NConnection({
           error: data.error
         })
 
-        // Show onboarding if not configured or not connected
+        // Redirect to setup if not configured or not connected
         if (!isConfigured || !isConnected) {
-          setShowOnboarding(true)
+          router.push('/setup/wizard')
         }
       } else {
         setConnectionState({
@@ -60,7 +60,7 @@ export function WithN8NConnection({
           isConnected: false,
           error: 'Failed to check connection status'
         })
-        setShowOnboarding(true)
+        router.push('/setup/wizard')
       }
     } catch (error) {
       setConnectionState({
@@ -69,19 +69,11 @@ export function WithN8NConnection({
         isConnected: false,
         error: 'Network error while checking connection'
       })
-      setShowOnboarding(true)
+      router.push('/setup/wizard')
     }
   }
 
-  const handleConnectionRestored = () => {
-    setConnectionState(prev => ({
-      ...prev,
-      isConfigured: true,
-      isConnected: true,
-      error: undefined
-    }))
-    setShowOnboarding(false)
-  }
+
 
   // Show loading state
   if (connectionState.isLoading) {
@@ -97,10 +89,7 @@ export function WithN8NConnection({
     return (
       <>
         {fallback}
-        <OnboardingModal
-          isOpen={showOnboarding}
-          onComplete={handleConnectionRestored}
-        />
+        {fallback}
       </>
     )
   }

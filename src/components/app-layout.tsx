@@ -89,7 +89,7 @@ function UserProfileSection() {
   return (
     <Dropdown>
       <DropdownButton as={SidebarItem}>
-        <Avatar src="" className="size-10" />
+        <Avatar src="" />
         <SidebarLabel className="flex flex-col items-start">
           <span className="text-sm font-medium">{userName}</span>
           <span className="text-xs text-gray-500">{userEmail}</span>

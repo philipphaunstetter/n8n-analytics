@@ -13,8 +13,8 @@ const PUBLIC_ROUTES = [
 
 // Setup wizard routes
 const SETUP_ROUTES = [
-  '/setup/admin',
-  '/setup/database', 
+  '/setup/wizard',
+  '/setup/database',
   '/setup/integrations',
   '/setup/complete'
 ]
@@ -51,7 +51,7 @@ export async function middleware(request: NextRequest) {
     if (!setupResponse.ok) {
       console.error('Failed to check setup status:', setupResponse.statusText)
       // On error, redirect to setup to be safe
-      return NextResponse.redirect(new URL('/setup/admin', request.url))
+      return NextResponse.redirect(new URL('/setup/wizard', request.url))
     }
 
     const setupStatus = await setupResponse.json()
@@ -60,7 +60,7 @@ export async function middleware(request: NextRequest) {
     if (pathname === '/') {
       if (!setupStatus.initDone) {
         // Setup not complete, redirect to admin setup
-        return NextResponse.redirect(new URL('/setup/admin', request.url))
+        return NextResponse.redirect(new URL('/setup/wizard', request.url))
       } else {
         // Setup complete, redirect to dashboard
         return NextResponse.redirect(new URL('/dashboard', request.url))
@@ -70,7 +70,7 @@ export async function middleware(request: NextRequest) {
     // If setup is required and user is not on a setup page
     if (!setupStatus.initDone && !SETUP_ROUTES.some(route => pathname.startsWith(route))) {
       // Redirect to admin setup
-      return NextResponse.redirect(new URL('/setup/admin', request.url))
+      return NextResponse.redirect(new URL('/setup/wizard', request.url))
     }
 
     // If setup is complete and user is on setup pages
@@ -81,14 +81,14 @@ export async function middleware(request: NextRequest) {
 
     // If user tries to access admin routes without setup completion
     if (!setupStatus.initDone && ADMIN_ROUTES.some(route => pathname.startsWith(route))) {
-      return NextResponse.redirect(new URL('/setup/admin', request.url))
+      return NextResponse.redirect(new URL('/setup/wizard', request.url))
     }
 
   } catch (error) {
     console.error('Setup middleware error:', error)
     // On error, redirect to admin setup to be safe
     if (!SETUP_ROUTES.some(route => pathname.startsWith(route))) {
-      return NextResponse.redirect(new URL('/setup/admin', request.url))
+      return NextResponse.redirect(new URL('/setup/wizard', request.url))
     }
   }
 

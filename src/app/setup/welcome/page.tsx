@@ -8,7 +8,7 @@ export default function WelcomePage() {
 
   useEffect(() => {
     // Redirect to admin setup since we're removing the welcome screen
-    router.replace('/setup/admin')
+    router.replace('/setup/wizard')
   }, [router])
 
   return (
