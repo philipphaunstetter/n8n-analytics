@@ -29,6 +29,7 @@ import { Navbar, NavbarItem, NavbarSection, NavbarSpacer } from './navbar'
 import { Dropdown, DropdownButton, DropdownItem, DropdownMenu } from './dropdown'
 import { Avatar } from './avatar'
 import { ToastContainer } from './toast'
+import { InitialSyncModal } from './initial-sync-modal'
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: DashboardIcon, current: true },
@@ -147,6 +148,7 @@ export function AppLayout({ children }: AppLayoutProps) {
     >
       {children}
       <ToastContainer />
+      <InitialSyncModal />
     </SidebarLayout>
   )
 }
