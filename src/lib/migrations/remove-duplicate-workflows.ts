@@ -1,4 +1,4 @@
-import { getDb } from './db'
+import { getDb } from '../db'
 
 /**
  * Remove duplicate workflows keeping only the most recent one
