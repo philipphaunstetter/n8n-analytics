@@ -207,14 +207,6 @@ export default function SetupWizardPage() {
       const result = await response.json()
 
       // Show syncing toast
-      const syncToastId = Math.random().toString(36).substr(2, 9)
-      showToast({
-        type: 'info',
-        title: 'Syncing your n8n data...',
-        message: 'Please wait while we fetch your workflows and executions',
-        duration: 0 // Don't auto-dismiss
-      })
-
       // Start initial sync in background (fire and forget)
       fetch('/api/setup/initial-sync', {
         method: 'POST',
@@ -225,8 +217,8 @@ export default function SetupWizardPage() {
       showToast({
         type: 'success',
         title: 'Setup completed successfully!',
-        message: 'Your n8n data is syncing in the background',
-        duration: 5000
+        message: 'Redirecting to dashboard...',
+        duration: 3000
       })
 
       // Small delay to show the toast, then redirect
@@ -362,8 +354,8 @@ export default function SetupWizardPage() {
             {/* Connection Status */}
             {connectionStatus !== 'unknown' && (
               <div className={`p-4 rounded-md ${connectionStatus === 'connected'
-                  ? 'bg-green-50 border border-green-200'
-                  : 'bg-red-50 border border-red-200'
+                ? 'bg-green-50 border border-green-200'
+                : 'bg-red-50 border border-red-200'
                 }`}>
                 <div className="flex items-center space-x-2">
                   <div className={`w-3 h-3 rounded-full ${connectionStatus === 'connected' ? 'bg-green-500' : 'bg-red-500'
