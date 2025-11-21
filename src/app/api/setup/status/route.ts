@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server'
 import { getConfigManager } from '@/lib/config/config-manager'
 
+
+export const dynamic = 'force-dynamic'
+
 export async function GET() {
   try {
     const config = getConfigManager()

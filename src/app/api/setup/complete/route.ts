@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getConfigManager } from '@/lib/config/config-manager'
+import { getProviderService } from '@/lib/services/provider-service'
 import crypto from 'crypto'
 
 export async function POST(request: NextRequest) {
@@ -26,10 +27,34 @@ export async function POST(request: NextRequest) {
       }
     }
 
+
+
+
+
     // Configure n8n integration
     if (n8nConfig) {
       await config.upsert('integrations.n8n.url', n8nConfig.url || '', 'string', 'integration', 'n8n instance URL')
       await config.upsert('integrations.n8n.api_key', n8nConfig.apiKey || '', 'encrypted', 'integration', 'n8n API key', true)
+
+      // Create provider entry for the new multi-provider system
+      try {
+        const providerService = getProviderService()
+        // Use the same admin ID as stored in config
+        const userId = 'admin-001'
+
+        await providerService.createProvider(userId, {
+          name: 'Primary n8n',
+          baseUrl: n8nConfig.url,
+          apiKey: n8nConfig.apiKey,
+          metadata: {
+            createdVia: 'setup-wizard'
+          }
+        })
+        console.log('Created default provider from setup wizard')
+      } catch (error) {
+        console.error('Failed to create default provider:', error)
+        // Don't fail setup if provider creation fails, but log it
+      }
     }
 
     // Set configuration values

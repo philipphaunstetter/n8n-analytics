@@ -45,7 +45,8 @@ export async function middleware(request: NextRequest) {
     const setupResponse = await fetch(new URL('/api/setup/status', request.url), {
       headers: {
         'x-forwarded-host': request.headers.get('host') || '',
-      }
+      },
+      cache: 'no-store'
     })
 
     if (!setupResponse.ok) {

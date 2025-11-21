@@ -1,14 +1,13 @@
 import { NextResponse } from 'next/server'
 import { getConfigManager } from '@/lib/config/config-manager'
 
-export async function POST() {
+export async function POST(request: Request) {
   try {
     const configManager = getConfigManager()
     await configManager.initialize()
 
-    // Get current n8n configuration
-    const n8nUrl = await configManager.get('integrations.n8n.url')
-    const n8nApiKey = await configManager.get('integrations.n8n.api_key')
+    const body = await request.json()
+    const { url: n8nUrl, apiKey: n8nApiKey } = body
 
     if (!n8nUrl || !n8nApiKey) {
       return NextResponse.json(
@@ -30,7 +29,7 @@ export async function POST() {
 
     if (!testResponse.ok) {
       let errorMessage = 'Connection failed'
-      
+
       switch (testResponse.status) {
         case 401:
           errorMessage = 'Invalid API key - please check your n8n API key'
@@ -55,13 +54,13 @@ export async function POST() {
     }
 
     const workflows = await testResponse.json()
-    
+
     // Get additional instance info
     let instanceInfo = {
       version: 'Unknown',
       instanceId: 'Unknown'
     }
-    
+
     try {
       const infoResponse = await fetch(`${cleanUrl}/api/v1/owner`, {
         method: 'GET',
@@ -71,7 +70,7 @@ export async function POST() {
         },
         signal: AbortSignal.timeout(5000)
       })
-      
+
       if (infoResponse.ok) {
         const info = await infoResponse.json()
         instanceInfo.version = info.version || 'Unknown'
@@ -94,9 +93,9 @@ export async function POST() {
 
   } catch (error) {
     console.error('n8n connection test failed:', error)
-    
+
     let errorMessage = 'Network error: Unable to connect to n8n instance'
-    
+
     if (error instanceof Error) {
       if (error.name === 'AbortError') {
         errorMessage = 'Connection timeout - please check your n8n URL and network'
