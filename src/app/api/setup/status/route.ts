@@ -9,18 +9,32 @@ export async function GET() {
     const config = getConfigManager()
     await config.initialize()
 
-    // Check if admin account actually exists (not just flags)
-    const adminEmail = await config.get('setup.admin_email')
-    const adminPasswordHash = await config.get('setup.admin_password_hash')
-    const adminUserId = await config.get('setup.admin_user_id')
+    // Check the explicit completion flag first (fastest)
+    const initDoneFlag = await config.get<string | boolean>('app.initDone')
+    if (initDoneFlag === 'true' || initDoneFlag === true) {
+      return NextResponse.json({
+        initDone: true,
+        requiresSetup: false,
+        nextStep: 'signin',
+        message: 'Setup completed (flag set)'
+      })
+    }
 
-    console.log('Setup Status Check:', { adminEmail, hasPassword: !!adminPasswordHash, adminUserId })
+    // Fallback: Check if admin account actually exists
+    const values = await config.getMany([
+      'setup.admin_email',
+      'setup.admin_password_hash',
+      'setup.admin_user_id'
+    ])
 
-    const hasAdminData = Boolean(adminEmail && adminPasswordHash && adminUserId)
+    const adminEmail = values['setup.admin_email']
+    const hasAdminData = Boolean(adminEmail && values['setup.admin_password_hash'] && values['setup.admin_user_id'])
 
     if (hasAdminData) {
       console.log(`Setup status: Admin account found (${adminEmail})`)
-      // Setup is complete - redirect to sign in
+      // Fix missing flag if data exists
+      await config.upsert('app.initDone', 'true', 'boolean', 'system', 'Setup completion flag')
+
       return NextResponse.json({
         initDone: true,
         requiresSetup: false,
