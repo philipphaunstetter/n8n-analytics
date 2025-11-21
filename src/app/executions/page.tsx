@@ -217,7 +217,7 @@ function ExecutionsContent() {
   const [currentPage, setCurrentPage] = useState(1)
   const [totalCount, setTotalCount] = useState(0)
   const [totalPages, setTotalPages] = useState(0)
-  const itemsPerPage = 100
+  const itemsPerPage = 20
 
   const router = useRouter()
 

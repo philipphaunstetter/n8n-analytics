@@ -133,13 +133,63 @@ export async function GET(request: NextRequest) {
         params.push(searchTerm, searchTerm, searchTerm)
       }
 
-      // Count query
+      // CTE for grouping logic
+      const groupingCte = `
+        WITH FilteredExecutions AS (
+          SELECT 
+            e.id,
+            e.provider_id,
+            e.workflow_id,
+            e.provider_execution_id,
+            e.provider_workflow_id,
+            e.status,
+            e.mode,
+            e.started_at,
+            e.stopped_at,
+            e.duration,
+            e.finished,
+            e.retry_of,
+            e.retry_success_id,
+            e.metadata,
+            e.total_tokens,
+            e.input_tokens,
+            e.output_tokens,
+            e.ai_cost,
+            e.ai_provider,
+            w.name as workflow_name,
+            p.name as provider_name
+          FROM executions e
+          LEFT JOIN workflows w ON e.workflow_id = w.id
+          LEFT JOIN providers p ON e.provider_id = p.id
+          ${whereClause}
+        ),
+        MarkedGroups AS (
+          SELECT 
+            *,
+            CASE 
+              WHEN 
+                LAG(workflow_id) OVER (ORDER BY started_at DESC) = workflow_id AND 
+                LAG(status) OVER (ORDER BY started_at DESC) = status AND
+                LAG(mode) OVER (ORDER BY started_at DESC) = mode AND
+                mode IN ('trigger', 'webhook', 'cron', 'schedule')
+              THEN 0 
+              ELSE 1 
+            END as is_group_start
+          FROM FilteredExecutions
+        ),
+        GroupedExecutions AS (
+          SELECT 
+            *,
+            SUM(is_group_start) OVER (ORDER BY started_at DESC) as group_id
+          FROM MarkedGroups
+        )
+      `
+
+      // Count query (count distinct groups)
       const countSql = `
-        SELECT COUNT(*) as total
-        FROM executions e
-        LEFT JOIN workflows w ON e.workflow_id = w.id
-        LEFT JOIN providers p ON e.provider_id = p.id
-        ${whereClause}
+        ${groupingCte}
+        SELECT COUNT(DISTINCT group_id) as total
+        FROM GroupedExecutions
       `
 
       totalCount = await new Promise<number>((resolve, reject) => {
@@ -149,36 +199,19 @@ export async function GET(request: NextRequest) {
         })
       })
 
-      // Data query
+      // Data query (fetch executions for the current page of groups)
       const sql = `
-        SELECT 
-          e.id,
-          e.provider_id,
-          e.workflow_id,
-          e.provider_execution_id,
-          e.provider_workflow_id,
-          e.status,
-          e.mode,
-          e.started_at,
-          e.stopped_at,
-          e.duration,
-          e.finished,
-          e.retry_of,
-          e.retry_success_id,
-          e.metadata,
-          e.total_tokens,
-          e.input_tokens,
-          e.output_tokens,
-          e.ai_cost,
-          e.ai_provider,
-          w.name as workflow_name,
-          p.name as provider_name
-        FROM executions e
-        LEFT JOIN workflows w ON e.workflow_id = w.id
-        LEFT JOIN providers p ON e.provider_id = p.id
-        ${whereClause}
-        ORDER BY e.started_at DESC
-        LIMIT ? OFFSET ?
+        ${groupingCte},
+        PagedGroups AS (
+          SELECT DISTINCT group_id
+          FROM GroupedExecutions
+          ORDER BY group_id ASC
+          LIMIT ? OFFSET ?
+        )
+        SELECT *
+        FROM GroupedExecutions
+        WHERE group_id IN (SELECT group_id FROM PagedGroups)
+        ORDER BY started_at DESC
       `
 
       // Execute query
