@@ -3,15 +3,15 @@
 import { usePathname } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
 import { SidebarLayout } from './sidebar-layout'
-import { 
-  Sidebar, 
-  SidebarBody, 
-  SidebarHeader, 
-  SidebarItem, 
-  SidebarSection, 
-  SidebarFooter, 
-  SidebarHeading, 
-  SidebarLabel 
+import {
+  Sidebar,
+  SidebarBody,
+  SidebarHeader,
+  SidebarItem,
+  SidebarSection,
+  SidebarFooter,
+  SidebarHeading,
+  SidebarLabel
 } from './sidebar'
 import {
   DashboardIcon,
@@ -24,7 +24,7 @@ import {
   ProfileIcon,
   ToolsIcon
 } from './icons'
-import { ServerIcon, ClockIcon } from '@heroicons/react/24/outline'
+import { ServerIcon, ClockIcon, ArrowRightOnRectangleIcon } from '@heroicons/react/24/outline'
 import { Navbar, NavbarItem, NavbarSection, NavbarSpacer } from './navbar'
 import { Dropdown, DropdownButton, DropdownItem, DropdownMenu } from './dropdown'
 import { Avatar } from './avatar'
@@ -54,7 +54,7 @@ function AppSidebar() {
           </span>
         </div>
       </SidebarHeader>
-      
+
       <SidebarBody>
         <SidebarSection>
           <SidebarHeading>Navigation</SidebarHeading>
@@ -97,7 +97,7 @@ function UserProfileSection() {
       </DropdownButton>
       <DropdownMenu className="min-w-64" anchor="top start">
         <DropdownItem href="/profile">
-          <ProfileIcon />
+          <ProfileIcon data-slot="icon" />
           My Profile
         </DropdownItem>
         <DropdownItem
@@ -106,6 +106,7 @@ function UserProfileSection() {
             window.location.href = '/'
           }}
         >
+          <ArrowRightOnRectangleIcon data-slot="icon" />
           Sign out
         </DropdownItem>
       </DropdownMenu>
@@ -116,7 +117,7 @@ function UserProfileSection() {
 function AppNavbar() {
   const pathname = usePathname()
   const currentPage = navigation.find((item) => item.href === pathname)
-  
+
   return (
     <Navbar>
       <NavbarSection>
@@ -140,8 +141,8 @@ interface AppLayoutProps {
 
 export function AppLayout({ children }: AppLayoutProps) {
   return (
-    <SidebarLayout 
-      navbar={<AppNavbar />} 
+    <SidebarLayout
+      navbar={<AppNavbar />}
       sidebar={<AppSidebar />}
     >
       {children}
