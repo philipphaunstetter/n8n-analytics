@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { 
+import {
   ChartPieIcon,
   EyeIcon,
   EyeSlashIcon,
@@ -25,15 +25,15 @@ interface SetupData {
   adminEmail: string
   adminPassword: string
   adminPasswordConfirm: string
-  
+
   // Step 2: n8n Integration
   n8nUrl: string
   n8nApiKey: string
-  
+
   // Step 3: Configuration
   syncInterval: string
   analyticsEnabled: boolean
-  
+
   // Step 4: Email Notifications (placeholder)
   emailEnabled: boolean
   smtpHost: string
@@ -58,7 +58,7 @@ export default function SetupWizardPage() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [testingConnection, setTestingConnection] = useState(false)
   const [connectionStatus, setConnectionStatus] = useState<'unknown' | 'connected' | 'error'>('unknown')
-  
+
   const [formData, setFormData] = useState<SetupData>({
     adminEmail: '',
     adminPassword: '',
@@ -79,7 +79,7 @@ export default function SetupWizardPage() {
     if (field === 'n8nUrl' && typeof value === 'string') {
       value = normalizeUrl(value.trim())
     }
-    
+
     setFormData(prev => ({
       ...prev,
       [field]: value
@@ -107,7 +107,7 @@ export default function SetupWizardPage() {
       })
 
       const result = await response.json()
-      
+
       if (response.ok && result.success) {
         setConnectionStatus('connected')
       } else {
@@ -205,7 +205,7 @@ export default function SetupWizardPage() {
       }
 
       const result = await response.json()
-      
+
       // Show syncing toast
       const syncToastId = Math.random().toString(36).substr(2, 9)
       showToast({
@@ -214,41 +214,21 @@ export default function SetupWizardPage() {
         message: 'Please wait while we fetch your workflows and executions',
         duration: 0 // Don't auto-dismiss
       })
-      
-      // Start initial sync in background
-      try {
-        const syncResponse = await fetch('/api/setup/initial-sync', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' }
-        })
-        
-        if (syncResponse.ok) {
-          // Show completion toast
-          showToast({
-            type: 'success',
-            title: 'Setup completed successfully!',
-            message: 'Your n8n data has been synced and is ready to view',
-            duration: 5000
-          })
-        } else {
-          // Show warning but don't fail setup
-          showToast({
-            type: 'error',
-            title: 'Setup completed with warnings',
-            message: 'Initial sync failed, but you can trigger it manually from the dashboard',
-            duration: 7000
-          })
-        }
-      } catch (syncError) {
-        console.warn('Initial sync failed:', syncError)
-        showToast({
-          type: 'error',
-          title: 'Setup completed with warnings',
-          message: 'Initial sync failed, but you can trigger it manually from the dashboard',
-          duration: 7000
-        })
-      }
-      
+
+      // Start initial sync in background (fire and forget)
+      fetch('/api/setup/initial-sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      }).catch(err => console.warn('Background sync error:', err))
+
+      // Show completion toast
+      showToast({
+        type: 'success',
+        title: 'Setup completed successfully!',
+        message: 'Your n8n data is syncing in the background',
+        duration: 5000
+      })
+
       // Small delay to show the toast, then redirect
       setTimeout(() => {
         router.push('/dashboard')
@@ -296,7 +276,7 @@ export default function SetupWizardPage() {
                   minLength={6}
                   className="pr-10"
                 />
-                <div 
+                <div
                   className="absolute right-3 top-1/2 -translate-y-1/2 cursor-pointer text-gray-400 hover:text-gray-600"
                   onClick={() => setShowPassword(!showPassword)}
                 >
@@ -317,7 +297,7 @@ export default function SetupWizardPage() {
                   minLength={6}
                   className="pr-10"
                 />
-                <div 
+                <div
                   className="absolute right-3 top-1/2 -translate-y-1/2 cursor-pointer text-gray-400 hover:text-gray-600"
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                 >
@@ -355,7 +335,7 @@ export default function SetupWizardPage() {
               />
               <p className="text-xs text-gray-500 mt-1">You can find your API key in n8n under Settings → API Keys</p>
             </div>
-            
+
             {/* Connection Test */}
             <div className="pt-4">
               <Button
@@ -381,18 +361,15 @@ export default function SetupWizardPage() {
 
             {/* Connection Status */}
             {connectionStatus !== 'unknown' && (
-              <div className={`p-4 rounded-md ${
-                connectionStatus === 'connected' 
-                  ? 'bg-green-50 border border-green-200' 
+              <div className={`p-4 rounded-md ${connectionStatus === 'connected'
+                  ? 'bg-green-50 border border-green-200'
                   : 'bg-red-50 border border-red-200'
-              }`}>
+                }`}>
                 <div className="flex items-center space-x-2">
-                  <div className={`w-3 h-3 rounded-full ${
-                    connectionStatus === 'connected' ? 'bg-green-500' : 'bg-red-500'
-                  }`} />
-                  <span className={`text-sm font-medium ${
-                    connectionStatus === 'connected' ? 'text-green-800' : 'text-red-800'
-                  }`}>
+                  <div className={`w-3 h-3 rounded-full ${connectionStatus === 'connected' ? 'bg-green-500' : 'bg-red-500'
+                    }`} />
+                  <span className={`text-sm font-medium ${connectionStatus === 'connected' ? 'text-green-800' : 'text-red-800'
+                    }`}>
                     {connectionStatus === 'connected' ? 'Connected Successfully' : 'Connection Failed'}
                   </span>
                 </div>
@@ -420,7 +397,7 @@ export default function SetupWizardPage() {
               </select>
               <p className="text-xs text-gray-500 mt-1">How often to sync data from n8n</p>
             </div>
-            
+
             <div>
               <div className="flex items-center space-x-3">
                 <input
@@ -449,7 +426,7 @@ export default function SetupWizardPage() {
                 <strong>Note:</strong> Email notifications are not yet implemented. These settings are placeholders for future functionality.
               </p>
             </div>
-            
+
             <div>
               <div className="flex items-center space-x-3">
                 <input
@@ -530,7 +507,7 @@ export default function SetupWizardPage() {
             {steps.map((step, stepIdx) => {
               const status = getStepStatus(stepIdx + 1)
               const StepIcon = step.icon
-              
+
               return (
                 <li key={step.name} className="relative md:flex md:flex-1">
                   {status === 'complete' ? (
@@ -591,7 +568,7 @@ export default function SetupWizardPage() {
           </CardHeader>
           <CardContent>
             {renderStepContent()}
-            
+
             {error && (
               <div className="mt-6 p-4 bg-red-50 border border-red-200 rounded-md">
                 <p className="text-sm text-red-800">{error}</p>
@@ -608,7 +585,7 @@ export default function SetupWizardPage() {
               >
                 Back
               </Button>
-              
+
               {currentStep === steps.length ? (
                 <Button
                   onClick={handleComplete}
