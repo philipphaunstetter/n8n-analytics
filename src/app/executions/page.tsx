@@ -6,6 +6,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { AppLayout } from '@/components/app-layout'
 import { WithN8NConnection } from '@/components/with-n8n-connection'
 import { apiClient } from '@/lib/api-client'
+import { useDebounce } from '@/hooks/use-debounce'
 import {
   ExecutionStatus,
   TimeRange,
@@ -80,6 +81,7 @@ function ExecutionsContent() {
   const [syncing, setSyncing] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
+  const debouncedSearchTerm = useDebounce(searchTerm, 500)
   const [statusFilter, setStatusFilter] = useState<ExecutionStatus | 'all'>('all')
   const [providerFilter, setProviderFilter] = useState<string>('all')
   const [timeRange, setTimeRange] = useState<TimeRange>('24h')
@@ -93,7 +95,7 @@ function ExecutionsContent() {
 
   useEffect(() => {
     fetchExecutions()
-  }, [statusFilter, timeRange, providerFilter])
+  }, [statusFilter, timeRange, providerFilter, debouncedSearchTerm])
 
   const fetchProviders = async () => {
     try {
@@ -101,29 +103,6 @@ function ExecutionsContent() {
       setProviders(response.data)
     } catch (error) {
       console.error('Failed to fetch providers:', error)
-    }
-  }
-
-  const fetchExecutions = async () => {
-    try {
-      setLoading(true)
-      const params = new URLSearchParams()
-      if (statusFilter !== 'all') {
-        params.append('status', statusFilter)
-      }
-      if (providerFilter !== 'all') {
-        params.append('providerId', providerFilter)
-      }
-      params.append('timeRange', timeRange)
-
-      const response = await apiClient.get<{ data: { items: Execution[] } }>(`/executions?${params}`)
-      setExecutions(response.data.items)
-      setError(null)
-    } catch (err) {
-      console.error('Failed to fetch executions:', err)
-      setError('Failed to load executions')
-    } finally {
-      setLoading(false)
     }
   }
 
@@ -155,20 +134,33 @@ function ExecutionsContent() {
     }
   }
 
-  const filteredExecutions = executions.filter(execution => {
-    if (!searchTerm) return true
-    const searchLower = searchTerm.toLowerCase()
-    // Try to get workflow name from metadata (n8n data) or demo workflows
-    const workflowName = execution.metadata?.workflowName ||
-      DEMO_WORKFLOWS.find(w => w.id === execution.workflowId)?.name ||
-      ''
-    return (
-      execution.id.toLowerCase().includes(searchLower) ||
-      execution.workflowId.toLowerCase().includes(searchLower) ||
-      (typeof workflowName === 'string' && workflowName.toLowerCase().includes(searchLower)) ||
-      execution.error?.message?.toLowerCase().includes(searchLower)
-    )
-  })
+  const fetchExecutions = async () => {
+    try {
+      setLoading(true)
+      const params = new URLSearchParams()
+      if (statusFilter !== 'all') {
+        params.append('status', statusFilter)
+      }
+      if (providerFilter !== 'all') {
+        params.append('providerId', providerFilter)
+      }
+      if (debouncedSearchTerm) {
+        params.append('search', debouncedSearchTerm)
+      }
+      params.append('timeRange', timeRange)
+
+      const response = await apiClient.get<{ data: { items: Execution[] } }>(`/executions?${params}`)
+      setExecutions(response.data.items)
+      setError(null)
+    } catch (err) {
+      console.error('Failed to fetch executions:', err)
+      setError('Failed to load executions')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const filteredExecutions = executions
 
   const groupedExecutions = (() => {
     const groups: ExecutionItem[] = []
