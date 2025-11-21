@@ -160,6 +160,12 @@ export async function GET(request: NextRequest) {
         params.push(searchTerm, searchTerm, searchTerm)
       }
 
+      // Add cursor filter for pagination
+      if (cursor) {
+        sql += ' AND e.started_at < ?'
+        params.push(cursor)
+      }
+
       // Order by most recent first and add limit
       sql += ' ORDER BY e.started_at DESC LIMIT ?'
       params.push(limit)
@@ -231,16 +237,22 @@ export async function GET(request: NextRequest) {
       console.error('Failed to fetch executions from database:', error)
       // If schema isn't initialized yet, return an empty result set gracefully
       if (isMissingTableError(error)) {
+        // Calculate next cursor
+        if (allExecutions.length === limit) {
+          const lastExecution = allExecutions[allExecutions.length - 1]
+          nextCursor = lastExecution.startedAt.toISOString()
+        }
+
         return NextResponse.json({
           success: true,
           data: {
-            items: [],
-            total: 0,
+            items: allExecutions,
+            total: totalCount, // Note: This is 0 currently as we didn't count
             limit: limit,
             cursor: cursor,
-            nextCursor: null,
-            hasNextPage: false,
-            hasPreviousPage: false
+            nextCursor: nextCursor,
+            hasNextPage: !!nextCursor,
+            hasPreviousPage: !!cursor
           },
           warning: 'Database schema not initialized yet. Run initial sync to populate data.'
         })

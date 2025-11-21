@@ -87,6 +87,8 @@ function ExecutionsContent() {
   const [timeRange, setTimeRange] = useState<TimeRange>('24h')
   const [n8nUrl, setN8nUrl] = useState<string>('')
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set())
+  const [nextCursor, setNextCursor] = useState<string | null>(null)
+  const [loadingMore, setLoadingMore] = useState(false)
   const router = useRouter()
 
   useEffect(() => {
@@ -94,6 +96,8 @@ function ExecutionsContent() {
   }, [])
 
   useEffect(() => {
+    // Reset cursor when filters change
+    setNextCursor(null)
     fetchExecutions()
   }, [statusFilter, timeRange, providerFilter, debouncedSearchTerm])
 
@@ -134,9 +138,14 @@ function ExecutionsContent() {
     }
   }
 
-  const fetchExecutions = async () => {
+  const fetchExecutions = async (cursor?: string) => {
     try {
-      setLoading(true)
+      if (cursor) {
+        setLoadingMore(true)
+      } else {
+        setLoading(true)
+      }
+
       const params = new URLSearchParams()
       if (statusFilter !== 'all') {
         params.append('status', statusFilter)
@@ -149,14 +158,26 @@ function ExecutionsContent() {
       }
       params.append('timeRange', timeRange)
 
-      const response = await apiClient.get<{ data: { items: Execution[] } }>(`/executions?${params}`)
-      setExecutions(response.data.items)
+      if (cursor) {
+        params.append('cursor', cursor)
+      }
+
+      const response = await apiClient.get<{ data: { items: Execution[], nextCursor?: string } }>(`/executions?${params}`)
+
+      if (cursor) {
+        setExecutions(prev => [...prev, ...response.data.items])
+      } else {
+        setExecutions(response.data.items)
+      }
+
+      setNextCursor(response.data.nextCursor || null)
       setError(null)
     } catch (err) {
       console.error('Failed to fetch executions:', err)
       setError('Failed to load executions')
     } finally {
       setLoading(false)
+      setLoadingMore(false)
     }
   }
 
@@ -283,7 +304,7 @@ function ExecutionsContent() {
         <ExclamationTriangleIcon className="mx-auto h-12 w-12 text-red-400" />
         <h3 className="mt-2 text-sm font-semibold text-gray-900 dark:text-white">Error loading executions</h3>
         <p className="mt-1 text-sm text-gray-500 dark:text-slate-400">{error}</p>
-        <Button onClick={fetchExecutions} className="mt-4">
+        <Button onClick={() => fetchExecutions()} className="mt-4">
           Try again
         </Button>
       </div>
@@ -320,7 +341,7 @@ function ExecutionsContent() {
             <ArrowPathIcon className={`h-4 w-4 ${syncing ? 'animate-spin' : ''}`} />
             <span>Full Sync</span>
           </Button>
-          <Button onClick={fetchExecutions} disabled={loading}>
+          <Button onClick={() => fetchExecutions()} disabled={loading}>
             {loading ? 'Loading...' : 'Refresh'}
           </Button>
         </div>
