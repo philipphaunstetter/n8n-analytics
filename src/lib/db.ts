@@ -60,9 +60,11 @@ function ensureSchema(database: Database) {
         cron_schedules TEXT DEFAULT '[]',
         created_at TEXT DEFAULT CURRENT_TIMESTAMP,
         updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (provider_id) REFERENCES providers (id) ON DELETE CASCADE
+        FOREIGN KEY (provider_id) REFERENCES providers (id) ON DELETE CASCADE,
+        UNIQUE(provider_id, provider_workflow_id)
       )
     `)
+
 
     database.run(`
       CREATE TABLE IF NOT EXISTS executions (
