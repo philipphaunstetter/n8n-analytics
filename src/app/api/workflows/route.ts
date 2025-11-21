@@ -8,10 +8,10 @@ import { getDb, isMissingTableError } from '@/lib/db'
 export async function GET(request: NextRequest) {
   try {
     console.log('📋 GET /api/workflows - Fetching workflows from database')
-    
+
     // Authenticate the request
     const { user, error: authError } = await authenticateRequest(request)
-    
+
     if (authError || !user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
@@ -22,31 +22,49 @@ export async function GET(request: NextRequest) {
     const isArchivedFilter = searchParams.get('isArchived')
     const providerIdFilter = searchParams.get('providerId')
 
+    // Pagination parameters
+    let page = parseInt(searchParams.get('page') || '1')
+    if (page < 1) page = 1
+    const limit = parseInt(searchParams.get('limit') || '20')
+    const offset = (page - 1) * limit
+
     const db = getDb()
-    
+
     try {
       // Build SQL query with filters
       let whereConditions: string[] = []
       let queryParams: any[] = []
-      
+
       if (providerIdFilter) {
         whereConditions.push('w.provider_id = ?')
         queryParams.push(providerIdFilter)
       }
-      
+
       if (isActiveFilter !== null) {
         const isActiveValue = isActiveFilter.toLowerCase() === 'true'
         whereConditions.push('is_active = ?')
         queryParams.push(isActiveValue ? 1 : 0)
       }
-      
+
       // Note: Archived filtering is applied after mapping to avoid conflicts with isActive.
       // We compute "archived" as inactive and not updated in 90 days.
-      
-      const whereClause = whereConditions.length > 0 
+
+      const whereClause = whereConditions.length > 0
         ? `WHERE ${whereConditions.join(' AND ')}`
         : ''
-      
+
+      // Get total count first
+      const totalCount: number = await new Promise((resolve, reject) => {
+        db.get(`
+          SELECT COUNT(*) as total
+          FROM workflows w
+          ${whereClause}
+        `, queryParams, (err, row: any) => {
+          if (err) reject(err)
+          else resolve(row?.total || 0)
+        })
+      })
+
       // Fetch workflows from database with execution stats
       const workflows: any[] = await new Promise((resolve, reject) => {
         db.all(`
@@ -69,32 +87,33 @@ export async function GET(request: NextRequest) {
           ${whereClause}
           GROUP BY w.id
           ORDER BY w.updated_at DESC
-        `, queryParams, (err, rows) => {
+          LIMIT ? OFFSET ?
+        `, [...queryParams, limit, offset], (err, rows) => {
           if (err) reject(err)
           else resolve(rows || [])
         })
       })
-      
+
       console.log(`✅ Found ${workflows.length} workflows from database`)
-      
+
       // Convert to API format
       let apiWorkflows: Workflow[] = workflows.map(dbWorkflow => {
         let workflowData: any = {}
         let tags: any[] = []
-        try { workflowData = dbWorkflow.workflow_data ? JSON.parse(dbWorkflow.workflow_data) : {} } catch {}
-        try { tags = dbWorkflow.tags ? JSON.parse(dbWorkflow.tags) : [] } catch {}
+        try { workflowData = dbWorkflow.workflow_data ? JSON.parse(dbWorkflow.workflow_data) : {} } catch { }
+        try { tags = dbWorkflow.tags ? JSON.parse(dbWorkflow.tags) : [] } catch { }
         // Normalize tags to string[] (n8n returns array of tag objects with id/name/createdAt/updatedAt)
         const tagNames: string[] = Array.isArray(tags)
           ? tags.map((t: any) => (typeof t === 'string' ? t : (t?.name ?? ''))).filter(Boolean)
           : []
-        
-        const successRate = dbWorkflow.total_executions > 0 
+
+        const successRate = dbWorkflow.total_executions > 0
           ? (dbWorkflow.success_count / dbWorkflow.total_executions) * 100
           : 0
-        
+
         // Use database is_archived field (populated from n8n sync)
         const isArchived = Boolean(dbWorkflow.is_archived)
-        
+
         return {
           id: dbWorkflow.provider_workflow_id, // Use n8n workflow ID as the main ID
           providerId: dbWorkflow.provider_id || 'n8n-main',
@@ -120,7 +139,7 @@ export async function GET(request: NextRequest) {
           }
         }
       })
-      
+
       // Apply archived filter post-mapping to avoid SQL conflicts with isActive
       if (isArchivedFilter !== null) {
         const isArchivedValue = isArchivedFilter.toLowerCase() === 'true'
@@ -138,11 +157,10 @@ export async function GET(request: NextRequest) {
         success: true,
         data: {
           items: apiWorkflows,
-          total: apiWorkflows.length,
-          page: 1,
-          limit: apiWorkflows.length,
-          hasNextPage: false,
-          hasPreviousPage: false
+          total: totalCount,
+          page,
+          limit,
+          totalPages: Math.ceil(totalCount / limit)
         }
       })
     } catch (dbError) {
@@ -155,9 +173,8 @@ export async function GET(request: NextRequest) {
             items: [],
             total: 0,
             page: 1,
-            limit: 0,
-            hasNextPage: false,
-            hasPreviousPage: false
+            limit: 20,
+            totalPages: 0
           },
           warning: 'Database schema not initialized yet. Run initial sync to populate data.'
         })

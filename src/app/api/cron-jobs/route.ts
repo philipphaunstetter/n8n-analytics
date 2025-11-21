@@ -25,6 +25,12 @@ export async function GET(request: NextRequest) {
     const providerId = searchParams.get('providerId')
     const statusFilter = searchParams.get('status') // 'all', 'active', 'inactive', 'archived'
 
+    // Pagination parameters
+    let page = parseInt(searchParams.get('page') || '1')
+    if (page < 1) page = 1
+    const limit = parseInt(searchParams.get('limit') || '20')
+    const offset = (page - 1) * limit
+
     const db = getDb()
 
     // Build query with filters
@@ -60,10 +66,19 @@ export async function GET(request: NextRequest) {
       params.push(providerId)
     }
 
-    query += ` ORDER BY w.name ASC`
+    // Get total count first
+    const countQuery = query.replace(/SELECT[\s\S]*?FROM/, 'SELECT COUNT(*) as total FROM')
+    const totalCount: number = await new Promise((resolve, reject) => {
+      db.get(countQuery, params, (err, row: any) => {
+        if (err) reject(err)
+        else resolve(row?.total || 0)
+      })
+    })
+
+    query += ` ORDER BY w.name ASC LIMIT ? OFFSET ?`
 
     const workflows = await new Promise<any[]>((resolve, reject) => {
-      db.all(query, params, (err, rows) => {
+      db.all(query, [...params, limit, offset], (err, rows) => {
         if (err) {
           reject(err)
         } else {
@@ -87,8 +102,13 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      data: cronJobs,
-      count: cronJobs.length
+      data: {
+        items: cronJobs,
+        total: totalCount,
+        page,
+        limit,
+        totalPages: Math.ceil(totalCount / limit)
+      }
     })
   } catch (error) {
     console.error('Failed to fetch cron jobs:', error)

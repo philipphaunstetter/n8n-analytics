@@ -22,6 +22,7 @@ import { Button } from '@/components/button'
 import { Input } from '@/components/input'
 import { Select } from '@/components/select'
 import { showToast } from '@/components/toast'
+import { TablePagination } from '@/components/TablePagination'
 
 interface Workflow {
   id: string
@@ -58,6 +59,10 @@ function WorkflowsContent() {
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive' | 'archived'>('all')
   const [providerFilter, setProviderFilter] = useState<string>('all')
+  const [currentPage, setCurrentPage] = useState(1)
+  const [totalCount, setTotalCount] = useState(0)
+  const [totalPages, setTotalPages] = useState(0)
+  const itemsPerPage = 20
   const router = useRouter()
 
   useEffect(() => {
@@ -73,10 +78,13 @@ function WorkflowsContent() {
     }
   }
 
-  const fetchWorkflows = useCallback(async () => {
+  const fetchWorkflows = useCallback(async (page = 1) => {
     try {
       setLoading(true)
       const params = new URLSearchParams()
+      params.append('page', page.toString())
+      params.append('limit', itemsPerPage.toString())
+
       if (statusFilter !== 'all') {
         if (statusFilter === 'active') {
           params.append('isActive', 'true')
@@ -90,9 +98,12 @@ function WorkflowsContent() {
       if (providerFilter !== 'all') {
         params.append('providerId', providerFilter)
       }
-      
-      const response = await apiClient.get<{ data: { items: Workflow[] } }>(`/workflows?${params}`)
+
+      const response = await apiClient.get<{ data: { items: Workflow[], total: number, page: number, totalPages: number } }>(`/workflows?${params}`)
       setWorkflows(response.data.items)
+      setTotalCount(response.data.total)
+      setTotalPages(response.data.totalPages)
+      setCurrentPage(page)
       setError(null)
     } catch (err) {
       console.error('Failed to fetch workflows:', err)
@@ -100,11 +111,16 @@ function WorkflowsContent() {
     } finally {
       setLoading(false)
     }
+  }, [statusFilter, providerFilter, itemsPerPage])
+
+  useEffect(() => {
+    setCurrentPage(1)
+    fetchWorkflows(1)
   }, [statusFilter, providerFilter])
 
   useEffect(() => {
-    fetchWorkflows()
-  }, [fetchWorkflows])
+    fetchWorkflows(currentPage)
+  }, [currentPage])
 
   const syncWorkflows = async () => {
     try {
@@ -113,7 +129,7 @@ function WorkflowsContent() {
       // After successful sync, refresh the data
       await fetchWorkflows()
       setError(null)
-      
+
       showToast({
         type: 'success',
         title: 'Workflows synced successfully',
@@ -123,7 +139,7 @@ function WorkflowsContent() {
       console.error('Failed to sync workflows:', err)
       const errorMessage = 'Failed to sync workflows. Please try again.'
       setError(errorMessage)
-      
+
       showToast({
         type: 'error',
         title: 'Sync failed',
@@ -139,7 +155,7 @@ function WorkflowsContent() {
       setBacking(true)
       await apiClient.post('/sync/backup')
       setError(null)
-      
+
       showToast({
         type: 'success',
         title: 'Workflows backed up successfully',
@@ -149,7 +165,7 @@ function WorkflowsContent() {
       console.error('Failed to backup workflows:', err)
       const errorMessage = 'Failed to backup workflows. Please try again.'
       setError(errorMessage)
-      
+
       showToast({
         type: 'error',
         title: 'Backup failed',
@@ -192,7 +208,7 @@ function WorkflowsContent() {
         <ExclamationTriangleIcon className="mx-auto h-12 w-12 text-red-400" />
         <h3 className="mt-2 text-sm font-semibold text-gray-900 dark:text-white">Error loading workflows</h3>
         <p className="mt-1 text-sm text-gray-500 dark:text-slate-400">{error}</p>
-        <Button onClick={fetchWorkflows} className="mt-4">
+        <Button onClick={() => fetchWorkflows(currentPage)} className="mt-4">
           Try again
         </Button>
       </div>
@@ -210,25 +226,25 @@ function WorkflowsContent() {
           </p>
         </div>
         <div className="flex space-x-3">
-          <Button 
+          <Button
             outline
-            onClick={backupWorkflows} 
+            onClick={backupWorkflows}
             disabled={backing || loading}
             className="flex items-center space-x-2"
           >
             <ArchiveBoxIcon className={`h-4 w-4 ${backing ? 'animate-pulse' : ''}`} />
             <span>{backing ? 'Backing up...' : 'Backup now'}</span>
           </Button>
-          <Button 
+          <Button
             outline
-            onClick={syncWorkflows} 
+            onClick={syncWorkflows}
             disabled={syncing || loading}
             className="flex items-center space-x-2"
           >
             <ArrowPathIcon className={`h-4 w-4 ${syncing ? 'animate-spin' : ''}`} />
             <span>{syncing ? 'Syncing...' : 'Sync'}</span>
           </Button>
-          <Button onClick={fetchWorkflows} disabled={loading}>
+          <Button onClick={() => fetchWorkflows(currentPage)} disabled={loading}>
             {loading ? 'Loading...' : 'Refresh'}
           </Button>
         </div>
@@ -240,8 +256,8 @@ function WorkflowsContent() {
           <label htmlFor="provider" className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
             n8n Instance
           </label>
-          <Select 
-            value={providerFilter} 
+          <Select
+            value={providerFilter}
             onChange={(e) => setProviderFilter(e.target.value)}
           >
             <option value="all">All instances</option>
@@ -274,8 +290,8 @@ function WorkflowsContent() {
           <label htmlFor="status" className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
             Status
           </label>
-          <Select 
-            value={statusFilter} 
+          <Select
+            value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value as 'all' | 'active' | 'inactive' | 'archived')}
           >
             <option value="all">All workflows</option>
@@ -339,7 +355,7 @@ function WorkflowsContent() {
             ) : filteredWorkflows.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={8} className="text-center py-8 text-gray-500">
-                  {workflows.length === 0 
+                  {workflows.length === 0
                     ? 'No workflows found'
                     : 'No workflows match your search criteria'
                   }
@@ -349,14 +365,14 @@ function WorkflowsContent() {
               filteredWorkflows.map((workflow) => {
                 const provider = providers.find(p => p.id === workflow.providerId)
                 return (
-                  <TableRow 
+                  <TableRow
                     key={workflow.id}
                     className="hover:bg-gray-50 dark:hover:bg-slate-800 cursor-pointer"
                     onClick={() => router.push(`/workflows/${workflow.id}`)}
                   >
                     <TableCell>
-                      <Badge 
-                        color={workflow.isActive ? 'green' : (workflow.isArchived ?? false) ? 'orange' : 'zinc'} 
+                      <Badge
+                        color={workflow.isActive ? 'green' : (workflow.isArchived ?? false) ? 'orange' : 'zinc'}
                         className="flex items-center space-x-1"
                       >
                         {workflow.isActive ? (
@@ -381,69 +397,80 @@ function WorkflowsContent() {
                       )}
                     </TableCell>
                     <TableCell>
-                    <div className="flex flex-col">
-                      <span 
-                        className="font-medium text-gray-900 dark:text-white truncate max-w-xs" 
-                        title={workflow.name}
-                      >
-                        {workflow.name}
-                      </span>
-                      <span className="text-xs text-gray-500 font-mono truncate max-w-xs" title={workflow.id}>
-                        {workflow.id}
-                      </span>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex flex-wrap gap-1">
-                      {workflow.tags.length > 0 ? (
-                        workflow.tags.slice(0, 3).map((tag, index) => (
-                          <Badge key={index} color="zinc" className="text-xs">
-                            {tag}
+                      <div className="flex flex-col">
+                        <span
+                          className="font-medium text-gray-900 dark:text-white truncate max-w-xs"
+                          title={workflow.name}
+                        >
+                          {workflow.name}
+                        </span>
+                        <span className="text-xs text-gray-500 font-mono truncate max-w-xs" title={workflow.id}>
+                          {workflow.id}
+                        </span>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex flex-wrap gap-1">
+                        {workflow.tags.length > 0 ? (
+                          workflow.tags.slice(0, 3).map((tag, index) => (
+                            <Badge key={index} color="zinc" className="text-xs">
+                              {tag}
+                            </Badge>
+                          ))
+                        ) : (
+                          <span className="text-gray-400 text-sm">No tags</span>
+                        )}
+                        {workflow.tags.length > 3 && (
+                          <Badge color="zinc" className="text-xs">
+                            +{workflow.tags.length - 3}
                           </Badge>
-                        ))
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      {workflow.lastExecutedAt ? (
+                        <span className="text-sm">
+                          {formatDate(workflow.lastExecutedAt)}
+                        </span>
                       ) : (
-                        <span className="text-gray-400 text-sm">No tags</span>
+                        <span className="text-gray-400">Never</span>
                       )}
-                      {workflow.tags.length > 3 && (
-                        <Badge color="zinc" className="text-xs">
-                          +{workflow.tags.length - 3}
-                        </Badge>
-                      )}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    {workflow.lastExecutedAt ? (
-                      <span className="text-sm">
-                        {formatDate(workflow.lastExecutedAt)}
-                      </span>
-                    ) : (
-                      <span className="text-gray-400">Never</span>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    <span className="font-medium">{workflow.totalExecutions}</span>
-                  </TableCell>
-                  <TableCell>
-                    {formatDate(workflow.updatedAt)}
-                  </TableCell>
-                  <TableCell>
-                    <Button 
-                      outline 
-                      className="text-sm px-3 py-1"
-                      onClick={(e: React.MouseEvent) => {
-                        e.stopPropagation()
-                        router.push(`/workflows/${workflow.id}`)
-                      }}
-                    >
-                      View
-                    </Button>
-                  </TableCell>
-                </TableRow>
+                    </TableCell>
+                    <TableCell>
+                      <span className="font-medium">{workflow.totalExecutions}</span>
+                    </TableCell>
+                    <TableCell>
+                      {formatDate(workflow.updatedAt)}
+                    </TableCell>
+                    <TableCell>
+                      <Button
+                        outline
+                        className="text-sm px-3 py-1"
+                        onClick={(e: React.MouseEvent) => {
+                          e.stopPropagation()
+                          router.push(`/workflows/${workflow.id}`)
+                        }}
+                      >
+                        View
+                      </Button>
+                    </TableCell>
+                  </TableRow>
                 )
               })
             )}
           </TableBody>
         </Table>
+
+        {/* Pagination */}
+        {totalCount > 0 && (
+          <TablePagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalCount={totalCount}
+            itemsPerPage={itemsPerPage}
+            onPageChange={(page) => setCurrentPage(page)}
+          />
+        )}
       </div>
     </div>
   )

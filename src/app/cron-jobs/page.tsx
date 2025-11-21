@@ -20,6 +20,7 @@ import { Button } from '@/components/button'
 import { Select } from '@/components/select'
 import { showToast } from '@/components/toast'
 import cronstrue from 'cronstrue'
+import { TablePagination } from '@/components/TablePagination'
 
 interface CronJob {
   id: string
@@ -45,6 +46,10 @@ function CronJobsContent() {
   const [error, setError] = useState<string | null>(null)
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive' | 'archived'>('active')
   const [providerFilter, setProviderFilter] = useState<string>('all')
+  const [currentPage, setCurrentPage] = useState(1)
+  const [totalCount, setTotalCount] = useState(0)
+  const [totalPages, setTotalPages] = useState(0)
+  const itemsPerPage = 20
   const router = useRouter()
 
   useEffect(() => {
@@ -60,19 +65,25 @@ function CronJobsContent() {
     }
   }
 
-  const fetchCronJobs = useCallback(async () => {
+  const fetchCronJobs = useCallback(async (page = 1) => {
     try {
       setLoading(true)
       const params = new URLSearchParams()
+      params.append('page', page.toString())
+      params.append('limit', itemsPerPage.toString())
+
       if (statusFilter !== 'all') {
         params.append('status', statusFilter)
       }
       if (providerFilter !== 'all') {
         params.append('providerId', providerFilter)
       }
-      
-      const response = await apiClient.get<{ data: CronJob[]; count: number }>(`/cron-jobs?${params}`)
-      setCronJobs(response.data)
+
+      const response = await apiClient.get<{ data: { items: CronJob[], total: number, page: number, totalPages: number } }>(`/cron-jobs?${params}`)
+      setCronJobs(response.data.items)
+      setTotalCount(response.data.total)
+      setTotalPages(response.data.totalPages)
+      setCurrentPage(page)
       setError(null)
     } catch (err) {
       console.error('Failed to fetch cron jobs:', err)
@@ -80,11 +91,16 @@ function CronJobsContent() {
     } finally {
       setLoading(false)
     }
+  }, [statusFilter, providerFilter, itemsPerPage])
+
+  useEffect(() => {
+    setCurrentPage(1)
+    fetchCronJobs(1)
   }, [statusFilter, providerFilter])
 
   useEffect(() => {
-    fetchCronJobs()
-  }, [fetchCronJobs])
+    fetchCronJobs(currentPage)
+  }, [currentPage])
 
   const syncWorkflows = async () => {
     try {
@@ -92,7 +108,7 @@ function CronJobsContent() {
       await apiClient.post('/sync/workflows')
       await fetchCronJobs()
       setError(null)
-      
+
       showToast({
         type: 'success',
         title: 'Workflows synced successfully',
@@ -102,7 +118,7 @@ function CronJobsContent() {
       console.error('Failed to sync workflows:', err)
       const errorMessage = 'Failed to sync workflows. Please try again.'
       setError(errorMessage)
-      
+
       showToast({
         type: 'error',
         title: 'Sync failed',
@@ -134,7 +150,7 @@ function CronJobsContent() {
     if (expression.toLowerCase().startsWith('every')) {
       return expression
     }
-    
+
     // Try to parse as cron expression
     try {
       return cronstrue.toString(expression, { verbose: true })
@@ -150,7 +166,7 @@ function CronJobsContent() {
         <ExclamationTriangleIcon className="mx-auto h-12 w-12 text-red-400" />
         <h3 className="mt-2 text-sm font-semibold text-gray-900 dark:text-white dark:text-white">Error loading cron jobs</h3>
         <p className="mt-1 text-sm text-gray-500 dark:text-slate-400">{error}</p>
-        <Button onClick={fetchCronJobs} className="mt-4">
+        <Button onClick={() => fetchCronJobs(currentPage)} className="mt-4">
           Try again
         </Button>
       </div>
@@ -168,16 +184,16 @@ function CronJobsContent() {
           </p>
         </div>
         <div className="flex space-x-3">
-          <Button 
+          <Button
             outline
-            onClick={syncWorkflows} 
+            onClick={syncWorkflows}
             disabled={syncing || loading}
             className="flex items-center space-x-2"
           >
             <ArrowPathIcon className={`h-4 w-4 ${syncing ? 'animate-spin' : ''}`} />
             <span>{syncing ? 'Syncing...' : 'Sync'}</span>
           </Button>
-          <Button onClick={fetchCronJobs} disabled={loading}>
+          <Button onClick={() => fetchCronJobs(currentPage)} disabled={loading}>
             {loading ? 'Loading...' : 'Refresh'}
           </Button>
         </div>
@@ -189,8 +205,8 @@ function CronJobsContent() {
           <label htmlFor="provider" className="block text-sm font-medium text-gray-700 dark:text-slate-300 dark:text-slate-300 mb-1">
             n8n Instance
           </label>
-          <Select 
-            value={providerFilter} 
+          <Select
+            value={providerFilter}
             onChange={(e) => setProviderFilter(e.target.value)}
           >
             <option value="all">All instances</option>
@@ -206,8 +222,8 @@ function CronJobsContent() {
           <label htmlFor="status" className="block text-sm font-medium text-gray-700 dark:text-slate-300 dark:text-slate-300 mb-1">
             Workflow Status
           </label>
-          <Select 
-            value={statusFilter} 
+          <Select
+            value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value as 'all' | 'active' | 'inactive' | 'archived')}
           >
             <option value="all">All workflows</option>
@@ -267,14 +283,14 @@ function CronJobsContent() {
               cronJobs.map((job) => {
                 const provider = providers.find(p => p.id === job.providerId)
                 return (
-                  <TableRow 
+                  <TableRow
                     key={job.id}
                     className="hover:bg-gray-50 dark:hover:bg-slate-800 cursor-pointer"
                     onClick={() => router.push(`/workflows/${job.workflowId}`)}
                   >
                     <TableCell>
-                      <Badge 
-                        color={job.isActive ? 'green' : job.isArchived ? 'orange' : 'zinc'} 
+                      <Badge
+                        color={job.isActive ? 'green' : job.isArchived ? 'orange' : 'zinc'}
                         className="flex items-center space-x-1"
                       >
                         {job.isActive ? (
@@ -300,8 +316,8 @@ function CronJobsContent() {
                     </TableCell>
                     <TableCell>
                       <div className="flex flex-col">
-                        <span 
-                          className="font-medium text-gray-900 dark:text-white truncate max-w-xs" 
+                        <span
+                          className="font-medium text-gray-900 dark:text-white truncate max-w-xs"
                           title={job.workflowName}
                         >
                           {job.workflowName}
@@ -326,6 +342,17 @@ function CronJobsContent() {
             )}
           </TableBody>
         </Table>
+
+        {/* Pagination */}
+        {totalCount > 0 && (
+          <TablePagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalCount={totalCount}
+            itemsPerPage={itemsPerPage}
+            onPageChange={(page) => setCurrentPage(page)}
+          />
+        )}
       </div>
     </div>
   )
