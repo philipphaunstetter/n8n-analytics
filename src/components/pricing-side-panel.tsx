@@ -1,7 +1,7 @@
 'use client'
 
-import { XMarkIcon } from '@heroicons/react/24/outline'
 import { AI_PRICING } from '@/lib/ai-pricing'
+import { Drawer } from '@/components/drawer'
 
 interface PricingSidePanelProps {
     isOpen: boolean
@@ -10,30 +10,13 @@ interface PricingSidePanelProps {
 
 export function PricingSidePanel({ isOpen, onClose }: PricingSidePanelProps) {
     return (
-        <div className="h-full w-[44rem] flex flex-col overflow-y-scroll bg-white dark:bg-slate-900 shadow-xl border-l border-gray-200 dark:border-slate-800">
-            <div className="px-4 py-6 sm:px-6">
-                <div className="flex items-start justify-between">
-                    <h2 className="text-base font-semibold leading-6 text-gray-900 dark:text-white">
-                        AI Cost Calculation
-                    </h2>
-                    <div className="ml-3 flex h-7 items-center">
-                        <button
-                            type="button"
-                            className="relative rounded-md bg-white dark:bg-slate-900 text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
-                            onClick={onClose}
-                        >
-                            <span className="absolute -inset-2.5" />
-                            <span className="sr-only">Close panel</span>
-                            <XMarkIcon className="h-6 w-6" aria-hidden="true" />
-                        </button>
-                    </div>
-                </div>
-                <p className="mt-1 text-sm text-gray-500 dark:text-slate-400">
-                    Costs are estimated based on token usage and standard pricing per 1K tokens.
-                </p>
-            </div>
-
-            <div className="relative flex-1 px-4 py-6 sm:px-6 border-t border-gray-200 dark:border-slate-800">
+        <Drawer
+            isOpen={isOpen}
+            onClose={onClose}
+            title="AI Cost Calculation"
+            description="Costs are estimated based on token usage and standard pricing per 1K tokens."
+        >
+            <div className="border-t border-gray-200 dark:border-slate-800 pt-6">
                 <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-4">
                     Current Pricing Models (per 1K tokens)
                 </h4>
@@ -78,6 +61,6 @@ export function PricingSidePanel({ isOpen, onClose }: PricingSidePanelProps) {
                     </p>
                 </div>
             </div>
-        </div>
+        </Drawer>
     )
 }
