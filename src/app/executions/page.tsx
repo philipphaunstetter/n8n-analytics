@@ -443,7 +443,7 @@ function ExecutionsContent() {
 
   return (
     <div className="relative">
-      <div className="flex flex-row flex-nowrap items-start relative min-h-full">
+      <div className="relative min-h-full">
         <div className="flex-1 min-w-0 space-y-6 transition-all duration-300 ease-in-out">
           {/* Page Header */}
           <div className="flex items-center justify-between">
@@ -906,46 +906,41 @@ function ExecutionsContent() {
           </div>
         </div>
 
-        <div className={`sticky top-0 h-screen transition-all duration-300 ease-in-out overflow-hidden ${showPricing ? 'w-[44rem]' : 'w-0'}`}>
-          <div className="w-[44rem] h-full">
-            <PricingSidePanel
-              isOpen={showPricing}
-              onClose={() => setShowPricing(false)}
-            />
-          </div>
-        </div>
+        <PricingSidePanel
+          isOpen={showPricing}
+          onClose={() => setShowPricing(false)}
+        />
       </div>
-    </div>
-  )
+      )
 }
 
-export default function ExecutionsPage() {
-  const { user, loading } = useAuth()
-  const router = useRouter()
+      export default function ExecutionsPage() {
+  const {user, loading} = useAuth()
+      const router = useRouter()
 
   useEffect(() => {
     if (!loading && !user) {
-      router.push('/auth/signin')
-    }
+        router.push('/auth/signin')
+      }
   }, [user, loading, router])
 
-  if (loading) {
+      if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-indigo-600"></div>
       </div>
-    )
+      )
   }
 
-  if (!user) {
+      if (!user) {
     return null
   }
 
-  return (
-    <AppLayout>
-      <WithN8NConnection>
-        <ExecutionsContent />
-      </WithN8NConnection>
-    </AppLayout>
-  )
+      return (
+      <AppLayout>
+        <WithN8NConnection>
+          <ExecutionsContent />
+        </WithN8NConnection>
+      </AppLayout>
+      )
 }
