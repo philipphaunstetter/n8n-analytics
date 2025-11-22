@@ -48,7 +48,7 @@ export function InitialSyncModal() {
     }
 
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 backdrop-blur-sm">
+        <div className="fixed inset-0 bg-gray-100/80 dark:bg-slate-900/80 flex items-center justify-center z-50 backdrop-blur-md transition-all duration-300">
             <div className="bg-white dark:bg-slate-800 rounded-lg shadow-2xl p-8 max-w-md w-full mx-4">
                 <div className="text-center">
                     {/* Animated Icon */}
