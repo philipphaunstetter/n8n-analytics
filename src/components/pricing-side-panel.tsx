@@ -10,12 +10,12 @@ interface PricingSidePanelProps {
 
 export function PricingSidePanel({ isOpen, onClose }: PricingSidePanelProps) {
     return (
-        <div className="fixed inset-y-0 right-0 flex max-w-full pointer-events-none">
+        <div className="absolute inset-y-0 right-0 flex max-w-full pointer-events-none z-40">
             <div
                 className={`pointer-events-auto w-full max-w-2xl transform transition-transform duration-300 ease-in-out ${isOpen ? 'translate-x-0' : 'translate-x-full'
                     }`}
             >
-                <div className="h-full flex flex-col overflow-y-scroll bg-white dark:bg-slate-900 shadow-xl border-l border-gray-200 dark:border-slate-800 mt-6 mr-6 mb-6 sm:mt-10 sm:mr-10 sm:mb-10 rounded-l-lg">
+                <div className="h-full flex flex-col overflow-y-scroll bg-white dark:bg-slate-900 shadow-xl border-l border-gray-200 dark:border-slate-800">
                     <div className="px-4 py-6 sm:px-6">
                         <div className="flex items-start justify-between">
                             <h2 className="text-base font-semibold leading-6 text-gray-900 dark:text-white">
