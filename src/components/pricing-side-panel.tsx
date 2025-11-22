@@ -16,7 +16,7 @@ export function PricingSidePanel({ isOpen, onClose }: PricingSidePanelProps) {
             title="AI Cost Calculation"
             description="Costs are estimated based on token usage and standard pricing per 1K tokens."
         >
-            <div className="border-t border-gray-200 dark:border-slate-800 pt-6">
+            <div>
                 <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-4">
                     Current Pricing Models (per 1K tokens)
                 </h4>
