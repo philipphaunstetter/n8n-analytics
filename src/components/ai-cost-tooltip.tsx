@@ -1,9 +1,7 @@
 'use client'
 
-import { useState } from 'react'
 import { InformationCircleIcon } from '@heroicons/react/24/outline'
-import { AI_PRICING, getModelPricing } from '@/lib/ai-pricing'
-import { Drawer } from '@/components/drawer'
+import { getModelPricing } from '@/lib/ai-pricing'
 
 interface AICostTooltipProps {
     type: 'header' | 'cell'
@@ -11,79 +9,23 @@ interface AICostTooltipProps {
     inputTokens?: number
     outputTokens?: number
     cost?: number
+    onToggle?: () => void
 }
 
-export function AICostTooltip({ type, model, inputTokens, outputTokens, cost }: AICostTooltipProps) {
-    const [isDrawerOpen, setIsDrawerOpen] = useState(false)
-
+export function AICostTooltip({ type, model, inputTokens, outputTokens, cost, onToggle }: AICostTooltipProps) {
     if (type === 'header') {
         return (
-            <>
-                <div className="relative inline-block ml-1">
-                    <button
-                        onClick={() => setIsDrawerOpen(true)}
-                        className="focus:outline-none"
-                        title="Click to view pricing details"
-                    >
-                        <InformationCircleIcon
-                            className="h-4 w-4 text-gray-400 hover:text-gray-600 dark:text-slate-500 dark:hover:text-slate-300 cursor-pointer"
-                        />
-                    </button>
-                </div>
-
-                <Drawer
-                    isOpen={isDrawerOpen}
-                    onClose={() => setIsDrawerOpen(false)}
-                    title="AI Cost Calculation"
-                    description="Costs are estimated based on token usage and standard pricing per 1K tokens."
+            <div className="relative inline-block ml-1">
+                <button
+                    onClick={onToggle}
+                    className="focus:outline-none"
+                    title="Click to view pricing details"
                 >
-                    <div className="mt-4">
-                        <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-4">
-                            Current Pricing Models (per 1K tokens)
-                        </h4>
-                        <div className="overflow-hidden shadow ring-1 ring-black ring-opacity-5 rounded-lg">
-                            <table className="min-w-full divide-y divide-gray-300 dark:divide-slate-700">
-                                <thead className="bg-gray-50 dark:bg-slate-800">
-                                    <tr>
-                                        <th scope="col" className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 dark:text-white sm:pl-6">
-                                            Model
-                                        </th>
-                                        <th scope="col" className="px-3 py-3.5 text-right text-sm font-semibold text-gray-900 dark:text-white">
-                                            Input
-                                        </th>
-                                        <th scope="col" className="px-3 py-3.5 text-right text-sm font-semibold text-gray-900 dark:text-white">
-                                            Output
-                                        </th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-gray-200 dark:divide-slate-700 bg-white dark:bg-slate-900">
-                                    {Object.entries(AI_PRICING).map(([name, pricing]) => (
-                                        <tr key={name}>
-                                            <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 dark:text-white sm:pl-6">
-                                                {name}
-                                            </td>
-                                            <td className="whitespace-nowrap px-3 py-4 text-sm text-right text-gray-500 dark:text-slate-400">
-                                                ${pricing.input}
-                                            </td>
-                                            <td className="whitespace-nowrap px-3 py-4 text-sm text-right text-gray-500 dark:text-slate-400">
-                                                ${pricing.output}
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-
-                        <div className="mt-6 p-4 bg-gray-50 dark:bg-slate-800 rounded-md">
-                            <h5 className="text-sm font-medium text-gray-900 dark:text-white mb-2">How it works</h5>
-                            <p className="text-sm text-gray-600 dark:text-slate-400">
-                                We automatically detect the AI model used in your n8n workflows and apply the standard pricing for that model.
-                                If a model is not recognized, we use an average pricing estimate.
-                            </p>
-                        </div>
-                    </div>
-                </Drawer>
-            </>
+                    <InformationCircleIcon
+                        className="h-4 w-4 text-gray-400 hover:text-gray-600 dark:text-slate-500 dark:hover:text-slate-300 cursor-pointer"
+                    />
+                </button>
+            </div>
         )
     }
 
