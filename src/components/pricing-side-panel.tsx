@@ -11,7 +11,7 @@ interface PricingSidePanelProps {
 export function PricingSidePanel({ isOpen, onClose }: PricingSidePanelProps) {
     return (
         <div
-            className={`fixed inset-y-0 right-0 z-40 w-96 bg-white dark:bg-slate-900 shadow-xl transform transition-transform duration-300 ease-in-out border-l border-gray-200 dark:border-slate-800 ${isOpen ? 'translate-x-0' : 'translate-x-full'
+            className={`fixed top-6 right-6 bottom-6 sm:top-10 sm:right-10 sm:bottom-10 z-40 w-full max-w-2xl bg-white dark:bg-slate-900 shadow-xl rounded-lg transform transition-transform duration-300 ease-in-out border border-gray-200 dark:border-slate-800 ${isOpen ? 'translate-x-0' : 'translate-x-full'
                 }`}
         >
             <div className="h-full flex flex-col overflow-y-scroll">
