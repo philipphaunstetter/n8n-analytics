@@ -20,37 +20,41 @@ export function PricingSidePanel({ isOpen, onClose }: PricingSidePanelProps) {
                 <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-4">
                     Current Pricing Models (per 1K tokens)
                 </h4>
-                <div className="overflow-hidden shadow ring-1 ring-black ring-opacity-5 rounded-lg">
-                    <table className="min-w-full divide-y divide-gray-300 dark:divide-slate-700">
-                        <thead className="bg-gray-50 dark:bg-slate-800">
-                            <tr>
-                                <th scope="col" className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 dark:text-white sm:pl-6">
-                                    Model
-                                </th>
-                                <th scope="col" className="px-3 py-3.5 text-right text-sm font-semibold text-gray-900 dark:text-white">
-                                    Input
-                                </th>
-                                <th scope="col" className="px-3 py-3.5 text-right text-sm font-semibold text-gray-900 dark:text-white">
-                                    Output
-                                </th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-gray-200 dark:divide-slate-700 bg-white dark:bg-slate-900">
-                            {Object.entries(AI_PRICING).map(([name, pricing]) => (
-                                <tr key={name}>
-                                    <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 dark:text-white sm:pl-6">
-                                        {name}
-                                    </td>
-                                    <td className="whitespace-nowrap px-3 py-4 text-sm text-right text-gray-500 dark:text-slate-400">
-                                        ${pricing.input}
-                                    </td>
-                                    <td className="whitespace-nowrap px-3 py-4 text-sm text-right text-gray-500 dark:text-slate-400">
-                                        ${pricing.output}
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
+                <div className="flow-root">
+                    <div className="-mx-4 -my-2 overflow-x-auto sm:-mx-6 lg:-mx-8">
+                        <div className="inline-block min-w-full py-2 align-middle sm:px-6 lg:px-8">
+                            <table className="min-w-full divide-y divide-gray-300 dark:divide-slate-700">
+                                <thead>
+                                    <tr>
+                                        <th scope="col" className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 dark:text-white sm:pl-0">
+                                            Model
+                                        </th>
+                                        <th scope="col" className="px-3 py-3.5 text-right text-sm font-semibold text-gray-900 dark:text-white">
+                                            Input
+                                        </th>
+                                        <th scope="col" className="px-3 py-3.5 text-right text-sm font-semibold text-gray-900 dark:text-white">
+                                            Output
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-gray-200 dark:divide-slate-700">
+                                    {Object.entries(AI_PRICING).map(([name, pricing]) => (
+                                        <tr key={name}>
+                                            <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 dark:text-white sm:pl-0">
+                                                {name}
+                                            </td>
+                                            <td className="whitespace-nowrap px-3 py-4 text-sm text-right text-gray-500 dark:text-slate-400">
+                                                ${pricing.input}
+                                            </td>
+                                            <td className="whitespace-nowrap px-3 py-4 text-sm text-right text-gray-500 dark:text-slate-400">
+                                                ${pricing.output}
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
                 </div>
 
                 <div className="mt-6 p-4 bg-gray-50 dark:bg-slate-800 rounded-md">
