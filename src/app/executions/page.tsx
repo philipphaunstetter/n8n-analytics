@@ -443,472 +443,478 @@ function ExecutionsContent() {
 
   return (
     <div className="relative">
-      <div className={`space-y-6 transition-all duration-300 ease-in-out ${showPricing ? 'mr-[44rem]' : ''}`}>
-        {/* Page Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Executions</h1>
-            <p className="mt-2 text-sm text-gray-600 dark:text-slate-400">
-              Monitor and debug workflow execution history
-            </p>
-          </div>
-          <div className="flex space-x-3">
-            <Button
-              outline
-              onClick={() => syncExecutions(false)}
-              disabled={syncing || loading}
-              className="flex items-center space-x-2"
-            >
-              <ArrowPathIcon className={`h-4 w-4 ${syncing ? 'animate-spin' : ''}`} />
-              <span>{syncing ? 'Syncing...' : 'Sync'}</span>
-            </Button>
-            <Button
-              outline
-              onClick={() => syncExecutions(true)}
-              disabled={syncing || loading}
-              className="flex items-center space-x-2"
-              title="Force a full sync of all executions (slower)"
-            >
-              <ArrowPathIcon className={`h-4 w-4 ${syncing ? 'animate-spin' : ''}`} />
-              <span>Full Sync</span>
-            </Button>
-            <Button onClick={() => fetchExecutions()} disabled={loading}>
-              {loading ? 'Loading...' : 'Refresh'}
-            </Button>
-          </div>
-        </div>
-
-        {/* Filters */}
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-5">
-          <div>
-            <label htmlFor="provider" className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
-              n8n Instance
-            </label>
-            <Select
-              value={providerFilter}
-              onChange={(e) => setProviderFilter(e.target.value)}
-            >
-              <option value="all">All instances</option>
-              {providers.map(provider => (
-                <option key={provider.id} value={provider.id}>
-                  {provider.name}
-                </option>
-              ))}
-            </Select>
-          </div>
-
-          <div>
-            <label htmlFor="search" className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
-              Search
-            </label>
-            <div className="relative">
-              <Input
-                id="search"
-                type="text"
-                placeholder="Search executions..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
-              <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+      <div className="flex relative min-h-full">
+        <div className="flex-1 min-w-0 space-y-6 transition-all duration-300 ease-in-out">
+          {/* Page Header */}
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Executions</h1>
+              <p className="mt-2 text-sm text-gray-600 dark:text-slate-400">
+                Monitor and debug workflow execution history
+              </p>
+            </div>
+            <div className="flex space-x-3">
+              <Button
+                outline
+                onClick={() => syncExecutions(false)}
+                disabled={syncing || loading}
+                className="flex items-center space-x-2"
+              >
+                <ArrowPathIcon className={`h-4 w-4 ${syncing ? 'animate-spin' : ''}`} />
+                <span>{syncing ? 'Syncing...' : 'Sync'}</span>
+              </Button>
+              <Button
+                outline
+                onClick={() => syncExecutions(true)}
+                disabled={syncing || loading}
+                className="flex items-center space-x-2"
+                title="Force a full sync of all executions (slower)"
+              >
+                <ArrowPathIcon className={`h-4 w-4 ${syncing ? 'animate-spin' : ''}`} />
+                <span>Full Sync</span>
+              </Button>
+              <Button onClick={() => fetchExecutions()} disabled={loading}>
+                {loading ? 'Loading...' : 'Refresh'}
+              </Button>
             </div>
           </div>
 
-          <div>
-            <label htmlFor="status" className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
-              Status
-            </label>
-            <Select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value as ExecutionStatus | 'all')}
-            >
-              <option value="all">All statuses</option>
-              <option value="success">Success</option>
-              <option value="error">Error</option>
-              <option value="running">Running</option>
-              <option value="waiting">Waiting</option>
-              <option value="canceled">Canceled</option>
-            </Select>
+          {/* Filters */}
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-5">
+            <div>
+              <label htmlFor="provider" className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
+                n8n Instance
+              </label>
+              <Select
+                value={providerFilter}
+                onChange={(e) => setProviderFilter(e.target.value)}
+              >
+                <option value="all">All instances</option>
+                {providers.map(provider => (
+                  <option key={provider.id} value={provider.id}>
+                    {provider.name}
+                  </option>
+                ))}
+              </Select>
+            </div>
+
+            <div>
+              <label htmlFor="search" className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
+                Search
+              </label>
+              <div className="relative">
+                <Input
+                  id="search"
+                  type="text"
+                  placeholder="Search executions..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10"
+                />
+                <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              </div>
+            </div>
+
+            <div>
+              <label htmlFor="status" className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
+                Status
+              </label>
+              <Select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value as ExecutionStatus | 'all')}
+              >
+                <option value="all">All statuses</option>
+                <option value="success">Success</option>
+                <option value="error">Error</option>
+                <option value="running">Running</option>
+                <option value="waiting">Waiting</option>
+                <option value="canceled">Canceled</option>
+              </Select>
+            </div>
+
+            <div>
+              <label htmlFor="timeRange" className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
+                Time Range
+              </label>
+              <Select
+                value={timeRange}
+                onChange={(e) => setTimeRange(e.target.value as TimeRange)}
+              >
+                <option value="1h">Last hour</option>
+                <option value="24h">Last 24 hours</option>
+                <option value="7d">Last 7 days</option>
+                <option value="30d">Last 30 days</option>
+                <option value="all">All Time</option>
+              </Select>
+            </div>
+
+            <div className="flex items-end">
+              <Button outline className="flex items-center space-x-2">
+                <FunnelIcon className="h-4 w-4" />
+                <span>More</span>
+              </Button>
+            </div>
           </div>
 
-          <div>
-            <label htmlFor="timeRange" className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
-              Time Range
-            </label>
-            <Select
-              value={timeRange}
-              onChange={(e) => setTimeRange(e.target.value as TimeRange)}
-            >
-              <option value="1h">Last hour</option>
-              <option value="24h">Last 24 hours</option>
-              <option value="7d">Last 7 days</option>
-              <option value="30d">Last 30 days</option>
-              <option value="all">All Time</option>
-            </Select>
-          </div>
-
-          <div className="flex items-end">
-            <Button outline className="flex items-center space-x-2">
-              <FunnelIcon className="h-4 w-4" />
-              <span>More</span>
-            </Button>
-          </div>
-        </div>
-
-        {/* Results Summary */}
-        <div className="bg-white dark:bg-slate-800 px-4 py-3 border border-gray-200 dark:border-slate-300 rounded-md">
-          <div className="flex items-center justify-between text-sm text-gray-600 dark:text-slate-400">
-            <span>
+          {/* Results Summary */}
+          <div className="bg-white dark:bg-slate-800 px-4 py-3 border border-gray-200 dark:border-slate-300 rounded-md">
+            <div className="flex items-center justify-between text-sm text-gray-600 dark:text-slate-400">
               <span>
-                Showing {filteredExecutions.length} executions
-                {groupedExecutions.length !== filteredExecutions.length && (
-                  <span className="ml-1 text-gray-500">
-                    (grouped into {groupedExecutions.length} rows)
-                  </span>
-                )}
+                <span>
+                  Showing {filteredExecutions.length} executions
+                  {groupedExecutions.length !== filteredExecutions.length && (
+                    <span className="ml-1 text-gray-500">
+                      (grouped into {groupedExecutions.length} rows)
+                    </span>
+                  )}
+                </span>
               </span>
-            </span>
-            <span>
-              {timeRange === '1h' && 'Last hour'}
-              {timeRange === '24h' && 'Last 24 hours'}
-              {timeRange === '7d' && 'Last 7 days'}
-              {timeRange === '30d' && 'Last 30 days'}
-            </span>
+              <span>
+                {timeRange === '1h' && 'Last hour'}
+                {timeRange === '24h' && 'Last 24 hours'}
+                {timeRange === '7d' && 'Last 7 days'}
+                {timeRange === '30d' && 'Last 30 days'}
+              </span>
+            </div>
           </div>
-        </div>
 
-        {/* Executions Table */}
-        <div className="bg-white dark:bg-slate-800 shadow border border-gray-200 dark:border-slate-300 overflow-hidden sm:rounded-md flex flex-col" style={{ height: 'calc(100vh - 24rem)' }}>
-          <Table className="flex-1">
-            <TableHead>
-              <TableRow>
-                <TableHeader>Status</TableHeader>
-                <TableHeader>Execution ID</TableHeader>
-                <TableHeader>Instance</TableHeader>
-                <TableHeader>Workflow</TableHeader>
-                <TableHeader>Started</TableHeader>
-                <TableHeader>Duration</TableHeader>
-                <TableHeader>Mode</TableHeader>
-                <TableHeader>Tokens</TableHeader>
-                <TableHeader>
-                  <div className="flex items-center">
-                    AI Cost
-                    <AICostTooltip type="header" onToggle={() => setShowPricing(!showPricing)} />
-                  </div>
-                </TableHeader>
-                <TableHeader>Actions</TableHeader>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {loading ? (
-                // Loading rows
-                Array.from({ length: 5 }).map((_, i) => (
-                  <TableRow key={i}>
-                    <TableCell colSpan={10}>
-                      <div className="animate-pulse flex space-x-4 py-4">
-                        <div className="rounded-full bg-gray-300 h-6 w-6"></div>
-                        <div className="flex-1 space-y-2">
-                          <div className="h-4 bg-gray-300 rounded w-3/4"></div>
-                          <div className="h-4 bg-gray-300 rounded w-1/2"></div>
-                        </div>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))
-              ) : filteredExecutions.length === 0 ? (
+          {/* Executions Table */}
+          <div className="bg-white dark:bg-slate-800 shadow border border-gray-200 dark:border-slate-300 overflow-hidden sm:rounded-md flex flex-col" style={{ height: 'calc(100vh - 24rem)' }}>
+            <Table className="flex-1">
+              <TableHead>
                 <TableRow>
-                  <TableCell colSpan={10} className="text-center py-8 text-gray-500">
-                    {executions.length === 0
-                      ? 'No executions found for this time range'
-                      : 'No executions match your search criteria'
-                    }
-                  </TableCell>
+                  <TableHeader>Status</TableHeader>
+                  <TableHeader>Execution ID</TableHeader>
+                  <TableHeader>Instance</TableHeader>
+                  <TableHeader>Workflow</TableHeader>
+                  <TableHeader>Started</TableHeader>
+                  <TableHeader>Duration</TableHeader>
+                  <TableHeader>Mode</TableHeader>
+                  <TableHeader>Tokens</TableHeader>
+                  <TableHeader>
+                    <div className="flex items-center">
+                      AI Cost
+                      <AICostTooltip type="header" onToggle={() => setShowPricing(!showPricing)} />
+                    </div>
+                  </TableHeader>
+                  <TableHeader>Actions</TableHeader>
                 </TableRow>
-              ) : (
-                groupedExecutions.map((item) => {
-                  if (isExecutionGroup(item)) {
-                    const isExpanded = expandedGroups.has(item.id)
-                    const StatusIcon = statusIcons[item.status]
-                    const provider = providers.find(p => p.id === item.providerId)
-                    const workflowName = (typeof item.executions[0].metadata?.workflowName === 'string' ? item.executions[0].metadata.workflowName : null) ||
-                      DEMO_WORKFLOWS.find(w => w.id === item.workflowId)?.name ||
-                      item.workflowId
-
-                    return (
-                      <>
-                        <TableRow
-                          key={item.id}
-                          className="hover:bg-gray-50 dark:hover:bg-slate-800 cursor-pointer bg-gray-50/50 dark:bg-slate-800/50"
-                          onClick={(e) => toggleGroup(item.id, e)}
-                        >
-                          <TableCell>
-                            <div className="flex items-center space-x-2">
-                              <button
-                                className="p-1 hover:bg-gray-200 dark:hover:bg-slate-700 rounded"
-                              >
-                                {isExpanded ? (
-                                  <ChevronDownIcon className="h-4 w-4 text-gray-500" />
-                                ) : (
-                                  <ChevronRightIcon className="h-4 w-4 text-gray-500" />
-                                )}
-                              </button>
-                              <Badge color={statusColors[item.status]} className="flex items-center space-x-1">
-                                <StatusIcon className="h-3 w-3" />
-                                <span className="capitalize">{item.status}</span>
-                              </Badge>
-                            </div>
-                          </TableCell>
-                          <TableCell className="font-mono text-sm text-gray-500">
-                            <div className="flex items-center space-x-2">
-                              <ListBulletIcon className="h-4 w-4" />
-                              <span>{item.executions.length} runs</span>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            {provider ? (
-                              <Badge color="zinc" className="text-xs">
-                                {provider.name}
-                              </Badge>
-                            ) : (
-                              <span className="text-xs text-gray-400">Unknown</span>
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex flex-col">
-                              <span className="font-medium text-gray-900 dark:text-white">
-                                {workflowName}
-                              </span>
-                              <span className="text-xs text-gray-500 font-mono">
-                                {item.executions[0].providerWorkflowId}
-                              </span>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <div className="text-xs text-gray-500">
-                              <div>Last: {formatDate(item.executions[0].startedAt)}</div>
-                              <div>First: {formatDate(item.executions[item.executions.length - 1].startedAt)}</div>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            ~{formatDuration(item.avgDuration)}
-                          </TableCell>
-                          <TableCell>
-                            <Badge color="blue" className="capitalize">
-                              {item.mode}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            {item.totalTokens > 0 ? (
-                              <div className="text-sm font-medium">
-                                {item.totalTokens.toLocaleString()} total
-                              </div>
-                            ) : (
-                              <span className="text-gray-400 text-sm">-</span>
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            {item.totalCost > 0 ? (
-                              <div className="text-sm font-medium">
-                                <AICostTooltip
-                                  type="cell"
-                                  cost={item.totalCost}
-                                  inputTokens={item.executions.reduce((acc, curr) => acc + (curr.inputTokens || 0), 0)}
-                                  outputTokens={item.executions.reduce((acc, curr) => acc + (curr.outputTokens || 0), 0)}
-                                  model="Mixed (Group)"
-                                />
-                              </div>
-                            ) : (
-                              <span className="text-gray-400 text-sm">-</span>
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            <span className="text-xs text-gray-400">Group</span>
-                          </TableCell>
-                        </TableRow>
-                        {isExpanded && item.executions.map((execution, idx) => {
-                          const ExStatusIcon = statusIcons[execution.status]
-                          return (
-                            <TableRow
-                              key={execution.id}
-                              className="hover:bg-gray-50 dark:hover:bg-slate-800 cursor-pointer bg-gray-50/30 dark:bg-slate-800/30"
-                              onClick={() => viewExecutionDetails(execution.id)}
-                            >
-                              <TableCell>
-                                <div className="pl-8">
-                                  <Badge color={statusColors[execution.status]} className="flex items-center space-x-1 scale-90 origin-left">
-                                    <ExStatusIcon className="h-3 w-3" />
-                                  </Badge>
-                                </div>
-                              </TableCell>
-                              <TableCell className="font-mono text-xs text-gray-500">
-                                {formatExecutionId(execution.providerExecutionId)}
-                              </TableCell>
-                              <TableCell></TableCell>
-                              <TableCell></TableCell>
-                              <TableCell className="text-xs">
-                                {formatDate(execution.startedAt)}
-                              </TableCell>
-                              <TableCell className="text-xs">
-                                {formatDuration(execution.duration)}
-                              </TableCell>
-                              <TableCell></TableCell>
-                              <TableCell>
-                                {execution.totalTokens && execution.totalTokens > 0 ? (
-                                  <span className="text-xs text-gray-500">{execution.totalTokens.toLocaleString()}</span>
-                                ) : null}
-                              </TableCell>
-                              <TableCell>
-                                {execution.aiCost && execution.aiCost > 0 ? (
-                                  <AICostTooltip
-                                    type="cell"
-                                    cost={execution.aiCost}
-                                    inputTokens={execution.inputTokens}
-                                    outputTokens={execution.outputTokens}
-                                    model={execution.aiModel}
-                                  />
-                                ) : null}
-                              </TableCell>
-                              <TableCell>
-                                <Button
-                                  outline
-                                  className="text-xs px-2 py-0.5"
-                                  onClick={(e: React.MouseEvent) => {
-                                    e.stopPropagation()
-                                    openN8nExecution(execution)
-                                  }}
-                                >
-                                  n8n
-                                </Button>
-                              </TableCell>
-                            </TableRow>
-                          )
-                        })}
-                      </>
-                    )
-                  }
-
-                  // Regular execution row
-                  const execution = item as Execution
-                  const StatusIcon = statusIcons[execution.status]
-                  const provider = providers.find(p => p.id === execution.providerId)
-                  return (
-                    <TableRow
-                      key={execution.id}
-                      className="hover:bg-gray-50 dark:hover:bg-slate-800 cursor-pointer"
-                      onClick={() => viewExecutionDetails(execution.id)}
-                    >
-                      <TableCell>
-                        <Badge color={statusColors[execution.status]} className="flex items-center space-x-1">
-                          <StatusIcon className="h-3 w-3" />
-                          <span className="capitalize">{execution.status}</span>
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="font-mono text-sm">
-                        {formatExecutionId(execution.providerExecutionId)}
-                      </TableCell>
-                      <TableCell>
-                        {provider ? (
-                          <Badge color="zinc" className="text-xs">
-                            {provider.name}
-                          </Badge>
-                        ) : (
-                          <span className="text-xs text-gray-400">Unknown</span>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex flex-col">
-                          <span className="font-medium text-gray-900 dark:text-white">
-                            {(typeof execution.metadata?.workflowName === 'string' ? execution.metadata.workflowName : null) ||
-                              DEMO_WORKFLOWS.find(w => w.id === execution.workflowId)?.name ||
-                              execution.workflowId}
-                          </span>
-                          <span className="text-xs text-gray-500 font-mono">
-                            {execution.providerWorkflowId}
-                          </span>
-                          {execution.error && (
-                            <span className="text-sm text-red-600 truncate max-w-xs">
-                              {execution.error.message}
-                            </span>
-                          )}
+              </TableHead>
+              <TableBody>
+                {loading ? (
+                  // Loading rows
+                  Array.from({ length: 5 }).map((_, i) => (
+                    <TableRow key={i}>
+                      <TableCell colSpan={10}>
+                        <div className="animate-pulse flex space-x-4 py-4">
+                          <div className="rounded-full bg-gray-300 h-6 w-6"></div>
+                          <div className="flex-1 space-y-2">
+                            <div className="h-4 bg-gray-300 rounded w-3/4"></div>
+                            <div className="h-4 bg-gray-300 rounded w-1/2"></div>
+                          </div>
                         </div>
-                      </TableCell>
-                      <TableCell>
-                        {formatDate(execution.startedAt)}
-                      </TableCell>
-                      <TableCell>
-                        {formatDuration(execution.duration)}
-                      </TableCell>
-                      <TableCell>
-                        <Badge color="blue" className="capitalize">
-                          {(execution.metadata as any)?.firstNode?.name || execution.mode}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        {execution.totalTokens && execution.totalTokens > 0 ? (
-                          <div className="text-sm">
-                            <div className="font-medium text-gray-900 dark:text-white">
-                              {execution.totalTokens.toLocaleString()}
-                            </div>
-                            <div className="text-xs text-gray-500">
-                              {execution.inputTokens?.toLocaleString() || 0} in / {execution.outputTokens?.toLocaleString() || 0} out
-                            </div>
-                          </div>
-                        ) : (
-                          <span className="text-gray-400 text-sm">-</span>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        {execution.aiCost && execution.aiCost > 0 ? (
-                          <div className="text-sm">
-                            <div className="font-medium text-gray-900 dark:text-white">
-                              ${execution.aiCost.toFixed(4)}
-                            </div>
-                            {execution.aiProvider && (
-                              <div className="text-xs text-gray-500 capitalize">
-                                {execution.aiProvider}
-                              </div>
-                            )}
-                          </div>
-                        ) : (
-                          <span className="text-gray-400 text-sm">-</span>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <Button
-                          outline
-                          className="text-sm px-2 py-1"
-                          onClick={(e: React.MouseEvent) => {
-                            e.stopPropagation()
-                            openN8nExecution(execution)
-                          }}
-                        >
-                          n8n
-                        </Button>
                       </TableCell>
                     </TableRow>
-                  )
-                })
-              )}
-            </TableBody>
-          </Table>
+                  ))
+                ) : filteredExecutions.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={10} className="text-center py-8 text-gray-500">
+                      {executions.length === 0
+                        ? 'No executions found for this time range'
+                        : 'No executions match your search criteria'
+                      }
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  groupedExecutions.map((item) => {
+                    if (isExecutionGroup(item)) {
+                      const isExpanded = expandedGroups.has(item.id)
+                      const StatusIcon = statusIcons[item.status]
+                      const provider = providers.find(p => p.id === item.providerId)
+                      const workflowName = (typeof item.executions[0].metadata?.workflowName === 'string' ? item.executions[0].metadata.workflowName : null) ||
+                        DEMO_WORKFLOWS.find(w => w.id === item.workflowId)?.name ||
+                        item.workflowId
 
-          {/* Pagination */}
-          {totalCount > 0 && (
-            <Pagination
-              currentPage={currentPage}
-              totalPages={totalPages}
-              totalCount={totalCount}
-              itemsPerPage={itemsPerPage}
-              onPageChange={(page) => fetchExecutions(page)}
-            />
-          )}
+                      return (
+                        <>
+                          <TableRow
+                            key={item.id}
+                            className="hover:bg-gray-50 dark:hover:bg-slate-800 cursor-pointer bg-gray-50/50 dark:bg-slate-800/50"
+                            onClick={(e) => toggleGroup(item.id, e)}
+                          >
+                            <TableCell>
+                              <div className="flex items-center space-x-2">
+                                <button
+                                  className="p-1 hover:bg-gray-200 dark:hover:bg-slate-700 rounded"
+                                >
+                                  {isExpanded ? (
+                                    <ChevronDownIcon className="h-4 w-4 text-gray-500" />
+                                  ) : (
+                                    <ChevronRightIcon className="h-4 w-4 text-gray-500" />
+                                  )}
+                                </button>
+                                <Badge color={statusColors[item.status]} className="flex items-center space-x-1">
+                                  <StatusIcon className="h-3 w-3" />
+                                  <span className="capitalize">{item.status}</span>
+                                </Badge>
+                              </div>
+                            </TableCell>
+                            <TableCell className="font-mono text-sm text-gray-500">
+                              <div className="flex items-center space-x-2">
+                                <ListBulletIcon className="h-4 w-4" />
+                                <span>{item.executions.length} runs</span>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              {provider ? (
+                                <Badge color="zinc" className="text-xs">
+                                  {provider.name}
+                                </Badge>
+                              ) : (
+                                <span className="text-xs text-gray-400">Unknown</span>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex flex-col">
+                                <span className="font-medium text-gray-900 dark:text-white">
+                                  {workflowName}
+                                </span>
+                                <span className="text-xs text-gray-500 font-mono">
+                                  {item.executions[0].providerWorkflowId}
+                                </span>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <div className="text-xs text-gray-500">
+                                <div>Last: {formatDate(item.executions[0].startedAt)}</div>
+                                <div>First: {formatDate(item.executions[item.executions.length - 1].startedAt)}</div>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              ~{formatDuration(item.avgDuration)}
+                            </TableCell>
+                            <TableCell>
+                              <Badge color="blue" className="capitalize">
+                                {item.mode}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              {item.totalTokens > 0 ? (
+                                <div className="text-sm font-medium">
+                                  {item.totalTokens.toLocaleString()} total
+                                </div>
+                              ) : (
+                                <span className="text-gray-400 text-sm">-</span>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              {item.totalCost > 0 ? (
+                                <div className="text-sm font-medium">
+                                  <AICostTooltip
+                                    type="cell"
+                                    cost={item.totalCost}
+                                    inputTokens={item.executions.reduce((acc, curr) => acc + (curr.inputTokens || 0), 0)}
+                                    outputTokens={item.executions.reduce((acc, curr) => acc + (curr.outputTokens || 0), 0)}
+                                    model="Mixed (Group)"
+                                  />
+                                </div>
+                              ) : (
+                                <span className="text-gray-400 text-sm">-</span>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              <span className="text-xs text-gray-400">Group</span>
+                            </TableCell>
+                          </TableRow>
+                          {isExpanded && item.executions.map((execution, idx) => {
+                            const ExStatusIcon = statusIcons[execution.status]
+                            return (
+                              <TableRow
+                                key={execution.id}
+                                className="hover:bg-gray-50 dark:hover:bg-slate-800 cursor-pointer bg-gray-50/30 dark:bg-slate-800/30"
+                                onClick={() => viewExecutionDetails(execution.id)}
+                              >
+                                <TableCell>
+                                  <div className="pl-8">
+                                    <Badge color={statusColors[execution.status]} className="flex items-center space-x-1 scale-90 origin-left">
+                                      <ExStatusIcon className="h-3 w-3" />
+                                    </Badge>
+                                  </div>
+                                </TableCell>
+                                <TableCell className="font-mono text-xs text-gray-500">
+                                  {formatExecutionId(execution.providerExecutionId)}
+                                </TableCell>
+                                <TableCell></TableCell>
+                                <TableCell></TableCell>
+                                <TableCell className="text-xs">
+                                  {formatDate(execution.startedAt)}
+                                </TableCell>
+                                <TableCell className="text-xs">
+                                  {formatDuration(execution.duration)}
+                                </TableCell>
+                                <TableCell></TableCell>
+                                <TableCell>
+                                  {execution.totalTokens && execution.totalTokens > 0 ? (
+                                    <span className="text-xs text-gray-500">{execution.totalTokens.toLocaleString()}</span>
+                                  ) : null}
+                                </TableCell>
+                                <TableCell>
+                                  {execution.aiCost && execution.aiCost > 0 ? (
+                                    <AICostTooltip
+                                      type="cell"
+                                      cost={execution.aiCost}
+                                      inputTokens={execution.inputTokens}
+                                      outputTokens={execution.outputTokens}
+                                      model={execution.aiModel}
+                                    />
+                                  ) : null}
+                                </TableCell>
+                                <TableCell>
+                                  <Button
+                                    outline
+                                    className="text-xs px-2 py-0.5"
+                                    onClick={(e: React.MouseEvent) => {
+                                      e.stopPropagation()
+                                      openN8nExecution(execution)
+                                    }}
+                                  >
+                                    n8n
+                                  </Button>
+                                </TableCell>
+                              </TableRow>
+                            )
+                          })}
+                        </>
+                      )
+                    }
+
+                    // Regular execution row
+                    const execution = item as Execution
+                    const StatusIcon = statusIcons[execution.status]
+                    const provider = providers.find(p => p.id === execution.providerId)
+                    return (
+                      <TableRow
+                        key={execution.id}
+                        className="hover:bg-gray-50 dark:hover:bg-slate-800 cursor-pointer"
+                        onClick={() => viewExecutionDetails(execution.id)}
+                      >
+                        <TableCell>
+                          <Badge color={statusColors[execution.status]} className="flex items-center space-x-1">
+                            <StatusIcon className="h-3 w-3" />
+                            <span className="capitalize">{execution.status}</span>
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="font-mono text-sm">
+                          {formatExecutionId(execution.providerExecutionId)}
+                        </TableCell>
+                        <TableCell>
+                          {provider ? (
+                            <Badge color="zinc" className="text-xs">
+                              {provider.name}
+                            </Badge>
+                          ) : (
+                            <span className="text-xs text-gray-400">Unknown</span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex flex-col">
+                            <span className="font-medium text-gray-900 dark:text-white">
+                              {(typeof execution.metadata?.workflowName === 'string' ? execution.metadata.workflowName : null) ||
+                                DEMO_WORKFLOWS.find(w => w.id === execution.workflowId)?.name ||
+                                execution.workflowId}
+                            </span>
+                            <span className="text-xs text-gray-500 font-mono">
+                              {execution.providerWorkflowId}
+                            </span>
+                            {execution.error && (
+                              <span className="text-sm text-red-600 truncate max-w-xs">
+                                {execution.error.message}
+                              </span>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          {formatDate(execution.startedAt)}
+                        </TableCell>
+                        <TableCell>
+                          {formatDuration(execution.duration)}
+                        </TableCell>
+                        <TableCell>
+                          <Badge color="blue" className="capitalize">
+                            {(execution.metadata as any)?.firstNode?.name || execution.mode}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          {execution.totalTokens && execution.totalTokens > 0 ? (
+                            <div className="text-sm">
+                              <div className="font-medium text-gray-900 dark:text-white">
+                                {execution.totalTokens.toLocaleString()}
+                              </div>
+                              <div className="text-xs text-gray-500">
+                                {execution.inputTokens?.toLocaleString() || 0} in / {execution.outputTokens?.toLocaleString() || 0} out
+                              </div>
+                            </div>
+                          ) : (
+                            <span className="text-gray-400 text-sm">-</span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {execution.aiCost && execution.aiCost > 0 ? (
+                            <div className="text-sm">
+                              <div className="font-medium text-gray-900 dark:text-white">
+                                ${execution.aiCost.toFixed(4)}
+                              </div>
+                              {execution.aiProvider && (
+                                <div className="text-xs text-gray-500 capitalize">
+                                  {execution.aiProvider}
+                                </div>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="text-gray-400 text-sm">-</span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <Button
+                            outline
+                            className="text-sm px-2 py-1"
+                            onClick={(e: React.MouseEvent) => {
+                              e.stopPropagation()
+                              openN8nExecution(execution)
+                            }}
+                          >
+                            n8n
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    )
+                  })
+                )}
+              </TableBody>
+            </Table>
+
+            {/* Pagination */}
+            {totalCount > 0 && (
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                totalCount={totalCount}
+                itemsPerPage={itemsPerPage}
+                onPageChange={(page) => fetchExecutions(page)}
+              />
+            )}
+          </div>
         </div>
       </div>
 
-      <PricingSidePanel
-        isOpen={showPricing}
-        onClose={() => setShowPricing(false)}
-      />
+      <div className={`sticky top-0 h-screen transition-all duration-300 ease-in-out overflow-hidden ${showPricing ? 'w-[44rem]' : 'w-0'}`}>
+        <div className="w-[44rem] h-full">
+          <PricingSidePanel
+            isOpen={showPricing}
+            onClose={() => setShowPricing(false)}
+          />
+        </div>
+      </div>
     </div >
   )
 }
