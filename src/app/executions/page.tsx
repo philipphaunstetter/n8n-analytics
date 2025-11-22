@@ -905,17 +905,17 @@ function ExecutionsContent() {
             )}
           </div>
         </div>
-      </div>
 
-      <div className={`sticky top-0 h-screen transition-all duration-300 ease-in-out overflow-hidden ${showPricing ? 'w-[44rem]' : 'w-0'}`}>
-        <div className="w-[44rem] h-full">
-          <PricingSidePanel
-            isOpen={showPricing}
-            onClose={() => setShowPricing(false)}
-          />
+        <div className={`sticky top-0 h-screen transition-all duration-300 ease-in-out overflow-hidden ${showPricing ? 'w-[44rem]' : 'w-0'}`}>
+          <div className="w-[44rem] h-full">
+            <PricingSidePanel
+              isOpen={showPricing}
+              onClose={() => setShowPricing(false)}
+            />
+          </div>
         </div>
       </div>
-    </div >
+    </div>
   )
 }
 
