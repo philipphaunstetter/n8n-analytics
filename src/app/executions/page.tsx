@@ -443,7 +443,7 @@ function ExecutionsContent() {
 
   return (
     <div className="relative">
-      <div className="flex relative min-h-full">
+      <div className="flex flex-row flex-nowrap items-start relative min-h-full">
         <div className="flex-1 min-w-0 space-y-6 transition-all duration-300 ease-in-out">
           {/* Page Header */}
           <div className="flex items-center justify-between">
