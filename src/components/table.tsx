@@ -26,7 +26,7 @@ export function Table({
       <div className="flow-root">
         <div {...props} className={clsx(className, '-mx-(--gutter) overflow-x-auto whitespace-nowrap')}>
           <div className={clsx('inline-block min-w-full align-middle', !bleed && 'sm:px-(--gutter)')}>
-            <table className="min-w-full text-left text-sm/6 text-zinc-950 dark:text-white">{children}</table>
+            <table className="min-w-full text-left text-sm/6 text-zinc-950 dark:text-white border-separate border-spacing-0">{children}</table>
           </div>
         </div>
       </div>
@@ -64,7 +64,7 @@ export function TableRow({
         className={clsx(
           className,
           href &&
-            'has-[[data-row-link][data-focus]]:outline-2 has-[[data-row-link][data-focus]]:-outline-offset-2 has-[[data-row-link][data-focus]]:outline-blue-500 dark:focus-within:bg-slate-800/50',
+          'has-[[data-row-link][data-focus]]:outline-2 has-[[data-row-link][data-focus]]:-outline-offset-2 has-[[data-row-link][data-focus]]:outline-blue-500 dark:focus-within:bg-slate-800/50',
           striped && 'even:bg-zinc-950/2.5 dark:even:bg-slate-800/30',
           href && striped && 'hover:bg-zinc-950/5 dark:hover:bg-slate-800/50',
           href && !striped && 'hover:bg-zinc-950/2.5 dark:hover:bg-slate-800/50'
@@ -82,7 +82,7 @@ export function TableHeader({ className, ...props }: React.ComponentPropsWithout
       {...props}
       className={clsx(
         className,
-        'border-b border-b-zinc-950/10 px-6 py-2 font-medium first:pl-6 last:pr-6 dark:border-b-zinc-700',
+        'sticky top-0 z-10 border-b border-b-zinc-950/10 bg-white/75 dark:bg-slate-800/75 backdrop-blur-sm backdrop-filter px-6 py-2 font-medium first:pl-6 last:pr-6 dark:border-b-zinc-700',
         grid && 'border-l border-l-zinc-950/5 first:border-l-0 dark:border-l-zinc-700',
         !bleed && 'sm:first:pl-6 sm:last:pr-6'
       )}
