@@ -75,6 +75,7 @@ export interface Execution {
   outputTokens?: number
   aiCost?: number
   aiProvider?: string | null
+  aiModel?: string | null
 
   // Provider-specific metadata
   metadata?: Record<string, unknown>

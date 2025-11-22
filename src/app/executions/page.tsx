@@ -35,6 +35,7 @@ import { Input } from '@/components/input'
 import { Select } from '@/components/select'
 import { showToast } from '@/components/toast'
 import { formatExecutionId, createN8nExecutionUrl } from '@/lib/utils'
+import { AICostTooltip } from '@/components/ai-cost-tooltip'
 
 const statusIcons = {
   'success': CheckCircleIcon,
@@ -586,7 +587,12 @@ function ExecutionsContent() {
               <TableHeader>Duration</TableHeader>
               <TableHeader>Mode</TableHeader>
               <TableHeader>Tokens</TableHeader>
-              <TableHeader>AI Cost</TableHeader>
+              <TableHeader>
+                <div className="flex items-center">
+                  AI Cost
+                  <AICostTooltip type="header" />
+                </div>
+              </TableHeader>
               <TableHeader>Actions</TableHeader>
             </TableRow>
           </TableHead>
@@ -700,7 +706,13 @@ function ExecutionsContent() {
                         <TableCell>
                           {item.totalCost > 0 ? (
                             <div className="text-sm font-medium">
-                              ${item.totalCost.toFixed(4)} total
+                              <AICostTooltip
+                                type="cell"
+                                cost={item.totalCost}
+                                inputTokens={item.executions.reduce((acc, curr) => acc + (curr.inputTokens || 0), 0)}
+                                outputTokens={item.executions.reduce((acc, curr) => acc + (curr.outputTokens || 0), 0)}
+                                model="Mixed (Group)"
+                              />
                             </div>
                           ) : (
                             <span className="text-gray-400 text-sm">-</span>
@@ -744,7 +756,13 @@ function ExecutionsContent() {
                             </TableCell>
                             <TableCell>
                               {execution.aiCost && execution.aiCost > 0 ? (
-                                <span className="text-xs text-gray-500">${execution.aiCost.toFixed(4)}</span>
+                                <AICostTooltip
+                                  type="cell"
+                                  cost={execution.aiCost}
+                                  inputTokens={execution.inputTokens}
+                                  outputTokens={execution.outputTokens}
+                                  model={execution.aiModel}
+                                />
                               ) : null}
                             </TableCell>
                             <TableCell>

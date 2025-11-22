@@ -644,6 +644,7 @@ export class ExecutionSyncService {
       output_tokens: aiMetrics?.outputTokens || 0,
       ai_cost: aiMetrics?.aiCost || 0,
       ai_provider: aiMetrics?.aiProvider || null,
+      ai_model: aiMetrics?.aiModel || null,
       metadata: JSON.stringify({
         workflowName: workflow.name,
         waitTill: (n8nExecution as any).waitTill,
@@ -671,7 +672,7 @@ export class ExecutionSyncService {
             workflow_id = ?, status = ?, mode = ?, started_at = ?, stopped_at = ?,
             duration = ?, finished = ?, retry_of = ?, retry_success_id = ?, metadata = ?,
             execution_data = ?, total_tokens = ?, input_tokens = ?, output_tokens = ?,
-            ai_cost = ?, ai_provider = ?,
+            ai_cost = ?, ai_provider = ?, ai_model = ?,
             updated_at = CURRENT_TIMESTAMP
           WHERE id = ?
         `, [
@@ -680,7 +681,7 @@ export class ExecutionSyncService {
           executionData.finished, executionData.retry_of, executionData.retry_success_id,
           executionData.metadata, executionData.execution_data, executionData.total_tokens,
           executionData.input_tokens, executionData.output_tokens, executionData.ai_cost,
-          executionData.ai_provider, existing.id
+          executionData.ai_provider, executionData.ai_model, existing.id
         ], function (err) {
           if (err) reject(err)
           else resolve({ updated: true, inserted: false })
@@ -692,8 +693,8 @@ export class ExecutionSyncService {
             id, provider_id, workflow_id, provider_execution_id, provider_workflow_id,
             status, mode, started_at, stopped_at, duration, finished, retry_of,
             retry_success_id, metadata, execution_data, total_tokens, input_tokens,
-            output_tokens, ai_cost, ai_provider
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            output_tokens, ai_cost, ai_provider, ai_model
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `, [
           executionData.id, executionData.provider_id, executionData.workflow_id,
           executionData.provider_execution_id, executionData.provider_workflow_id,
@@ -701,7 +702,7 @@ export class ExecutionSyncService {
           executionData.stopped_at, executionData.duration, executionData.finished,
           executionData.retry_of, executionData.retry_success_id, executionData.metadata,
           executionData.execution_data, executionData.total_tokens, executionData.input_tokens,
-          executionData.output_tokens, executionData.ai_cost, executionData.ai_provider
+          executionData.output_tokens, executionData.ai_cost, executionData.ai_provider, executionData.ai_model
         ], function (err) {
           if (err) reject(err)
           // Check if row was actually inserted (this.changes > 0) or ignored (this.changes === 0)

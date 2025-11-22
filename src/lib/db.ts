@@ -15,6 +15,7 @@ function migrateAIMetrics(database: Database) {
       'ALTER TABLE executions ADD COLUMN output_tokens INTEGER DEFAULT 0',
       'ALTER TABLE executions ADD COLUMN ai_cost REAL DEFAULT 0.0',
       'ALTER TABLE executions ADD COLUMN ai_provider TEXT DEFAULT NULL',
+      'ALTER TABLE executions ADD COLUMN ai_model TEXT DEFAULT NULL',
       'ALTER TABLE workflows ADD COLUMN workflow_json TEXT'
     ]
 
@@ -65,7 +66,6 @@ function ensureSchema(database: Database) {
       )
     `)
 
-
     database.run(`
       CREATE TABLE IF NOT EXISTS executions (
         id TEXT PRIMARY KEY,
@@ -84,6 +84,13 @@ function ensureSchema(database: Database) {
         metadata TEXT DEFAULT '{}',
         created_at TEXT DEFAULT CURRENT_TIMESTAMP,
         updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        execution_data TEXT DEFAULT NULL,
+        total_tokens INTEGER DEFAULT 0,
+        input_tokens INTEGER DEFAULT 0,
+        output_tokens INTEGER DEFAULT 0,
+        ai_cost REAL DEFAULT 0.0,
+        ai_provider TEXT DEFAULT NULL,
+        ai_model TEXT DEFAULT NULL,
         FOREIGN KEY (provider_id) REFERENCES providers (id) ON DELETE CASCADE,
         FOREIGN KEY (workflow_id) REFERENCES workflows (id) ON DELETE CASCADE
       )
